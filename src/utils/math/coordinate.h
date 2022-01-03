@@ -1,0 +1,143 @@
+#pragma once
+
+#include "math.h"
+
+NAMESPACE_BEGIN(simple_renderer)
+
+constexpr int UP_DIM_WORLD = 1;
+constexpr int FRONT_DIM_WORLD = 2;
+constexpr int RIGHT_DIM_WORLD = 0;
+
+inline Vector3 TransfromDir(Mat4 trans, Vector3 dir)
+{
+    Vector3 ret(0);
+    auto dir_tmp = trans * glm::vec4(dir, 0);
+    for (int j = 0; j < 3; ++j)
+        ret[j] = dir_tmp[j];
+    return glm::normalize(ret);
+}
+
+inline Vector3 TransfromPt(Mat4 trans, Vector3 pt)
+{
+    Vector3 ret(0);
+    auto pt_tmp = trans * glm::vec4(pt, 1);
+    for (int j = 0; j < 3; ++j)
+        ret[j] = pt_tmp[j] / pt_tmp.w;
+    return ret;
+}
+
+inline Float Angle(const Vector3 &a, const Vector3 &b)
+{
+    return glm::acos(glm::dot(a, b)) * kPiInv * 180;
+}
+
+//\brief 两个向量是否同向
+inline bool SameDirection(const Vector3 &a, const Vector3 &b)
+{
+    return FloatEqual(glm::dot(a, b), 1, kEpsilonL);
+}
+
+//\brief 两个向量是否不在同一个半球之中（夹角大于90度）
+inline bool NotSameHemis(const Vector3 &a, const Vector3 &b)
+{
+    return glm::dot(a, b) < kEpsilon;
+}
+
+//\brief 两个向量是否在同一个半球之中（夹角小于90度）
+inline bool SameHemis(const Vector3 &a, const Vector3 &b)
+{
+    return glm::dot(a, b) > kEpsilon;
+}
+
+//\brief 将向量转换至目标坐标系下
+//
+//\param dir 待转换的向量
+//
+//\param normal 目标坐标系的竖直向上方向
+//
+//\return 获得的转换后的向量
+inline Vector3 ToWorld(const Vector3 &dir, const Vector3 &normal)
+{
+    Vector3 B, C;
+    if (std::fabs(normal.x) > std::fabs(normal.y))
+    {
+        Float len_inv = 1 / std::sqrt(normal.x * normal.x + normal.z * normal.z);
+        C = Vector3(normal.z * len_inv, 0, -normal.x * len_inv);
+    }
+    else
+    {
+        Float len_inv = 1 / std::sqrt(normal.y * normal.y + normal.z * normal.z);
+        C = Vector3(0, normal.z * len_inv, -normal.y * len_inv);
+    }
+    B = glm::cross(C, normal);
+    return glm::normalize(dir.x * B + dir.y * C + dir.z * normal);
+}
+
+inline Vector3 ToLocal(const Vector3 &dir, const Vector3 &up)
+{
+    Vector3 B, C;
+    if (std::fabs(up.x) > std::fabs(up.y))
+    {
+        Float len_inv = 1 / std::sqrt(up.x * up.x + up.z * up.z);
+        C = Vector3(up.z * len_inv, 0, -up.x * len_inv);
+    }
+    else
+    {
+        Float len_inv = 1.0f / std::sqrt(up.y * up.y + up.z * up.z);
+        C = Vector3(0, up.z * len_inv, -up.y * len_inv);
+    }
+    B = glm::cross(C, up);
+    return Vector3(glm::dot(dir, B), glm::dot(dir, C), glm::dot(dir, up));
+}
+
+//\brief 将单位向量坐标从笛卡尔坐标系转换至球坐标系
+//
+//\param dir - 待转换的单位向量
+//
+//\param phi - 向量与 Front 方向的夹角
+//
+//\param theta - 向量与 Up 方向的夹角
+inline void CartesianToSpherical(const Vector3 &dir, Float &theta, Float &phi)
+{
+    auto cos_theta = dir[UP_DIM_WORLD];
+
+    theta = glm::acos(cos_theta);
+
+    auto sin_theta = std::sqrt(1 - cos_theta * cos_theta);
+    auto cos_phi = Clamp<Float>(-1 + kEpsilon, 1 - kEpsilon, dir[FRONT_DIM_WORLD] / sin_theta);
+    auto sin_phi = dir[RIGHT_DIM_WORLD] / sin_theta;
+
+    phi = (sin_phi > 0) ? glm::acos(cos_phi) : (2 * kPi - glm::acos(cos_phi));
+
+    if (phi < 0)
+        phi += 2 * kPi;
+    if (phi > 2 * kPi)
+        phi -= 2 * kPi;
+}
+
+//\brief 将起点是原点的向量从笛卡尔坐标系转换至球坐标系
+//
+//\param dir 待转换的，起点是原点的向量
+//
+//\param phi 向量与 Front 方向的夹角
+//
+//\param theta 向量与 Up 方向的夹角
+//
+//\param r 向量长度
+inline void CartesianToSpherical(const Vector3 &dir, Float &theta, Float &phi, Float &r)
+{
+    r = glm::length(dir);
+    CartesianToSpherical(glm::normalize(dir), theta, phi);
+}
+
+inline Vector3 SphericalToCartesian(Float theta, Float phi, Float r = 1)
+{
+    Vector3 dir(0);
+    dir[UP_DIM_WORLD] = r * std::cos(theta);
+    auto sin_theta = std::sin(theta);
+    dir[RIGHT_DIM_WORLD] = r * std::sin(phi) * sin_theta;
+    dir[FRONT_DIM_WORLD] = r * std::cos(phi) * sin_theta;
+    return dir;
+}
+
+NAMESPACE_END(simple_renderer)
