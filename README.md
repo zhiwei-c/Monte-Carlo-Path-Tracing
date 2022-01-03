@@ -45,6 +45,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 - 基于路径追踪（path tracing）算法的积分器，包括：
   - 使用蒙特卡洛方法（Monte Carlo method）计算辐射亮度（radiance）的数学期望；
+  - 重要性抽样（importance sampling），已知光线入射方向和表面法线方向，根据 BSDF 对光线出射方向进行重要性抽样；
   - 多重重要性抽样（multiple importance sampling）：
     - 按发光物体表面积直接采样光源；
     - 按 BSDF 采样光源；（可能存在错误，may contain errors）
