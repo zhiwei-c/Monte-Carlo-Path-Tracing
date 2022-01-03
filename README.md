@@ -52,7 +52,9 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 ### 2.3 其它
 
-- 凹凸贴图（bump mapping）
+- 环境映射（environment mapping）
+
+- 凹凸映射（bump mapping）
 
 - 内置了一些电介质材质的[折射率（refractive index）](src/rendering/ray.h#L9)，在配置文件中可根据名称直接调用：
 
