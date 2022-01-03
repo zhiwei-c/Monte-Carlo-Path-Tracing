@@ -54,7 +54,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 - 凹凸贴图（bump mapping）
 
-- 内置了一些电介质材质的折射率，在配置文件中可直接根据名称调用：
+- 内置了一些电介质材质的[折射率（refractive index）](src/rendering/ray.h#L9)，在配置文件中可根据名称直接调用：
 
     | 名称（Preset(s)）                  | 说明（Description）          | 名称（Preset(s)）                              | 说明（Description）  |
     | ---------------------------------- | ---------------------------- | ---------------------------------------------- | -------------------- |
@@ -71,7 +71,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
     | water                              | 水                           | silicone oil<br />silicone-oil                 | 硅油                 |
     | polypropylene                      | 聚丙烯                       |                                                |                      |
 
-- 内置了一些导体材质的折射率，在配置文件中可直接根据名称调用：
+- 内置了一些导体材质的[折射率](src/rendering/ray.h#L208)和[消光系数（extinction coefficient）](src/rendering/ray.h#L325)，在配置文件中可根据名称直接调用：
 
     | 名称（Preset(s)）    | 说明（Description）                   | 名称（Preset(s)）    | 说明（Description）                           |
     | -------------------- | ------------------------------------- | -------------------- | --------------------------------------------- |

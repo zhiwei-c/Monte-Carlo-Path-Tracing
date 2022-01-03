@@ -6,7 +6,7 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
-// 各种电介质材质（dielectric）的折射系数
+// 各种电介质材质（dielectric）的折射率（refractive index）
 const std::map<std::string, Float> IOR{
 	//真空
 	{"vacuum", 1.0f},
@@ -205,7 +205,7 @@ inline Float FresnelDiffuseReflectance(Float eta)
 	}
 }
 
-//各种导体材质（conductor）的折射系数
+//各种导体材质（conductor）的折射率（refractive index）
 const std::map<std::string, Vector3> IOR_eta{
 	//无定形碳 Amorphous carbon
 	{"a-C", Vector3(2.93785f, 2.22242f, 1.96400f)},
@@ -322,7 +322,7 @@ const std::map<std::string, Vector3> IOR_eta{
 	{"W", Vector3(4.36142f, 3.29330f, 2.99191f)},
 };
 
-//各种导体材质（conductor）的消光系数
+//各种导体材质（conductor）的消光系数（extinction coefficient）
 const std::map<std::string, Vector3> IOR_k{
 	{"a-C", Vector3(0.88555f, 0.79763f, 0.81356f)},
 	
