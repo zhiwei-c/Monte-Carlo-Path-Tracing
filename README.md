@@ -5,41 +5,41 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 ## 1 支持的绘制配置文件格式
 
-- 自拟的 json 格式文件；
+- 自拟的[ json 格式文件](resources/scenes/cornell-box/scene.json)；
 
-- mitsuba 0.5 定义的 xml 格式文件（部分支持）；
+- mitsuba 0.5 定义的[ xml 格式文件](resources/rendering_resources/bathroom/scene.xml)（部分支持）；
 
 ## 2 实现的功能
 
 ### 2.1 表面散射模型（Surface scattering models）
 
-- 朗伯模型（Lambert's model）定义的，平滑的漫反射材质（smooth diffuse material）；
+- 朗伯模型（Lambert's model）定义的，[平滑的漫反射材质（smooth diffuse material）](src/material/bsdfs/diffuse.h)；
 
-- 冯模型（Phong model）定义的，有光泽的材质（glossy material）;
+- 冯模型（Phong model）定义的，[有光泽的材质（glossy material）](src/material/bsdfs/glossy.h);
 
-- 平滑的电介质材质（smooth dielectric material）；
+- [平滑的电介质材质（smooth dielectric material）](src/material/bsdfs/dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-dielectric-material-dielectric)；
 
   ![cornell_box-smooth_dielectric](resources/cornell_box-smooth_dielectric.png)
 
-- 微表面模型（microfacet model）定义的，粗糙的电介质材质（rough dielectric material）；
+- 微表面模型（microfacet model）定义的，[粗糙的电介质材质（rough dielectric material）](src/material/bsdfs/rough_dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-dielectric-material-roughdielectric)；
 
   ![cornell_box-rough_dielectric](resources/cornell_box-rough_dielectric.png)
 
-- 薄的电介质材质（thin dielectric material）；
+- [薄的电介质材质（thin dielectric material）](src/material/bsdfs/thin_dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#thin-dielectric-material-thindielectric)；
 
-- 平滑的导体材质（smooth conductor material）；
+- [平滑的导体材质（smooth conductor material）](src/material/bsdfs/conductor.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-conductor-conductor)；
 
   ![Al_smooth](resources/Al_smooth.png)
 
-- 微表面模型（microfacet model）定义的，粗糙的导体材质（rough conductor material）；
+- 微表面模型（microfacet model）定义的，[粗糙的导体材质（rough conductor material）](src/material/bsdfs/rough_conductor.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-conductor-material-roughconductor)；
 
   ![Al_rough](resources/Al_rough.png)
 
-- 平滑的塑料材质（smooth plastic material）；
+- [平滑的塑料材质（smooth plastic material）](src/material/bsdfs/plastic.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-plastic-material-plastic)；
 
   ![smooth_plastic-bump_mapping](resources/smooth_plastic-bump_mapping.png)
 
-- 粗糙的塑料材质（rough plastic material）；（可能存在错误，may contain errors）
+- [粗糙的塑料材质（rough plastic material）](src/material/bsdfs/rough_plastic.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-plastic-material-roughplastic)；（可能存在错误，may contain errors）
 
 ### 2.2 积分器（Integrators）
 
