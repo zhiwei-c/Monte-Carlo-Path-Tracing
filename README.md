@@ -101,13 +101,13 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 - 《[Contemporary Bathroom](http://www.blendswap.com/blends/view/75302)》 by [Mareck](http://www.blendswap.com/users/view/Mareck)，来源于[Rendering Resources | Benedikt Bitterli's Portfolio ](https://benedikt-bitterli.me/resources/)；
   
-  - 以16K，4 spp 绘制；
+  - 以16K，9 spp 绘制；
 
   ![bathroom](resources/bathroom.png)
 
 - 《[The Grey & White Room](http://www.blendswap.com/blends/view/75795)》 by [Wig42](http://www.blendswap.com/users/view/Wig42)，来源于[Rendering Resources | Benedikt Bitterli's Portfolio ](https://benedikt-bitterli.me/resources/)；
 
-  - 以16K，4 spp 绘制；
+  - 以16K，9 spp 绘制；
 
   ![living-room](resources/living-room.png)
 
