@@ -29,11 +29,15 @@ public:
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     std::pair<Vector3, BsdfSamplingType> Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
     {
-        auto ior_in = !inside ? ext_ior_ : int_ior_, //法线同侧介质折射率，此处也是光线入射侧介质折射率
-            ior_t = !inside ? int_ior_ : ext_ior_;   //法线对侧介质折射率，此处也是光线透射侧介质折射率
+        auto ior_in = ext_ior_, //法线同侧介质折射率，此处也是光线入射侧介质折射率
+            ior_t = int_ior_;   //法线对侧介质折射率，此处也是光线透射侧介质折射率
 
         const auto &wi_pseudo = -wo;
         auto kr_pseudo = Fresnel(wi_pseudo, normal, ior_in, ior_t);
+
+        //考虑光线在材质内部多次反射: r' = r + trt + tr^3t + ..
+        kr_pseudo *= 2 / (1 + kr_pseudo);
+
         auto sample_x = UniformFloat();
         if (sample_x < kr_pseudo)
             return {-Reflect(wi_pseudo, normal), BsdfSamplingType::kReflection};
@@ -44,11 +48,16 @@ public:
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
     Vector3 Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
     {
-        auto ior_in = !inside ? ext_ior_ : int_ior_, //法线同侧介质折射率，此处也是光线入射侧介质折射率
-            ior_t = !inside ? int_ior_ : ext_ior_;   //法线对侧介质折射率，此处也是光线透射侧介质折射率
+        auto ior_in = ext_ior_, //法线同侧介质折射率，此处也是光线入射侧介质折射率
+            ior_t = int_ior_;   //法线对侧介质折射率，此处也是光线透射侧介质折射率
 
         Vector3 weight(0);
+
         auto kr = Fresnel(wi, normal, ior_in, ior_t);
+        //考虑光线在材质内部多次反射: r' = r + trt + tr^3t + ..
+        if (kr < 1)
+            kr *= 2 / (1 + kr);
+
         if (bsdf_sampling_type == BsdfSamplingType::kReflection ||
             SameDirection(wo, Reflect(wi, normal)))
         {
@@ -69,10 +78,14 @@ public:
     ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
     Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
     {
-        auto ior_in = !inside ? ext_ior_ : int_ior_, //法线同侧介质折射率，此处也是光线入射侧介质折射率
-            ior_t = !inside ? int_ior_ : ext_ior_;   //法线对侧介质折射率，此处也是光线透射侧介质折射率
+        auto ior_in = ext_ior_, //法线同侧介质折射率，此处也是光线入射侧介质折射率
+            ior_t = int_ior_;   //法线对侧介质折射率，此处也是光线透射侧介质折射率
 
         auto kr = Fresnel(wi, normal, ior_in, ior_t);
+        //考虑光线在材质内部多次反射: r' = r + trt + tr^3t + ..
+        if (kr < 1)
+            kr *= 2 / (1 + kr);
+
         if (bsdf_sampling_type == BsdfSamplingType::kReflection ||
             SameDirection(wo, Reflect(wi, normal)))
         {
