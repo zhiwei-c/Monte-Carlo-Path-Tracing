@@ -220,12 +220,15 @@ void XmlParser::ParseBsdf(rapidxml::xml_node<> *node_bsdf, const std::string *id
 		ParseDiffuse(node_bsdf, id);
 		break;
 	case "dielectric"_hash:
+		twsided = true;
 		ParseDielectric(node_bsdf, id);
 		break;
 	case "roughdielectric"_hash:
+		twsided = true;
 		ParseRoughDielectric(node_bsdf, id);
 		break;
 	case "thindielectric"_hash:
+		twsided = true;
 		ParseDielectric(node_bsdf, id, true);
 		break;
 	case "conductor"_hash:
