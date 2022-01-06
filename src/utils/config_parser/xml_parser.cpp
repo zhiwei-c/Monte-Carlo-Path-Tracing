@@ -317,9 +317,9 @@ void XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, std::stri
 	auto int_ior = GetIor(node_dielectric, "intIOR", "bk7");
 	auto ext_ior = GetIor(node_dielectric, "extIOR", "air");
 	if (thin)
-		bsdfs_.push_back(new ThinDielectric(id, int_ior, ext_ior));
+		bsdfs_.push_back(new ThinDielectric(id, ext_ior, int_ior));
 	else
-		bsdfs_.push_back(new Dielectric(id, int_ior, ext_ior));
+		bsdfs_.push_back(new Dielectric(id, ext_ior, int_ior));
 }
 
 void XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric, std::string id)
