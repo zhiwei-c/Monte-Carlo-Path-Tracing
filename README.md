@@ -5,7 +5,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 ## 1 支持的绘制配置文件格式
 
-- 自拟的[ json 格式文件](resources/scenes/cornell-box/scene.json)；
+- 自拟的[ json 格式文件](resources/rendering_resources/cornell-box/scene.json)；
 
 - mitsuba 0.5 定义的[ xml 格式文件](resources/rendering_resources/bathroom/scene.xml)（部分支持）；
 
