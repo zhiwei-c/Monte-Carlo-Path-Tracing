@@ -30,9 +30,8 @@ public:
 				   std::unique_ptr<Vector3> specular_reflectance = nullptr)
 		: Material(id, MaterialType::kRoughConductor),
 		  mirror_(mirror),
-		  eta_(eta),
-		  k_(k),
-		  ext_ior_(ext_ior),
+		  eta_(eta / ext_ior),
+		  k_(k / ext_ior),
 		  distrib_type_(distrib_type),
 		  alpha_u_(alpha_u),
 		  alpha_v_(alpha_v),
@@ -70,7 +69,7 @@ public:
 		auto G = distrib->SmithG1(-wi, h, normal) * distrib->SmithG1(wo, h, normal);
 		DeleteDistribPointer(distrib);
 
-		auto weight = F * static_cast<Float>(D * G / (4.f * std::fabs(cos_i_n * cos_o_n)));
+		auto weight = F * static_cast<Float>(D * G / (4 * std::fabs(cos_i_n * cos_o_n)));
 		if (specular_reflectance_ != nullptr)
 			weight *= *specular_reflectance_;
 		return weight;
@@ -97,9 +96,8 @@ public:
 
 private:
 	bool mirror_;									//是否是镜面
-	Vector3 eta_;									//材质折射率的实部
-	Vector3 k_;										//材质折射率的虚部,
-	Float ext_ior_;									//外部介质折射率
+	Vector3 eta_;									//材质相对折射率的实部
+	Vector3 k_;										//材质相对折射率的虚部,
 	std::unique_ptr<Vector3> specular_reflectance_; //镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
 	MicrofacetDistribType distrib_type_;			//用于模拟表面粗糙度的微表面分布的类型
 	Float alpha_u_;									//沿切线（tangent）方向的粗糙度

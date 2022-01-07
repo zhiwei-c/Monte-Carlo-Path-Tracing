@@ -23,9 +23,8 @@ public:
               std::unique_ptr<Vector3> specular_reflectance = nullptr)
         : Material(id, MaterialType::kConductor),
           mirror_(mirror),
-          eta_(eta),
-          k_(k),
-          ext_ior_(ext_ior),
+          eta_(eta / ext_ior),
+          k_(k / ext_ior),
           specular_reflectance_(std::move(specular_reflectance)) {}
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
@@ -66,9 +65,8 @@ public:
 
 private:
     bool mirror_;                                   //是否是镜面
-    Vector3 eta_;                                   //材质折射率的实部
-    Vector3 k_;                                     //材质折射率的虚部
-    Float ext_ior_;                                 //外部介质折射率
+    Vector3 eta_;                                   //材质相对折射率的实部
+    Vector3 k_;                                     //材质相对折射率的虚部（消光系数）
     std::unique_ptr<Vector3> specular_reflectance_; //调节镜面反射分量的可选参数。注意，对于物理真实感绘制，不应设置此参数。
 };
 

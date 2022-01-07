@@ -10,45 +10,43 @@ public:
     /**
 	 * \brief 光滑的电介质材质
 	 * \param id 材质id
-	 * \param ext_ior 外折射率
+	 * \param ior_ext 外折射率
 	 * \param ior_int 内折射率
 	 * \param specular_reflectance 可选参数，调节镜面反射分量。注意，对于物理真实感绘制，不应设置此参数。
 	 * \param specular_transmittance 可选参数，调节镜面透射分量。注意，对于物理真实感绘制，不应设置此参数。
 	*/
     Dielectric(const std::string &id,
-               Float ext_ior,
+               Float ior_ext,
                Float ior_int,
                std::unique_ptr<Vector3> specular_reflectance = nullptr,
                std::unique_ptr<Vector3> specular_transmittance = nullptr)
         : Material(id, MaterialType::kDielectric),
-          ext_ior_(ext_ior),
-          int_ior(ior_int),
+          ior_in_(ior_int / ior_ext),
+          ior_out_(ior_ext / ior_int),
           specular_reflectance_(std::move(specular_reflectance)),
           specular_transmittance_(std::move(specular_transmittance)) {}
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     std::pair<Vector3, BsdfSamplingType> Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
     {
-        auto ior_in = !inside ? ext_ior_ : int_ior, //法线同侧介质折射率，此处也是光线入射侧介质折射率
-            ior_t = !inside ? int_ior : ext_ior_;   //法线对侧介质折射率，此处也是光线透射侧介质折射率
+        auto eta_inv = inside ? ior_in_ : ior_out_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
         const auto &wi_pseudo = -wo;
-        auto kr_pseudo = Fresnel(wi_pseudo, normal, ior_in, ior_t);
+        auto kr_pseudo = Fresnel(wi_pseudo, normal, eta_inv);
         auto sample_x = UniformFloat();
         if (sample_x < kr_pseudo)
             return {-Reflect(wi_pseudo, normal), BsdfSamplingType::kReflection};
         else
-            return {-Refract(wi_pseudo, normal, ior_in, ior_t), BsdfSamplingType::kTransmission};
+            return {-Refract(wi_pseudo, normal, eta_inv), BsdfSamplingType::kTransmission};
     }
 
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
     Vector3 Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
     {
-        auto ior_in = !inside ? ext_ior_ : int_ior, //法线同侧介质折射率，此处也是光线入射侧介质折射率
-            ior_t = !inside ? int_ior : ext_ior_;   //法线对侧介质折射率，此处也是光线透射侧介质折射率
+        auto eta_inv = inside ? ior_in_ : ior_out_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
         Vector3 weight(0);
-        auto kr = Fresnel(wi, normal, ior_in, ior_t);
+        auto kr = Fresnel(wi, normal, eta_inv);
         if (bsdf_sampling_type == BsdfSamplingType::kReflection ||
             SameDirection(wo, Reflect(wi, normal)))
         {
@@ -57,14 +55,14 @@ public:
                 weight *= *specular_reflectance_;
         }
         else if (bsdf_sampling_type == BsdfSamplingType::kTransmission ||
-                 SameDirection(wo, Refract(wi, normal, ior_in, ior_t)))
+                 SameDirection(wo, Refract(wi, normal, eta_inv)))
         {
             weight = Vector3(1 - kr);
             if (specular_transmittance_)
                 weight *= *specular_transmittance_;
 
             //光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
-            weight *= Sqr(ior_in / ior_t);
+            weight *= Sqr(eta_inv);
         }
         return weight;
     }
@@ -72,10 +70,9 @@ public:
     ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
     Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
     {
-        auto ior_in = !inside ? ext_ior_ : int_ior, //法线同侧介质折射率，此处也是光线入射侧介质折射率
-            ior_t = !inside ? int_ior : ext_ior_;   //法线对侧介质折射率，此处也是光线透射侧介质折射率
+        auto eta_inv = inside ? ior_in_ : ior_out_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
-        auto kr = Fresnel(wi, normal, ior_in, ior_t);
+        auto kr = Fresnel(wi, normal, eta_inv);
 
         if (bsdf_sampling_type == BsdfSamplingType::kReflection ||
             SameDirection(wo, Reflect(wi, normal)))
@@ -85,15 +82,15 @@ public:
             return 0;
 
         if (bsdf_sampling_type == BsdfSamplingType::kTransmission ||
-            SameDirection(wo, Refract(wi, normal, ior_in, ior_t)))
+            SameDirection(wo, Refract(wi, normal, eta_inv)))
             return 1 - kr;
 
         return 0;
     }
 
 private:
-    Float ext_ior_;                                   //外折射率
-    Float int_ior;                                    //内折射率
+    Float ior_in_;                                    //光线射入材质的相对折射率
+    Float ior_out_;                                   //光线从材质内部射出的相对折射率
     std::unique_ptr<Vector3> specular_reflectance_;   //调节镜面反射分量的可选参数。（注意：对于物理真实感绘制，不应设置此参数）
     std::unique_ptr<Vector3> specular_transmittance_; //调节镜面透射分量的可选参数。（注意：对于物理真实感绘制，不应设置此参数）
 };

@@ -105,33 +105,30 @@ inline Vector3 Reflect(const Vector3 &wi, Vector3 normal)
 }
 
 /**
- * \brief 根据光线入射方向、表面法线方向与折射率，计算光线完美折射方向
+ * \brief 根据光线入射方向、表面法线方向与相对折射率，计算光线完美折射方向
  * \param wi 光线入射方向；
  * \param normal 表面法线方向；（注意：已处理为与光线入射方向夹角大于90度）
- * \param eta_i 光线入射侧介质折射率
- * \param eta_t 光线透射侧介质折射率
+ * \param eta_inv 相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
  * \return 光线完美折射方向
  */
-inline Vector3 Refract(const Vector3 &wi, const Vector3 &normal, Float eta_i, Float eta_t)
+inline Vector3 Refract(const Vector3 &wi, const Vector3 &normal, Float eta_inv)
 {
 	auto cos_theta_i = std::fabs(glm::dot(wi, normal));
-	auto eta = eta_i / eta_t;
-	auto k = 1 - eta * eta * (1 - cos_theta_i * cos_theta_i);
-	return (k < 0) ? Vector3(0) : glm::normalize((eta * wi + (eta * cos_theta_i - std::sqrt(k)) * normal));
+	auto k = 1 - Sqr(eta_inv) * (1 - Sqr(cos_theta_i));
+	return (k < 0) ? Vector3(0) : glm::normalize((eta_inv * wi + (eta_inv * cos_theta_i - std::sqrt(k)) * normal));
 }
 
 /**
- * \brief 根据光线入射方向、表面法线方向与折射率，计算菲涅尔系数；
+ * \brief 根据光线入射方向、表面法线方向与相对折射率，计算菲涅尔系数；
  * \param wi 光线入射方向
  * \param normal 表面法线方向（注意：已处理为与光线入射方向夹角大于90度）
- * \param eta_i 光线入射侧介质折射率
- * \param eta_t 光线透射侧介质折射率
+ * \param eta_inv 相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
  * \return 菲涅尔系数。
  */
-inline Float Fresnel(const Vector3 &wi, const Vector3 &normal, Float eta_i, Float eta_t)
+inline Float Fresnel(const Vector3 &wi, const Vector3 &normal, Float eta_inv)
 {
 	auto cos_theta_i = std::fabs(glm::dot(wi, normal));
-	auto cos_theta_t_2 = 1 - Sqr(eta_i / eta_t) * (1 - Sqr(cos_theta_i));
+	auto cos_theta_t_2 = 1 - Sqr(eta_inv) * (1 - Sqr(cos_theta_i));
 
 	if (cos_theta_t_2 <= 0)
 	{
@@ -140,18 +137,18 @@ inline Float Fresnel(const Vector3 &wi, const Vector3 &normal, Float eta_i, Floa
 	else
 	{
 		auto cos_theta_t = std::sqrt(cos_theta_t_2);
-		auto Rs_sqrt = ((eta_i * cos_theta_i) - (eta_t * cos_theta_t)) / ((eta_i * cos_theta_i) + (eta_t * cos_theta_t)),
-			 Rp_sqrt = ((eta_t * cos_theta_i) - (eta_i * cos_theta_t)) / ((eta_t * cos_theta_i) + (eta_i * cos_theta_t));
+		auto Rs_sqrt = (eta_inv * cos_theta_i - cos_theta_t) / (eta_inv * cos_theta_i + cos_theta_t),
+			 Rp_sqrt = (cos_theta_i - eta_inv * cos_theta_t) / (cos_theta_i + eta_inv * cos_theta_t);
 		return (Rs_sqrt * Rs_sqrt + Rp_sqrt * Rp_sqrt) / 2;
 	}
 }
 
 /**
- * \brief 根据光线入射方向、表面法线方向与折射率，计算导体的菲涅尔系数；
+ * \brief 根据光线入射方向、表面法线方向与相对折射率，计算导体的菲涅尔系数；
  * \param wi 光线入射方向
  * \param normal 表面法线方向
- * \param eta_r 折射率的实部
- * \param eta_i 折射率的虚部（消光系数）
+ * \param eta_r 相对折射率的实部
+ * \param eta_i 相对折射率的虚部（消光系数）
  * \return 菲涅尔系数
  */
 inline Vector3 FresnelConductor(const Vector3 &wi, const Vector3 &normal, const Vector3 &eta_r, const Vector3 &eta_i)
