@@ -105,6 +105,10 @@ public:
 			auto weight = Vector3(std::fabs(cos_i_h * cos_o_h * ior_t * ior_t * (1 - F) * G * D / (cos_i_n * cos_o_n * std::pow(ior_in * cos_i_h + ior_t * cos_o_h, 2))));
 			if (specular_transmittance_)
 				weight *= *specular_transmittance_;
+			
+            //光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
+            weight *= Sqr(ior_in / ior_t);
+			
 			return weight;
 		}
 	}

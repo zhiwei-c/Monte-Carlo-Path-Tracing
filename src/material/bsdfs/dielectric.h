@@ -62,6 +62,9 @@ public:
             weight = Vector3(1 - kr);
             if (specular_transmittance_)
                 weight *= *specular_transmittance_;
+
+            //光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
+            weight *= Sqr(ior_in / ior_t);
         }
         return weight;
     }
