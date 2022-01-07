@@ -130,16 +130,16 @@ inline Vector3 Refract(const Vector3 &wi, const Vector3 &normal, Float eta_i, Fl
  */
 inline Float Fresnel(const Vector3 &wi, const Vector3 &normal, Float eta_i, Float eta_t)
 {
-	auto cos_theta_i = glm::dot(wi, normal);
-	auto sin_theta_t = eta_i / eta_t * std::sqrt(std::max(static_cast<decltype(cos_theta_i)>(0), 1 - cos_theta_i * cos_theta_i));
-	if (sin_theta_t >= 1 - kEpsilon)
+	auto cos_theta_i = std::fabs(glm::dot(wi, normal));
+	auto cos_theta_t_2 = 1 - Sqr(eta_i / eta_t) * (1 - Sqr(cos_theta_i));
+
+	if (cos_theta_t_2 <= 0)
 	{
 		return 1;
 	}
 	else
 	{
-		auto cos_theta_t = std::fabs(std::max(static_cast<decltype(sin_theta_t)>(0), 1 - sin_theta_t * sin_theta_t));
-		cos_theta_i = std::fabs(cos_theta_i);
+		auto cos_theta_t = std::sqrt(cos_theta_t_2);
 		auto Rs_sqrt = ((eta_i * cos_theta_i) - (eta_t * cos_theta_t)) / ((eta_i * cos_theta_i) + (eta_t * cos_theta_t)),
 			 Rp_sqrt = ((eta_t * cos_theta_i) - (eta_i * cos_theta_t)) / ((eta_t * cos_theta_i) + (eta_i * cos_theta_t));
 		return (Rs_sqrt * Rs_sqrt + Rp_sqrt * Rp_sqrt) / 2;
@@ -325,7 +325,7 @@ const std::map<std::string, Vector3> IOR_eta{
 //各种导体材质（conductor）的消光系数（extinction coefficient）
 const std::map<std::string, Vector3> IOR_k{
 	{"a-C", Vector3(0.88555f, 0.79763f, 0.81356f)},
-	
+
 	{"Ag", Vector3(4.81810f, 3.11562f, 2.14240f)},
 
 	{"Al", Vector3(9.20430f, 6.25621f, 4.82675f)},
@@ -392,7 +392,7 @@ const std::map<std::string, Vector3> IOR_k{
 
 	{"Nb", Vector3(3.43408f, 2.73183f, 2.57445f)},
 	{"Nb_palik", Vector3(3.43408f, 2.73183f, 2.57445f)},
-	
+
 	{"Ni", Vector3(4.48929f, 3.04369f, 2.34046f)},
 	{"Ni_palik", Vector3(4.48929f, 3.04369f, 2.34046f)},
 

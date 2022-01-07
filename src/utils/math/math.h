@@ -57,6 +57,12 @@ inline T ClampBottom(T bottom, T num)
 }
 
 template <typename T>
+inline T Sqr(T num)
+{
+    return num * num;
+}
+
+template <typename T>
 bool SolveQuadratic(T a, T b, T c, Float &x0, Float &x1)
 {
     /* Linear case */
