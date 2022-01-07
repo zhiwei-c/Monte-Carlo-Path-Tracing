@@ -367,6 +367,8 @@ void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string
 			exit(1);
 		}
 	}
+	else if (node_conductor->first_node() == nullptr)
+		bsdfs_.push_back(new Conductor(id, true, Vector3(1), Vector3(1), ext_eta));
 	else
 	{
 		auto node_eta = GetChild(node_conductor, "eta", false);
