@@ -142,8 +142,9 @@ public:
         DeleteDistribPointer(distrib);
 
         auto value = F * D * G / (4 * std::fabs(cos_i_n * cos_o_n));
-        auto weight_loss = EvalMultipleScatter(cos_i_n, cos_o_n);
-        value += weight_loss;
+
+        if (albedo_avg_ < kOneMinusEpsilon)
+            value += EvalMultipleScatter(cos_i_n, cos_o_n);
 
         weight += specular_reflectance_ * value;
 

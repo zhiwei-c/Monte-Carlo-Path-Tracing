@@ -85,9 +85,10 @@ public:
 		if (specular_reflectance_ != nullptr)
 			weight *= *specular_reflectance_;
 
-		auto weight_loss = EvalMultipleScatter(cos_i_n, cos_o_n);
+		if (albedo_avg_ < kOneMinusEpsilon)
+			weight += EvalMultipleScatter(cos_i_n, cos_o_n);
 
-		return weight + weight_loss;
+		return weight;
 	}
 
 	///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率

@@ -110,9 +110,13 @@ public:
 			if (specular_reflectance_)
 				weight *= *specular_reflectance_;
 
-			auto weight_loss = (1 - ratio_t) * EvalMultipleScatter(cos_i_n, cos_o_n, inside);
+			if (albedo_avg_ < kOneMinusEpsilon)
+			{
+				auto weight_loss = (1 - ratio_t) * EvalMultipleScatter(cos_i_n, cos_o_n, inside);
+				weight += Vector3(weight_loss);
+			}
 
-			return weight + Vector3(weight_loss);
+			return weight;
 		}
 		else
 		{
@@ -123,9 +127,11 @@ public:
 			if (specular_transmittance_)
 				weight *= *specular_transmittance_;
 
-			auto weight_loss = ratio_t * EvalMultipleScatter(cos_i_n, cos_o_n, inside);
-
-			weight += Vector3(weight_loss);
+			if (albedo_avg_ < kOneMinusEpsilon)
+			{
+				auto weight_loss = ratio_t * EvalMultipleScatter(cos_i_n, cos_o_n, inside);
+				weight += Vector3(weight_loss);
+			}
 
 			//光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
 			weight *= Sqr(eta_inv);

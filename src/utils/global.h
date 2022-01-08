@@ -26,6 +26,7 @@ using Mat3 = glm::dmat3;
 const std::string kFstr = "%lf";
 
 constexpr auto kEpsilon = static_cast<Float>(1e-10);
+constexpr auto kOneMinusEpsilon = static_cast<Float>(1 - 1e-10);
 constexpr auto kEpsilonDistance = static_cast<Float>(1e-10);
 constexpr auto kEpsilonL = static_cast<Float>(1e-3);
 

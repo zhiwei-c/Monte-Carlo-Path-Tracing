@@ -9,7 +9,11 @@ class Microfacet : public Material
 {
 public:
     /**
-	 * \brief 微表面模型
+	 * \brief 微表面模型。参数 alpha 控制表面的粗糙程度：
+     *      0.001 到 0.01 的 alpha 对应于有轻微瑕疵的光滑表面；
+     *      0.1 的 alpha 是相对粗糙的表面；
+     *      0.3 到 0.7 的 alpha 是极其粗糙的表面，例如被蚀刻或研磨的表面；
+     *      过高的 alpha 可能不太接近实际情况。
 	 * \param id 材质id
 	 * \param type 材质类型
 	 * \param distrib_type 用于模拟表面粗糙度的微表面分布的类型
