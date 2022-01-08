@@ -131,7 +131,7 @@ public:
 
         auto kr_i = Fresnel(wi, normal, eta_inv);
         auto kr_o = Fresnel(-wo, normal, eta_inv);
-        weight *= Sqr(eta_inv) * (1 - kr_i) * (1 - kr_o);
+        weight *= Sqr(eta_inv) * (1 - kr_i) * (1 - kr_o) * kPiInv;
 
         auto h = glm::normalize(-wi + wo);
         auto F = Fresnel(wi, h, eta_inv);
