@@ -53,6 +53,8 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 ### 2.3 其它
 
+- [使用Kulla和Conty提出的方法](https://fpsunflower.github.io/ckulla/data/s2017_pbs_imageworks_slides_v2.pdf)，尝试补上[微表面模型](https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf)没有建模的，微表面之间的多重散射；
+
 - 环境映射（environment mapping）
 
 - 凹凸映射（bump mapping）
@@ -74,7 +76,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
     | water                              | 水                           | silicone oil<br />silicone-oil                 | 硅油                 |
     | polypropylene                      | 聚丙烯                       |                                                |                      |
 
-- 内置了一些导体材质的[折射率](src/rendering/ray.h#L208)和[消光系数（extinction coefficient）](src/rendering/ray.h#L325)，在配置文件中可根据名称直接调用：
+- 内置了一些导体材质的[折射率](src/rendering/ray.h#L268)和[消光系数（extinction coefficient）](src/rendering/ray.h#L385)，在配置文件中可根据名称直接调用：
 
     | 名称（Preset(s)）    | 说明（Description）                   | 名称（Preset(s)）    | 说明（Description）                           |
     | -------------------- | ------------------------------------- | -------------------- | --------------------------------------------- |
@@ -143,6 +145,8 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 - 《[GAMES101: 现代计算机图形学入门 ](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》
 
 - [Mitsuba renderer](https://github.com/mitsuba-renderer/mitsuba)
+
+- 《[GAMES202: 高质量实时渲染](https://sites.cs.ucsb.edu/~lingqi/teaching/games202.html)》
 
   
 
