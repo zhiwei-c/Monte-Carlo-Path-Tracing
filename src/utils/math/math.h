@@ -62,6 +62,30 @@ inline T Sqr(T num)
     return num * num;
 }
 
+inline Float Lerp(Float t, Float v1, Float v2)
+{
+    return (1 - t) * v1 + t * v2;
+}
+
+template <typename Predicate>
+int FindInterval(int size, const Predicate &pred)
+{
+    int first = 0, len = size;
+    while (len > 0)
+    {
+        int half = len >> 1, middle = first + half;
+        // Bisect range based on value of _pred_ at _middle_
+        if (pred(middle))
+        {
+            first = middle + 1;
+            len -= half + 1;
+        }
+        else
+            len = half;
+    }
+    return Clamp(first - 1, 0, size - 2);
+}
+
 template <typename T>
 bool SolveQuadratic(T a, T b, T c, Float &x0, Float &x1)
 {

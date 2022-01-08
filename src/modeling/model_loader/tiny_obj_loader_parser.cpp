@@ -318,13 +318,13 @@ std::tuple<bool, Vector3, Vector3> GetEtaK(const std::map<std::string, std::stri
                 exit(1);
             }
             else
-                return {true, Vector3(1), Vector3(1)};
+                return {true, Vector3(0), Vector3(1)};
         }
         else
             return {false, eta.value(), k.value()};
     }
     else if (material_name == "none")
-        return {true, Vector3(1), Vector3(1)};
+        return {true, Vector3(0), Vector3(1)};
     else if (IOR_eta.find(material_name) != IOR_eta.end())
         return {false, IOR_eta.at(material_name), IOR_k.at(material_name)};
     else

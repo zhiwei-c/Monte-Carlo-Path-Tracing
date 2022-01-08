@@ -347,7 +347,7 @@ void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string
 		{
 			bsdfs_.push_back(new Conductor(id,
 										   true,
-										   Vector3(1),
+										   Vector3(0),
 										   Vector3(1),
 										   ext_eta));
 		}
@@ -368,7 +368,7 @@ void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string
 		}
 	}
 	else if (node_conductor->first_node() == nullptr)
-		bsdfs_.push_back(new Conductor(id, true, Vector3(1), Vector3(1), ext_eta));
+		bsdfs_.push_back(new Conductor(id, true, Vector3(0), Vector3(1), ext_eta));
 	else
 	{
 		auto node_eta = GetChild(node_conductor, "eta", false);
@@ -397,7 +397,7 @@ void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, 
 		{
 			bsdfs_.push_back(new RoughConductor(id,
 												true,
-												Vector3(1),
+												Vector3(0),
 												Vector3(1),
 												GetDistrbType(distri),
 												alpha_u,

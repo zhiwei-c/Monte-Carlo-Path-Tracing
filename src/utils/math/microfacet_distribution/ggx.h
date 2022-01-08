@@ -13,15 +13,12 @@ public:
     GGX(Float alpha_u, Float alpha_v)
         : MicrofacetDistribution(MicrofacetDistribType::kGgx, alpha_u, alpha_v) {}
 
-    Vector3 Sample(const Vector3 &normal_macro) const
+    Vector3 Sample(const Vector3 &normal_macro, const Vector2 &sample) const
     {
         Float sin_phi, cos_phi, alpha_2;
-
-        auto u_1 = UniformFloat();
-        auto u_2 = UniformFloat();
         if (isotropic_)
         {
-            auto phi = 2 * kPi * u_2;
+            auto phi = 2 * kPi * sample.y;
             cos_phi = std::cos(phi);
             sin_phi = std::sin(phi);
             alpha_2 = alpha_u_ * alpha_u_;
@@ -29,15 +26,15 @@ public:
         else
         {
             Float ratio = alpha_v_ / alpha_u_,
-                  tmp = ratio * std::tan((2 * kPi) * u_2);
+                  tmp = ratio * std::tan((2 * kPi) * sample.y);
             cos_phi = 1 / std::sqrt(tmp * tmp + 1);
-            if (std::fabs(u_2 - .5f) - .25f > 0)
+            if (std::fabs(sample.y - .5f) - .25f > 0)
                 cos_phi = -cos_phi;
             sin_phi = cos_phi * tmp;
             alpha_2 = 1 / (std::pow(cos_phi / alpha_u_, 2) +
                            std::pow(sin_phi / alpha_v_, 2));
         }
-        auto tan_theta_2 = (alpha_2 * u_1) / (1 - u_1);
+        auto tan_theta_2 = (alpha_2 * sample.x) / (1 - sample.x);
         auto cos_theta = 1 / std::sqrt(1 + tan_theta_2),
              sin_theta = std::sqrt(1 - cos_theta * cos_theta);
 

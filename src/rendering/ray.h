@@ -185,14 +185,35 @@ inline Vector3 FresnelConductor(const Vector3 &wi, const Vector3 &normal, const 
 	return static_cast<Float>(.5) * (r_s + r_p);
 }
 
+/**
+ * \brief Computes the diffuse unpolarized Fresnel reflectance of a dielectric
+ *		material (sometimes referred to as "Fdr").
+ *		This value quantifies what fraction of diffuse incident illumination
+ *		will, on average, be reflected at a dielectric material boundary
+ * \param eta Relative refraction coefficient
+ * \return F, the unpolarized Fresnel coefficient.
+ */
 inline Float FresnelDiffuseReflectance(Float eta)
 {
 	if (eta < 1)
 	{
+		/* Fit by Egan and Hilgeman (1973). Works reasonably well for
+       		"normal" IOR values (<2).
+       		Max rel. error in 1.0 - 1.5 : 0.1%
+       		Max rel. error in 1.5 - 2   : 0.6%
+       		Max rel. error in 2.0 - 5   : 9.5%
+    	*/
 		return -1.4399 * (eta * eta) + 0.7099 * eta + 0.6681 + 0.0636 / eta;
 	}
 	else
 	{
+		/* Fit by d'Eon and Irving (2011)
+
+       		Maintains a good accuracy even for unrealistic IOR values.
+
+       		Max rel. error in 1.0 - 2.0   : 0.1%
+       		Max rel. error in 2.0 - 10.0  : 0.2%  
+		*/
 		auto inv_eta = 1 / eta,
 			 inv_eta_2 = inv_eta * inv_eta,
 			 inv_eta_3 = inv_eta_2 * inv_eta,
@@ -200,6 +221,48 @@ inline Float FresnelDiffuseReflectance(Float eta)
 			 inv_eta_5 = inv_eta_4 * inv_eta;
 		return 0.919317 - 3.4793 * inv_eta + 6.75335 * inv_eta_2 - 7.80989 * inv_eta_3 + 4.98554 * inv_eta_4 - 1.36881 * inv_eta_5;
 	}
+}
+
+/**
+ * \brief 根据 Gulbrandsen 提出的方法，将金属的折射率 eta 和消光系数 k 重新映射为两个更直观的参数——反射率 reflectivity 和边缘色差 edgetint，
+ * 		反射率具体而言是光线垂直表面入射时的反射率，边缘色差控制了观察方向与表面平行时颜色的偏差，
+ * 		参见 [《artist Friendly Metallic Fresnel》](https://jcgt.org/published/0003/04/03/paper.pdf)
+ * \param eta 相对折射率的实部
+ * \param k 相对折射率的虚部（消光系数）
+ * \return 由两个 Vector3 类型构成的 pair，分别代表反射率 reflectivity 和边缘色差 edgetint
+ */
+inline std::pair<Vector3, Vector3> IorToReflectivityEdgetint(const Vector3 &eta, const Vector3 &k)
+{
+	Vector3 reflectivity,
+		edgetint;
+	Float temp1, temp2;
+	for (int i = 0; i < 3; i++)
+	{
+		reflectivity[i] = (Sqr(eta[i] - 1) + Sqr(k[i])) / (Sqr(eta[i] + 1) + Sqr(k[i]));
+
+		temp1 = (1 + std::sqrt(reflectivity[i])) / (1 - std::sqrt(reflectivity[i]));
+		temp2 = (1 - reflectivity[i]) / (1 + reflectivity[i]);
+		edgetint[i] = (temp1 - eta[i]) / (temp1 - temp2);
+	}
+	return {reflectivity, edgetint};
+}
+
+///\brief 导体材质的平均菲涅尔系数，https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
+inline Vector3 AverageFresnelConductor(const Vector3 &r, const Vector3 &g)
+{
+	return Vector3(0.087237) + 0.0230685 * g - 0.0864902 * g * g + 0.0774594 * g * g * g + 0.782654 * r - 0.136432 * r * r + 0.278708 * r * r * r + 0.19744 * g * r + 0.0360605 * g * g * r - 0.2586 * g * r * r;
+}
+
+///\brief 电介质材质的平均菲涅尔系数，来自 https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
+inline Float AverageFresnelDielectric(Float eta)
+{
+	if (eta < 1)
+		return 0.997118 +
+			   0.1014 * eta -
+			   0.965241 * std::pow(eta, 2) -
+			   0.130607 * std::pow(eta, 3);
+	else
+		return (eta - 1) / (4.08567 + 1.00071 * eta);
 }
 
 //各种导体材质（conductor）的折射率（refractive index）

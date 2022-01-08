@@ -25,7 +25,14 @@ public:
           mirror_(mirror),
           eta_(eta / ext_ior),
           k_(k / ext_ior),
-          specular_reflectance_(std::move(specular_reflectance)) {}
+          specular_reflectance_(std::move(specular_reflectance))
+    {
+        if (mirror)
+        {
+            eta_ = Vector3(0);
+            k_ = Vector3(1) / ext_ior;
+        }
+    }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     std::pair<Vector3, BsdfSamplingType> Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override

@@ -13,16 +13,12 @@ public:
     Phong(Float alpha_u, Float alpha_v)
         : MicrofacetDistribution(MicrofacetDistribType::kPhong, alpha_u, alpha_v) {}
 
-    Vector3 Sample(const Vector3 &normal_macro) const
+    Vector3 Sample(const Vector3 &normal_macro, const Vector2 &sample) const
     {
         Float sin_phi, cos_phi, alpha_2;
-
-        auto u_1 = UniformFloat();
-        auto u_2 = UniformFloat();
-
         if (isotropic_)
         {
-            auto phi = 2 * kPi * u_2;
+            auto phi = 2 * kPi * sample.y;
             cos_phi = std::cos(phi);
             sin_phi = std::sin(phi);
             alpha_2 = alpha_u_ * alpha_u_;
@@ -30,9 +26,9 @@ public:
         else
         {
             Float ratio = alpha_v_ / alpha_u_,
-                  tmp = ratio * std::tan((2 * kPi) * u_2);
+                  tmp = ratio * std::tan((2 * kPi) * sample.y);
             cos_phi = 1 / std::sqrt(tmp * tmp + 1);
-            if (std::fabs(u_2 - .5) - .25 > 0)
+            if (std::fabs(sample.y - .5) - .25 > 0)
                 cos_phi = -cos_phi;
             sin_phi = cos_phi * tmp;
             alpha_2 = 1 / (std::pow(cos_phi / alpha_u_, 2) +
@@ -40,7 +36,7 @@ public:
         }
         auto alpha = 2 / alpha_2 - 2;
 
-        auto cos_theta = std::pow(u_1, 1 / (alpha + 2)),
+        auto cos_theta = std::pow(sample.x, 1 / (alpha + 2)),
              sin_theta = std::sqrt(1 - cos_theta * cos_theta);
 
         auto normal_micro_local = Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);

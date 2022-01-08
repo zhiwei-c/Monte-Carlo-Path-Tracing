@@ -16,7 +16,7 @@ enum class MicrofacetDistribType
 class MicrofacetDistribution
 {
 public:
-    virtual Vector3 Sample(const Vector3 &normal_macro) const = 0;
+    virtual Vector3 Sample(const Vector3 &normal_macro, const Vector2 &sample) const = 0;
 
     virtual Float Eval(const Vector3 &normal_micro, const Vector3 &normal_macro) const = 0;
 
