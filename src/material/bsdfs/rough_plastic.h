@@ -218,8 +218,8 @@ private:
 
     Float EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const
     {
-        auto albedo_i = GetAlbedo(cos_i_n);
-        auto albedo_o = GetAlbedo(cos_o_n);
+		auto albedo_i = GetAlbedo(std::fabs(cos_i_n));
+		auto albedo_o = GetAlbedo(std::fabs(cos_o_n));
         auto f_ms = (1 - albedo_o) * (1 - albedo_i) / (kPi * (1 - albedo_avg_));
         return f_ms * f_add_;
     }
