@@ -235,14 +235,15 @@ inline std::pair<Vector3, Vector3> IorToReflectivityEdgetint(const Vector3 &eta,
 {
 	Vector3 reflectivity,
 		edgetint;
-	Float temp1, temp2;
+	Float temp1, temp2, temp3;
 	for (int i = 0; i < 3; i++)
 	{
 		reflectivity[i] = (Sqr(eta[i] - 1) + Sqr(k[i])) / (Sqr(eta[i] + 1) + Sqr(k[i]));
 
-		temp1 = (1 + std::sqrt(reflectivity[i])) / (1 - std::sqrt(reflectivity[i]));
-		temp2 = (1 - reflectivity[i]) / (1 + reflectivity[i]);
-		edgetint[i] = (temp1 - eta[i]) / (temp1 - temp2);
+		temp1 = 1 + std::sqrt(reflectivity[i]);
+		temp2 = 1 - std::sqrt(reflectivity[i]);
+		temp3 = (1 - reflectivity[i]) / (1 + reflectivity[i]);
+		edgetint[i] = (temp1 - eta[i] * temp2) / (temp1 - temp3 * temp2);
 	}
 	return {reflectivity, edgetint};
 }

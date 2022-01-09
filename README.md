@@ -80,7 +80,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
     | water                              | 水                           | silicone oil<br />silicone-oil                 | 硅油                 |
     | polypropylene                      | 聚丙烯                       |                                                |                      |
 
-- 内置了一些导体材质的[折射率](src/rendering/ray.h#L268)和[消光系数（extinction coefficient）](src/rendering/ray.h#L385)，在配置文件中可根据名称直接调用：
+- 内置了一些导体材质的[折射率](src/rendering/ray.h#L269)和[消光系数（extinction coefficient）](src/rendering/ray.h#L386)，在配置文件中可根据名称直接调用：
 
     | 名称（Preset(s)）    | 说明（Description）                   | 名称（Preset(s)）    | 说明（Description）                           |
     | -------------------- | ------------------------------------- | -------------------- | --------------------------------------------- |
