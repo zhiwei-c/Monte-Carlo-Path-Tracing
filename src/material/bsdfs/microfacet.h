@@ -5,6 +5,11 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
+constexpr int kResolution = 512;
+constexpr Float step = 1.0 / kResolution;
+constexpr int sample_count = 1024;
+constexpr Float sample_count_inv = 1.0 / sample_count;
+
 class Microfacet : public Material
 {
 public:

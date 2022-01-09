@@ -14,6 +14,17 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	std::string output_name = "";
+	if (argc == 3){
+		output_name = simple_renderer::ConvertBackSlash(argv[2]);
+		auto out_directory = std::filesystem::path(simple_renderer::GetDirectory(argv[2]));
+		if (!std::filesystem::exists(out_directory))
+		{
+			std::cerr << "[error] invalid output directory :" << out_directory << std::endl;
+			exit(1);
+		}
+	}
+
 	auto file_path = simple_renderer::ConvertBackSlash(argv[1]);
 	std::filesystem::path file_path_now = file_path;
 	if (!std::filesystem::exists(file_path_now))
@@ -40,10 +51,6 @@ int main(int argc, char *argv[])
 				  << "\tunsupported config format." << std::endl;
 		exit(1);
 	}
-
-	std::string output_name = "";
-	if (argc == 3)
-		output_name = simple_renderer::ConvertBackSlash(argv[2]);
 
 	camera->Shoot(scene, output_name);
 

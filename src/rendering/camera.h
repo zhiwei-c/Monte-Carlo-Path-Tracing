@@ -136,8 +136,8 @@ public:
         delete integrator;
         integrator = nullptr;
         frame.Write(output_name);
-        std::cout << std::endl
-                  << "[info] Finished." << std::endl;
+        timer.PrintTimePassed();
+        std::cout << std::endl;
     }
 
 private:

@@ -27,7 +27,7 @@ public:
 		auto hours = static_cast<int>(diff / 3600);
 		auto mins = static_cast<int>(diff / 60) - hours * 60;
 		auto secs = static_cast<int>(diff) - hours * 3600 - mins * 60;
-		printf("Finished. It takes %i h, %i m, %i s.\n", hours, mins, secs);
+		printf("[info] Finished. It takes %i h, %i m, %i s.\n", hours, mins, secs);
 	}
 
 	//\brief 在命令行输出工作进度，已耗时和预估总耗时

@@ -58,6 +58,7 @@ std::tuple<Scene *, Camera *> XmlParser::Parse(const std::string &path)
 
 Scene *XmlParser::ParseScene(rapidxml::xml_node<> *node_scene)
 {
+	std::cout<<"[info] load bsdfs..."<<std::endl;
 	auto node_bsdf = node_scene->first_node("bsdf");
 	while (node_bsdf)
 	{
@@ -65,6 +66,7 @@ Scene *XmlParser::ParseScene(rapidxml::xml_node<> *node_scene)
 		node_bsdf = node_bsdf->next_sibling("bsdf");
 	}
 
+	std::cout<<"[info] load shapes..."<<std::endl;
 	auto node_shape = node_scene->first_node("shape");
 	while (node_shape)
 	{
