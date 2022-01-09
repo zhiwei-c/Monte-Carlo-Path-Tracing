@@ -19,15 +19,13 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 - [平滑的电介质材质（smooth dielectric material）](src/material/bsdfs/dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-dielectric-material-dielectric)；
 
-  ![dielectric](resources/rendering_results/dielectric.png)
+  ![cornell_box-dielectric](resources/rendering_results/cornell_box-dielectric.png)
 
 - 微表面模型（microfacet model）定义的，[粗糙的电介质材质（rough dielectric material）](src/material/bsdfs/rough_dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-dielectric-material-roughdielectric)；
 
   ![rough_dielectric](resources/rendering_results/rough_dielectric.png)
 
 - [薄的电介质材质（thin dielectric material）](src/material/bsdfs/thin_dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#thin-dielectric-material-thindielectric)；
-
-  ![thin_dielectric](resources/rendering_results/thin_dielectric.png)
 
 - [平滑的导体材质（smooth conductor material）](src/material/bsdfs/conductor.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-conductor-conductor)；
 
@@ -106,27 +104,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
     | Ir<br />Ir_palik     | 铱 Iridium                            | W                    | 钨 Tungsten                                   |
     | K<br />K_palik       | 多晶钾 Polycrystalline potassium      | none                 | 全反射镜面 100% reflecting mirror             |
 
-## 3 更多的绘制效果
-
-- 《[Contemporary Bathroom](http://www.blendswap.com/blends/view/75302)》 by [Mareck](http://www.blendswap.com/users/view/Mareck)，来源于[Rendering Resources | Benedikt Bitterli's Portfolio ](https://benedikt-bitterli.me/resources/)；
-  
-  - 以16K，9 spp 绘制；
-
-  ![bathroom](resources/rendering_results/bathroom.png)
-
-- 《[The Grey & White Room](http://www.blendswap.com/blends/view/75795)》 by [Wig42](http://www.blendswap.com/users/view/Wig42)，来源于[Rendering Resources | Benedikt Bitterli's Portfolio ](https://benedikt-bitterli.me/resources/)；
-
-  - 以16K，9 spp 绘制；
-
-  ![living-room](resources/rendering_results/living-room.png)
-
-- 《[Country Kitchen](http://www.blendswap.com/blends/view/42851)》 by [Jay-Artist](http://www.blendswap.com/user/Jay-Artist)，来源于[Rendering Resources | Benedikt Bitterli's Portfolio ](https://benedikt-bitterli.me/resources/)；
-
-  - 以16K，4 spp 绘制；
-
-  ![kitchen](resources/rendering_results/kitchen.png)
-
-## 4 依赖（Dependencies）
+## 3 依赖（Dependencies）
 
 建议使用 [vcpkg](https://github.com/microsoft/vcpkg) 进行 c++ 库管理。
 
@@ -144,7 +122,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 - [tinyexr](https://github.com/syoyo/tinyexr)
 
-## 5 参考
+## 4 参考（References）
 
 - 《[GAMES101: 现代计算机图形学入门 ](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》
 

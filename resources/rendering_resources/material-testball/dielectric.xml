@@ -14,8 +14,8 @@
 			<integer name="sampleCount" value="128" />
 		</sampler>
 		<film type="ldrfilm" >
-			<integer name="width" value="360" />
-			<integer name="height" value="360" />
+			<integer name="width" value="1024" />
+			<integer name="height" value="1024" />
 			<string name="fileFormat" value="png" />
 			<string name="pixelFormat" value="rgb" />
 			<float name="gamma" value="2.2" />

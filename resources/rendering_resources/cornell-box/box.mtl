@@ -8,17 +8,19 @@ newmtl white
 Kd 0.725 0.71 0.68
 
 newmtl tallbox
-type rough_conductor
-distribution ggx
-alpha 0.1
-material Al
+Kd 0.725 0.71 0.68
+# type rough_conductor
+# distribution ggx
+# alpha 0.1
+# material Al
 
 newmtl shortbox
-type rough_dielectric
-distribution ggx
-alpha 0.5
-extIOR 1.000277
-intIOR bk7
+type dielectric
+# type rough_dielectric
+# distribution ggx
+# alpha 0.5
+# extIOR 1.000277
+# intIOR bk7
 
 newmtl light
 Ke 47.8348007 38.5663986 31.0807991

@@ -17,8 +17,8 @@
             0
         ],
         "fov_height": 60,
-        "width": 640,
-        "height": 640,
+        "width": 11520,
+        "height": 11520,
         "spp": 4
     }
 }
