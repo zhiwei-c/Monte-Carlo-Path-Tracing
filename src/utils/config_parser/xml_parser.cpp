@@ -429,7 +429,7 @@ void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, 
 		auto eta = GetSpectrum(node_eta);
 		auto node_k = GetChild(node_rough_conductor, "k", false);
 		auto k = GetSpectrum(node_k);
-		bsdfs_.push_back(new RoughConductor(id, "", eta, k, GetDistrbType(distri), alpha_u, alpha_v, ext_eta));
+		bsdfs_.push_back(new RoughConductor(id, false, eta, k, GetDistrbType(distri), alpha_u, alpha_v, ext_eta));
 	}
 }
 
