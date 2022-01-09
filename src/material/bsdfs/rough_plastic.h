@@ -39,7 +39,6 @@ public:
           nonlinear_(nonlinear),
           eta_(int_ior / ext_ior),
           eta_inv_(ext_ior / int_ior),
-          alpha_(alpha),
           specular_reflectance_(specular_reflectance)
     {
         fdr_int_ = FresnelDiffuseReflectance(eta_inv_);
@@ -84,7 +83,7 @@ public:
         auto sample_x = UniformFloat();
         if (sample_x < pdf_specular)
         {
-            auto distrib = InitDistrib(distrib_type_, alpha_, alpha_);
+            auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_u_);
             auto normal_micro = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
             DeleteDistribPointer(distrib);
 
@@ -136,7 +135,7 @@ public:
         auto h = glm::normalize(-wi + wo);
         auto F = Fresnel(wi, h, eta_inv);
 
-        auto distrib = InitDistrib(distrib_type_, alpha_, alpha_);
+        auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_u_);
         auto D = distrib->Eval(h, normal);
         auto G = distrib->SmithG1(-wi, h, normal) * distrib->SmithG1(wo, h, normal);
         DeleteDistribPointer(distrib);
@@ -177,7 +176,7 @@ public:
         auto wo_local = ToLocal(wo, normal);
         auto result = pdf_diffuse * PdfHemisCos(wo_local);
 
-        auto distrib = InitDistrib(distrib_type_, alpha_, alpha_);
+        auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_u_);
         auto h = glm::normalize(-wi + wo);
         auto pdf_normal_micro = distrib->Eval(h, normal);
         DeleteDistribPointer(distrib);
@@ -207,8 +206,6 @@ private:
     Float eta_;                          // 光线射入材质的相对折射率
     Float eta_inv_;                      // 光线射出材质的相对折射率
     Vector3 specular_reflectance_;       // 镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
-    MicrofacetDistribType distrib_type_; // 用于模拟表面粗糙度的微表面分布的类型
-    Float alpha_;                        // 粗糙度
 
     Float fdr_ext_;
     Float fdr_int_;
