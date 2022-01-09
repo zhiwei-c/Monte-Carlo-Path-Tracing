@@ -14,8 +14,8 @@
 			<integer name="sampleCount" value="4" />
 		</sampler>
 		<film type="ldrfilm" >
-			<integer name="width" value="2880" />
-			<integer name="height" value="2880" />
+			<integer name="width" value="11520" />
+			<integer name="height" value="11520" />
 			<string name="fileFormat" value="exr" />
 			<string name="pixelFormat" value="rgb" />
 			<float name="gamma" value="2.2" />

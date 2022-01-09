@@ -19,27 +19,31 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 - [平滑的电介质材质（smooth dielectric material）](src/material/bsdfs/dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-dielectric-material-dielectric)；
 
-  ![cornell_box-smooth_dielectric](resources/cornell_box-smooth_dielectric.png)
+  ![dielectric](resources/rendering_results/dielectric.png)
 
 - 微表面模型（microfacet model）定义的，[粗糙的电介质材质（rough dielectric material）](src/material/bsdfs/rough_dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-dielectric-material-roughdielectric)；
 
-  ![cornell_box-rough_dielectric](resources/cornell_box-rough_dielectric.png)
+  ![rough_dielectric](resources/rendering_results/rough_dielectric.png)
 
 - [薄的电介质材质（thin dielectric material）](src/material/bsdfs/thin_dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#thin-dielectric-material-thindielectric)；
 
+  ![thin_dielectric](resources/rendering_results/thin_dielectric.png)
+
 - [平滑的导体材质（smooth conductor material）](src/material/bsdfs/conductor.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-conductor-conductor)；
 
-  ![Al_smooth](resources/Al_smooth.png)
+  ![Au](resources/rendering_results/Au.png)
 
 - 微表面模型（microfacet model）定义的，[粗糙的导体材质（rough conductor material）](src/material/bsdfs/rough_conductor.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-conductor-material-roughconductor)；
 
-  ![Al_rough](resources/Al_rough.png)
+  ![rough_Au](resources/rendering_results/rough_Au.png)
 
 - [平滑的塑料材质（smooth plastic material）](src/material/bsdfs/plastic.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-plastic-material-plastic)；
 
-  ![smooth_plastic-bump_mapping](resources/smooth_plastic-bump_mapping.png)
+  ![plastic](resources/rendering_results/plastic.png)
 
 - [粗糙的塑料材质（rough plastic material）](src/material/bsdfs/rough_plastic.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-plastic-material-roughplastic)；（可能存在错误，may contain errors）
+
+  ![rough_plastic](resources/rendering_results/rough_plastic.png)
 
 ### 2.2 积分器（Integrators）
 
@@ -108,19 +112,19 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
   
   - 以16K，9 spp 绘制；
 
-  ![bathroom](resources/bathroom.png)
+  ![bathroom](resources/rendering_results/bathroom.png)
 
 - 《[The Grey & White Room](http://www.blendswap.com/blends/view/75795)》 by [Wig42](http://www.blendswap.com/users/view/Wig42)，来源于[Rendering Resources | Benedikt Bitterli's Portfolio ](https://benedikt-bitterli.me/resources/)；
 
   - 以16K，9 spp 绘制；
 
-  ![living-room](resources/living-room.png)
+  ![living-room](resources/rendering_results/living-room.png)
 
 - 《[Country Kitchen](http://www.blendswap.com/blends/view/42851)》 by [Jay-Artist](http://www.blendswap.com/user/Jay-Artist)，来源于[Rendering Resources | Benedikt Bitterli's Portfolio ](https://benedikt-bitterli.me/resources/)；
 
   - 以16K，4 spp 绘制；
 
-  ![kitchen](resources/kitchen.png)
+  ![kitchen](resources/rendering_results/kitchen.png)
 
 ## 4 依赖（Dependencies）
 
