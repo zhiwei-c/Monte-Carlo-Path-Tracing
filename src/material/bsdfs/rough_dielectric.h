@@ -69,14 +69,29 @@ public:
 
 		auto sample_x = UniformFloat();
 		if (sample_x < kr_pseudo)
-			return {-Reflect(wi_pseudo, normal_micro), BsdfSamplingType::kReflection};
+		{
+			auto wi = -Reflect(wi_pseudo, normal_micro);
+			if (glm::dot(wi, normal) * glm::dot(wo, normal) >= 0)
+				return {Vector3(0), BsdfSamplingType::kNone};
+			else
+				return {wi, BsdfSamplingType::kReflection};
+		}
 		else
-			return {-Refract(wi_pseudo, normal_micro, eta_inv), BsdfSamplingType::kTransmission};
+		{
+			auto wi = -Refract(wi_pseudo, normal_micro, eta_inv);
+			if (glm::dot(wi, normal) * glm::dot(wo, normal) <= 0)
+				return {Vector3(0), BsdfSamplingType::kNone};
+			else
+				return {wi, BsdfSamplingType::kTransmission};
+		}
 	}
 
 	///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
 	Vector3 Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
 	{
+		if (bsdf_sampling_type == BsdfSamplingType::kNone)
+			return Vector3(0);
+
 		auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 		auto ratio_t = inside ? ratio_t_inv_ : ratio_t_;
 
@@ -143,6 +158,9 @@ public:
 	///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
 	Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
 	{
+		if (bsdf_sampling_type == BsdfSamplingType::kNone)
+			return 0;
+
 		auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
 		auto cos_i_n = glm::dot(-wi, normal),

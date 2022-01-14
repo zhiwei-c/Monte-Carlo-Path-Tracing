@@ -86,8 +86,11 @@ public:
             auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_u_);
             auto normal_micro = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
             DeleteDistribPointer(distrib);
-
-            return {-Reflect(wi_pseudo, normal_micro), BsdfSamplingType::kSpecularReflection};
+            auto wi = -Reflect(wi_pseudo, normal_micro);
+            if (glm::dot(wi, normal) * glm::dot(wo, normal) >= 0)
+                return {Vector3(0), BsdfSamplingType::kNone};
+            else
+                return {wi, BsdfSamplingType::kSpecularReflection};
         }
         else
         {
@@ -100,7 +103,7 @@ public:
     Vector3 Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
     {
 
-        if (NotSameHemis(wo, normal))
+        if (bsdf_sampling_type == BsdfSamplingType::kNone || NotSameHemis(wo, normal))
             return Vector3(0);
 
         auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
@@ -153,7 +156,7 @@ public:
     ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
     Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
     {
-        if (NotSameHemis(wo, normal))
+        if (bsdf_sampling_type == BsdfSamplingType::kNone || NotSameHemis(wo, normal))
             return 0;
 
         auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
@@ -200,12 +203,12 @@ public:
     }
 
 private:
-    Vector3 diffuse_reflectance_;        // 漫反射系数
-    Texture *diffuse_map_;               // 漫反射纹理
-    bool nonlinear_;                     // 是否考虑因内部散射而引起的非线性色移
-    Float eta_;                          // 光线射入材质的相对折射率
-    Float eta_inv_;                      // 光线射出材质的相对折射率
-    Vector3 specular_reflectance_;       // 镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
+    Vector3 diffuse_reflectance_;  // 漫反射系数
+    Texture *diffuse_map_;         // 漫反射纹理
+    bool nonlinear_;               // 是否考虑因内部散射而引起的非线性色移
+    Float eta_;                    // 光线射入材质的相对折射率
+    Float eta_inv_;                // 光线射出材质的相对折射率
+    Vector3 specular_reflectance_; // 镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
 
     Float fdr_ext_;
     Float fdr_int_;
@@ -215,8 +218,8 @@ private:
 
     Float EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const
     {
-		auto albedo_i = GetAlbedo(std::fabs(cos_i_n));
-		auto albedo_o = GetAlbedo(std::fabs(cos_o_n));
+        auto albedo_i = GetAlbedo(std::fabs(cos_i_n));
+        auto albedo_o = GetAlbedo(std::fabs(cos_o_n));
         auto f_ms = (1 - albedo_o) * (1 - albedo_i) / (kPi * (1 - albedo_avg_));
         return f_ms * f_add_;
     }
