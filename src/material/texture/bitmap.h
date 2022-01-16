@@ -46,7 +46,7 @@ public:
     // \param pos_y - height 方向的坐标，范围[0,1]
     //
     // \return 图像在相应位置的数值
-    Vector3 GetPixel(const Vector2 &coord) const override;
+    Spectrum GetPixel(const Vector2 &coord) const override;
 
     // \brief 保存数据为 png 格式图像
     //

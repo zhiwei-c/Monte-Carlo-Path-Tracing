@@ -18,8 +18,8 @@ public:
      * \param diffuse_map 漫反射纹理
      */
     Glossy(const std::string &id,
-           const Vector3 &diffuse_reflectance,
-           const Vector3 &specular_reflectance,
+           const Spectrum &diffuse_reflectance,
+           const Spectrum &specular_reflectance,
            Float exponent,
            Texture *diffuse_map)
         : Material(id, MaterialType::kGlossy),
@@ -39,7 +39,7 @@ public:
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    std::pair<Vector3, BsdfSamplingType> Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
+    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
     {
         auto diffuse_reflectance_sum = diffuse_reflectance_sum_;
         if (texcoord != nullptr)
@@ -50,52 +50,56 @@ public:
                 diffuse_reflectance_sum = diffuse_reflectance.r + diffuse_reflectance.g + diffuse_reflectance.b;
             }
         }
+
+        BsdfSampling bs;
         auto thresh = diffuse_reflectance_sum / (diffuse_reflectance_sum + specular_reflectance_sum_);
         auto sample_x = UniformFloat();
         if (sample_x < thresh)
         {
-            auto wo_pseudo_local = HemisCos();
-            return {-ToWorld(wo_pseudo_local, normal), BsdfSamplingType::kReflection};
+            auto [wi_local, pdf] = HemisCos();
+            bs.wi = -ToWorld(wi_local, normal);
         }
         else
         {
-            auto wo_pseudo_local = HemisCosN(exponent_);
+            auto wi_local = HemisCosN(exponent_);
             auto wr_pseudo = Reflect(-wo, normal);
-            auto wi = -ToWorld(wo_pseudo_local, wr_pseudo);
+            auto wi = -ToWorld(wi_local, wr_pseudo);
             if (SameHemis(wi, normal))
-                return {Vector3(0), BsdfSamplingType::kNone};
-            else
-                return {wi, BsdfSamplingType::kReflection};
+                return BsdfSampling();
         }
+        bs.pdf = Pdf(bs.wi, wo, normal, texcoord, inside);
+        if (bs.pdf < kEpsilon)
+            return BsdfSampling();
+        bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
+        return bs;
     }
 
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
-    Vector3 Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
+    Spectrum Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
     {
         // 入射、出射光线需在同侧
         if (NotSameHemis(wo, normal))
-            return Vector3(0);
+            return Spectrum(0);
 
-        Vector3 weight(0);
+        Spectrum albedo(0);
         // 计算漫反射分量的贡献
         if (texcoord != nullptr && diffuse_map_)
-            weight += diffuse_map_->GetPixel(*texcoord) * kPiInv;
+            albedo += diffuse_map_->GetPixel(*texcoord) * kPiInv;
         else
-            weight += diffuse_reflectance_ * kPiInv;
+            albedo += diffuse_reflectance_ * kPiInv;
         // 计算镜面反射分量的贡献
         auto wr = Reflect(wi, normal);
         auto cos_alpha = glm::dot(wr, wo);
         if (cos_alpha > kEpsilon)
-            weight += specular_reflectance_ * static_cast<Float>((exponent_ + 2) * kPiInv * 0.5 * std::pow(cos_alpha, exponent_));
+            albedo += specular_reflectance_ * static_cast<Float>((exponent_ + 2) * kPiInv * 0.5 * std::pow(cos_alpha, exponent_));
 
-        return weight;
+        return albedo;
     }
 
     ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
-    Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
+    Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
     {
-        if (bsdf_sampling_type == BsdfSamplingType::kNone ||
-            NotSameHemis(wo, normal))
+        if (NotSameHemis(wo, normal))
             return 0;
 
         auto diffuse_reflectance_sum = diffuse_reflectance_sum_;
@@ -145,9 +149,9 @@ public:
     }
 
 private:
-    Vector3 diffuse_reflectance_;  //漫反射系数
+    Spectrum diffuse_reflectance_;  //漫反射系数
     Texture *diffuse_map_;         //漫反射纹理
-    Vector3 specular_reflectance_; //镜面反射系数
+    Spectrum specular_reflectance_; //镜面反射系数
     Float exponent_;               //镜面反射指数系数
 
     Float diffuse_reflectance_sum_;

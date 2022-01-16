@@ -2,7 +2,7 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
-Vector3 PathIntegrator::Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const
+Spectrum PathIntegrator::Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const
 {
 	if (this->bvh_ != nullptr)
 	{
@@ -23,12 +23,12 @@ Vector3 PathIntegrator::Shade(const Vector3 &eye_pos, const Vector3 &look_dir) c
 	if (envmap_ != nullptr)
 		return envmap_->GetLe(look_dir);
 
-	return Vector3(0);
+	return Spectrum(0);
 }
 
-Vector3 PathIntegrator::ShadeRecursively(const Intersection &obj, const Vector3 &wo) const
+Spectrum PathIntegrator::ShadeRecursively(const Intersection &obj, const Vector3 &wo) const
 {
-	Vector3 L_env(0),  //来自环境的直接光照
+	Spectrum L_env(0),  //来自环境的直接光照
 		L_emitter(0),  //来自面光源的直接光照
 		L_indirect(0); //间接光照
 
@@ -39,55 +39,46 @@ Vector3 PathIntegrator::ShadeRecursively(const Intersection &obj, const Vector3 
 	if (closet.distance() + kEpsilonDistance > light.distance())
 	{
 		const auto &wi = -ray_light.dir();
-		auto cos_theta = std::fabs(glm::dot(-wi, obj.normal()));
-		if (cos_theta > kEpsilonL)
+		auto cos_theta_l = glm::dot(wi, light.normal());
+		if (cos_theta_l > kEpsilonL)
 		{
-			auto cos_theta_l = glm::dot(wi, light.normal());
-			if (cos_theta_l > kEpsilonL)
+			auto f_r = obj.Eval(wi, wo);
+			if (f_r.r + f_r.g + f_r.b > kEpsilonL)
 			{
-				auto f_r = obj.Eval(wi, wo, BsdfSamplingType::kUnknown);
-				if (f_r.r + f_r.g + f_r.b > kEpsilonL)
-				{
-					const auto &length = light.distance();
-					L_emitter = light.radiance() * f_r * static_cast<Float>(cos_theta * cos_theta_l / (length * length * pdf_emitter));
-				}
+				auto cos_theta = std::fabs(glm::dot(-wi, obj.normal()));
+				const auto &length = light.distance();
+				L_emitter = light.radiance() * f_r * static_cast<Float>(cos_theta * cos_theta_l / (Sqr(length) * pdf_emitter));
 			}
 		}
 	}
 
 	//按BSDF采样光照
-	auto [wi, bsdf_sampling_type] = obj.SampleWi(wo);
-	auto pdf_bsdf = obj.Pdf(wi, wo, bsdf_sampling_type);
-	if (pdf_bsdf > kEpsilonL)
+	BsdfSampling bs = obj.SampleWi(wo);
+	if (bs.pdf > kEpsilonL)
 	{
-		auto f_r = obj.Eval(wi, wo, bsdf_sampling_type);
-		if (f_r.r + f_r.g + f_r.b > kEpsilonL)
+		auto cos_theta = std::fabs(glm::dot(-bs.wi, obj.normal()));
+		auto pre = this->bvh_->Intersect(Ray(obj.pos(), -bs.wi));
+		if (pre.valid())
 		{
-			auto cos_theta = std::fabs(glm::dot(-wi, obj.normal()));
-			auto pre = this->bvh_->Intersect(Ray(obj.pos(), -wi));
-			if (pre.valid())
+			if (!pre.HasEmission()) //按BSDF采样间接光照
 			{
-				if (!pre.HasEmission()) //按BSDF采样间接光照
+				if (UniformFloat() < pdf_rr_)
 				{
-					if (UniformFloat() < pdf_rr_)
-					{
-						auto L_pre = ShadeRecursively(pre, wi);
-						auto div = 1 / (pdf_bsdf * pdf_rr_);
-						L_indirect = L_pre * f_r * static_cast<Float>(cos_theta * div);
-					}
-				}
-				else //按BSDF采样来自面光源的直接光照，并和按发光物体表面积采样的来自面光源的直接光照根据多重重要性采样技术合并
-				{
-					auto L_emitter_bsdf = pre.radiance() * f_r * static_cast<Float>(cos_theta / pdf_bsdf);
-					auto [weight_bsdf, weight_area] = WeightPowerHeuristic(pdf_bsdf, pdf_emitter);
-					L_emitter = weight_bsdf * L_emitter_bsdf +
-								weight_area * L_emitter;
+					auto L_pre = ShadeRecursively(pre, bs.wi);
+					L_indirect = L_pre * bs.weight * static_cast<Float>(cos_theta / (bs.pdf * pdf_rr_));
 				}
 			}
-			else if (envmap_ != nullptr) //按BSDF采样来自环境的直接光照
+			else //按BSDF采样来自面光源的直接光照，并和按发光物体表面积采样的来自面光源的直接光照根据多重重要性采样技术合并
 			{
-				L_env = envmap_->GetLe(-wi) * f_r * static_cast<Float>(cos_theta / pdf_bsdf);
+				auto L_emitter_bsdf = pre.radiance() * bs.weight * static_cast<Float>(cos_theta / bs.pdf);
+				auto [weight_bsdf, weight_area] = WeightPowerHeuristic(bs.pdf, pdf_emitter);
+				L_emitter = weight_bsdf * L_emitter_bsdf +
+							weight_area * L_emitter;
 			}
+		}
+		else if (envmap_ != nullptr) //按BSDF采样来自环境的直接光照
+		{
+			L_env = envmap_->GetLe(-bs.wi) * bs.weight * static_cast<Float>(cos_theta / bs.pdf);
 		}
 	}
 

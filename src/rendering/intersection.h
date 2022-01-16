@@ -47,7 +47,7 @@ public:
      * \param wo 给定的光线出射方向
      * \return 采样得到的光线入射方向
      */
-    std::pair<Vector3, BsdfSamplingType> SampleWi(const Vector3 &wo) const
+    BsdfSampling SampleWi(const Vector3 &wo) const
     {
         auto one_side = glm::dot(wo, normal_) > 0; //光线与交点法线是否同侧
         auto normal = one_side ? normal_ : -normal_;
@@ -65,16 +65,16 @@ public:
      * \param wo 给定的光线射出方向
      * \return 算得的BSDF系数
      */
-    Vector3 Eval(const Vector3 &wi, const Vector3 &wo, const BsdfSamplingType &bsdf_sampling_type) const
+    Spectrum Eval(const Vector3 &wi, const Vector3 &wo) const
     {
         auto one_side = glm::dot(wi, normal_) < 0; //入射光线与法线是否同侧
         auto normal = one_side ? normal_ : -normal_;
         auto inside = one_side ? inside_ : !inside_;
 
         if (material_->TextureMapping())
-            return material_->Eval(wi, wo, normal, &texcoord_, inside, bsdf_sampling_type);
+            return material_->Eval(wi, wo, normal, &texcoord_, inside);
         else
-            return material_->Eval(wi, wo, normal, nullptr, inside, bsdf_sampling_type);
+            return material_->Eval(wi, wo, normal, nullptr, inside);
     }
 
     /**
@@ -83,16 +83,15 @@ public:
      * \param wo 给定的光线射出方向
      * \return 算得的概率
      */
-    Float Pdf(const Vector3 &wi, const Vector3 &wo, const BsdfSamplingType &bsdf_sampling_type) const
+    Float Pdf(const Vector3 &wi, const Vector3 &wo) const
     {
-
         auto one_side = glm::dot(wi, normal_) < 0; //入射光线与法线是否同侧
         auto normal = one_side ? normal_ : -normal_;
         auto inside = one_side ? inside_ : !inside_;
 
         return (material_->TextureMapping())
-                   ? material_->Pdf(wi, wo, normal, &texcoord_, inside, bsdf_sampling_type)
-                   : material_->Pdf(wi, wo, normal, nullptr, inside, bsdf_sampling_type);
+                   ? material_->Pdf(wi, wo, normal, &texcoord_, inside)
+                   : material_->Pdf(wi, wo, normal, nullptr, inside);
     }
 
     ///\return 交点的位置
@@ -111,7 +110,7 @@ public:
     bool HasEmission() const { return material_->HasEmission(); }
 
     ///\return 交点处的物体表面的辐射亮度
-    Vector3 radiance() const { return material_->radiance(); }
+    Spectrum radiance() const { return material_->radiance(); }
 
 private:
     bool valid_;         //光线与物体的相交是否发生

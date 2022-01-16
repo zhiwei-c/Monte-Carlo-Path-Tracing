@@ -13,7 +13,7 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
-static Vector3 GetSpectrum(rapidxml::xml_node<> *node_spectrum);
+static Spectrum GetSpectrum(rapidxml::xml_node<> *node_spectrum);
 
 static std::optional<std::string> GetAttri(rapidxml::xml_node<> *node, std::string key, bool not_exist_ok = false);
 
@@ -307,7 +307,7 @@ void XmlParser::ParseDiffuse(rapidxml::xml_node<> *node_diffuse, std::string id)
 	case "texture"_hash:
 	{
 		auto diffuse_map = ParseTexture(node_reflectance);
-		bsdfs_.push_back(new Diffuse(id, Vector3(0.7), diffuse_map));
+		bsdfs_.push_back(new Diffuse(id, Spectrum(0.7), diffuse_map));
 		break;
 	}
 	default:
@@ -349,8 +349,8 @@ void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string
 		{
 			bsdfs_.push_back(new Conductor(id,
 										   true,
-										   Vector3(0),
-										   Vector3(1),
+										   Spectrum(0),
+										   Spectrum(1),
 										   ext_eta));
 		}
 		else if (IOR_eta.find(material_name) != IOR_eta.end())
@@ -370,7 +370,7 @@ void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string
 		}
 	}
 	else if (node_conductor->first_node() == nullptr)
-		bsdfs_.push_back(new Conductor(id, true, Vector3(0), Vector3(1), ext_eta));
+		bsdfs_.push_back(new Conductor(id, true, Spectrum(0), Spectrum(1), ext_eta));
 	else
 	{
 		auto node_eta = GetChild(node_conductor, "eta", false);
@@ -399,8 +399,8 @@ void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, 
 		{
 			bsdfs_.push_back(new RoughConductor(id,
 												true,
-												Vector3(0),
-												Vector3(1),
+												Spectrum(0),
+												Spectrum(1),
 												GetDistrbType(distri),
 												alpha_u,
 												alpha_v,
@@ -443,7 +443,7 @@ void XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic, std::string id)
 	auto node_reflectance = GetChild(node_plastic, "diffuseReflectance");
 	if (!node_reflectance)
 	{
-		bsdfs_.push_back(new Plastic(id, Vector3(0.5), nullptr, nonlinear, ior_ext, ior_int));
+		bsdfs_.push_back(new Plastic(id, Spectrum(0.5), nullptr, nonlinear, ior_ext, ior_int));
 	}
 	else
 	{
@@ -460,7 +460,7 @@ void XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic, std::string id)
 		case "texture"_hash:
 		{
 			auto diffuse_map = ParseTexture(node_reflectance);
-			bsdfs_.push_back(new Plastic(id, Vector3(0.5), diffuse_map, nonlinear, ior_ext, ior_int));
+			bsdfs_.push_back(new Plastic(id, Spectrum(0.5), diffuse_map, nonlinear, ior_ext, ior_int));
 			break;
 		}
 		default:
@@ -483,7 +483,7 @@ void XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std:
 	auto node_reflectance = GetChild(node_rough_plastic, "diffuseReflectance");
 	if (!node_reflectance)
 	{
-		bsdfs_.push_back(new RoughPlastic(id, Vector3(0.5), nullptr, nonlinear, ior_ext, ior_int, GetDistrbType(distri), alpha));
+		bsdfs_.push_back(new RoughPlastic(id, Spectrum(0.5), nullptr, nonlinear, ior_ext, ior_int, GetDistrbType(distri), alpha));
 	}
 	else
 	{
@@ -500,7 +500,7 @@ void XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std:
 		case "texture"_hash:
 		{
 			auto diffuse_map = ParseTexture(node_reflectance);
-			bsdfs_.push_back(new RoughPlastic(id, Vector3(0.5), diffuse_map, nonlinear, ior_ext, ior_int, GetDistrbType(distri), alpha));
+			bsdfs_.push_back(new RoughPlastic(id, Spectrum(0.5), diffuse_map, nonlinear, ior_ext, ior_int, GetDistrbType(distri), alpha));
 			break;
 		}
 		default:
@@ -671,10 +671,10 @@ Texture *XmlParser::ParseTexture(rapidxml::xml_node<> *node_texture)
 	case "checkerboard"_hash:
 	{
 		auto node_color0 = GetChild(node_texture, "color0");
-		auto color0 = node_color0 ? GetSpectrum(node_color0) : Vector3(0.4);
+		auto color0 = node_color0 ? GetSpectrum(node_color0) : Spectrum(0.4);
 
 		auto node_color1 = GetChild(node_texture, "color1");
-		auto color1 = node_color1 ? GetSpectrum(node_color1) : Vector3(0.2);
+		auto color1 = node_color1 ? GetSpectrum(node_color1) : Spectrum(0.2);
 
 		auto u_offset = GetFloat(node_texture, "uoffset", false).value(),
 			 v_offset = GetFloat(node_texture, "voffset", false).value(),
@@ -687,10 +687,10 @@ Texture *XmlParser::ParseTexture(rapidxml::xml_node<> *node_texture)
 	case "gridtexture"_hash:
 	{
 		auto node_color0 = GetChild(node_texture, "color0");
-		auto color0 = node_color0 ? GetSpectrum(node_color0) : Vector3(0.4);
+		auto color0 = node_color0 ? GetSpectrum(node_color0) : Spectrum(0.4);
 
 		auto node_color1 = GetChild(node_texture, "color1");
-		auto color1 = node_color1 ? GetSpectrum(node_color1) : Vector3(0.2);
+		auto color1 = node_color1 ? GetSpectrum(node_color1) : Spectrum(0.2);
 
 		auto line_width = GetFloat(node_texture, "lineWidth").value_or(0.01),
 			 u_offset = GetFloat(node_texture, "uoffset", false).value(),
@@ -789,7 +789,7 @@ std::unique_ptr<Mat4> GetToWorld(rapidxml::xml_node<> *node_parent)
 		return std::make_unique<Mat4>(result);
 }
 
-Vector3 GetSpectrum(rapidxml::xml_node<> *node_spectrum)
+Spectrum GetSpectrum(rapidxml::xml_node<> *node_spectrum)
 {
 	if (strcmp(node_spectrum->name(), "rgb") != 0)
 	{
@@ -798,7 +798,7 @@ Vector3 GetSpectrum(rapidxml::xml_node<> *node_spectrum)
 		exit(1);
 	}
 	auto value_str = GetAttri(node_spectrum, "value").value();
-	Vector3 result;
+	Spectrum result;
 
 	auto in_format_str = kFstr;
 	for (int i = 0; i < 2; i++)
@@ -981,9 +981,6 @@ MicrofacetDistribType GetDistrbType(const std::string &name)
 		break;
 	case "ggx"_hash:
 		return MicrofacetDistribType::kGgx;
-		break;
-	case "phong"_hash:
-		return MicrofacetDistribType::kPhong;
 		break;
 	default:
 		std::cout << "[warning] unkown microfacet distribution: " << name << ", use Beckmann instead.";

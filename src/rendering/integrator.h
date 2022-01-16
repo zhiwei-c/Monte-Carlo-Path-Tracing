@@ -36,7 +36,7 @@ public:
      * \param look_dir 观察方向
      * \return 观察点来源于给定观察方向的辐射亮度
      */
-    virtual Vector3 Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const = 0;
+    virtual Spectrum Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const = 0;
 
 protected:
     std::unique_ptr<BvhAccel> bvh_; //层次包围盒

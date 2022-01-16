@@ -9,16 +9,15 @@ NAMESPACE_BEGIN(simple_renderer)
 enum class MicrofacetDistribType
 {
     kBeckmann,
-    kGgx,
-    kPhong
+    kGgx
 };
 
 class MicrofacetDistribution
 {
 public:
-    virtual Vector3 Sample(const Vector3 &normal_macro, const Vector2 &sample) const = 0;
+    virtual std::pair<Vector3, Float> Sample(const Vector3 &normal_macro, const Vector2 &sample) const = 0;
 
-    virtual Float Eval(const Vector3 &normal_micro, const Vector3 &normal_macro) const = 0;
+    virtual Float Pdf(const Vector3 &normal_micro, const Vector3 &normal_macro) const = 0;
 
     virtual Float SmithG1(const Vector3 &v, const Vector3 &normal_micro, const Vector3 &normal_macro) const = 0;
 

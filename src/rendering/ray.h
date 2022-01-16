@@ -151,11 +151,11 @@ inline Float Fresnel(const Vector3 &wi, const Vector3 &normal, Float eta_inv)
  * \param eta_i 相对折射率的虚部（消光系数）
  * \return 菲涅尔系数
  */
-inline Vector3 FresnelConductor(const Vector3 &wi, const Vector3 &normal, const Vector3 &eta_r, const Vector3 &eta_i)
+inline Spectrum FresnelConductor(const Vector3 &wi, const Vector3 &normal, const Spectrum &eta_r, const Spectrum &eta_i)
 {
 	auto cos_theta_i = glm::dot(-wi, normal);
 	auto cos_theta_i_2 = cos_theta_i * cos_theta_i,
-		 sin_theta_i_2 = 1.f - cos_theta_i_2,
+		 sin_theta_i_2 = 1 - cos_theta_i_2,
 		 sin_theta_i_4 = sin_theta_i_2 * sin_theta_i_2;
 
 	auto temp_1 = eta_r * eta_r - eta_i * eta_i - sin_theta_i_2;
@@ -173,7 +173,7 @@ inline Vector3 FresnelConductor(const Vector3 &wi, const Vector3 &normal, const 
 	}
 
 	auto term_1 = a_2_pb_2 + cos_theta_i_2,
-		 term_2 = 2.f * cos_theta_i * a;
+		 term_2 = 2 * cos_theta_i * a;
 
 	auto r_s = (term_1 - term_2) / (term_1 + term_2);
 
@@ -229,11 +229,11 @@ inline Float FresnelDiffuseReflectance(Float eta)
  * 		参见 [《artist Friendly Metallic Fresnel》](https://jcgt.org/published/0003/04/03/paper.pdf)
  * \param eta 相对折射率的实部
  * \param k 相对折射率的虚部（消光系数）
- * \return 由两个 Vector3 类型构成的 pair，分别代表反射率 reflectivity 和边缘色差 edgetint
+ * \return 由两个 Spectrum 类型构成的 pair，分别代表反射率 reflectivity 和边缘色差 edgetint
  */
-inline std::pair<Vector3, Vector3> IorToReflectivityEdgetint(const Vector3 &eta, const Vector3 &k)
+inline std::pair<Spectrum, Spectrum> IorToReflectivityEdgetint(const Spectrum &eta, const Spectrum &k)
 {
-	Vector3 reflectivity,
+	Spectrum reflectivity,
 		edgetint;
 	Float temp1, temp2, temp3;
 	for (int i = 0; i < 3; i++)
@@ -249,9 +249,9 @@ inline std::pair<Vector3, Vector3> IorToReflectivityEdgetint(const Vector3 &eta,
 }
 
 ///\brief 导体材质的平均菲涅尔系数，https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
-inline Vector3 AverageFresnelConductor(const Vector3 &r, const Vector3 &g)
+inline Spectrum AverageFresnelConductor(const Spectrum &r, const Spectrum &g)
 {
-	return Vector3(0.087237) + 0.0230685 * g - 0.0864902 * g * g + 0.0774594 * g * g * g + 0.782654 * r - 0.136432 * r * r + 0.278708 * r * r * r + 0.19744 * g * r + 0.0360605 * g * g * r - 0.2586 * g * r * r;
+	return Spectrum(0.087237) + 0.0230685 * g - 0.0864902 * g * g + 0.0774594 * g * g * g + 0.782654 * r - 0.136432 * r * r + 0.278708 * r * r * r + 0.19744 * g * r + 0.0360605 * g * g * r - 0.2586 * g * r * r;
 }
 
 ///\brief 电介质材质的平均菲涅尔系数，来自 https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
@@ -267,7 +267,7 @@ inline Float AverageFresnelDielectric(Float eta)
 }
 
 //各种导体材质（conductor）的折射率（refractive index）
-const std::map<std::string, Vector3> IOR_eta{
+const std::map<std::string, Spectrum> IOR_eta{
 	//无定形碳 Amorphous carbon
 	{"a-C", Vector3(2.93785f, 2.22242f, 1.96400f)},
 	//银 Silver
@@ -384,7 +384,7 @@ const std::map<std::string, Vector3> IOR_eta{
 };
 
 //各种导体材质（conductor）的消光系数（extinction coefficient）
-const std::map<std::string, Vector3> IOR_k{
+const std::map<std::string, Spectrum> IOR_k{
 	{"a-C", Vector3(0.88555f, 0.79763f, 0.81356f)},
 
 	{"Ag", Vector3(4.81810f, 3.11562f, 2.14240f)},

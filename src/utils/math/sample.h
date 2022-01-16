@@ -19,7 +19,8 @@ inline Float UniformFloat()
     return std::fabs(1 - dist(e) * 2);
 }
 
-inline Vector2 Hammersley(uint32_t i, uint32_t N) {
+inline Vector2 Hammersley(uint32_t i, uint32_t N)
+{
     uint32_t bits = (i << 16u) | (i >> 16u);
     bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
     bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
@@ -75,7 +76,7 @@ inline Vector2 DiskUnifrom()
     return Vector2(r * cos_phi, r * sin_phi);
 }
 
-inline Vector3 HemisCos()
+inline std::pair<Vector3, Float> HemisCos()
 {
     auto x_1 = UniformFloat();
     auto x_2 = UniformFloat();
@@ -85,7 +86,8 @@ inline Vector3 HemisCos()
          cos_phi = std::cos(phi),
          sin_phi = std::sin(phi);
     auto dir = Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
-    return dir;
+    auto pdf = kPiInv * cos_theta;
+    return {dir, pdf};
 }
 
 inline Float PdfHemisCos(const Vector3 &dir_local)

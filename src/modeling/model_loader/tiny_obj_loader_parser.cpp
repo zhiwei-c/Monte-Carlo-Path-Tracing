@@ -115,7 +115,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
     {
         auto other_params = materials[m].unknown_parameter;
         auto id = materials[m].name;
-        auto ke = Vector3(materials[m].emission[0], materials[m].emission[1], materials[m].emission[2]);
+        auto ke = Spectrum(materials[m].emission[0], materials[m].emission[1], materials[m].emission[2]);
         if (auto Le = GetVec3(other_params, "Le"); Le.has_value())
             ke = Le.value();
         if (ke.r + ke.g + ke.b > 0)
@@ -124,7 +124,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             continue;
         }
 
-        auto kd = Vector3(materials[m].diffuse[0], materials[m].diffuse[1], materials[m].diffuse[2]);
+        auto kd = Spectrum(materials[m].diffuse[0], materials[m].diffuse[1], materials[m].diffuse[2]);
 
         Texture *diffuse_map = nullptr;
         if (auto diffuse_texname = materials[m].diffuse_texname; !diffuse_texname.empty())
@@ -145,7 +145,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             opacity_map->setGamma(1);
         }
 
-        auto ks = Vector3(materials[m].specular[0], materials[m].specular[1], materials[m].specular[2]);
+        auto ks = Spectrum(materials[m].specular[0], materials[m].specular[1], materials[m].specular[2]);
         auto ns = materials[m].shininess;
 
         auto flag_parsed = false;
@@ -257,7 +257,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
         result.back()->setBump(bump_map);
 
         if (opacity < 1)
-            result.back()->setOpacity(Vector3(opacity));
+            result.back()->setOpacity(Spectrum(opacity));
         result.back()->setOpacity(opacity_map);
     }
     std::cout << "[info] parse material finished\t\t\t\r";
@@ -298,7 +298,7 @@ std::optional<Float> GetIor(const std::map<std::string, std::string> &params, co
         return std::stof(it->second);
 }
 
-std::tuple<bool, Vector3, Vector3> GetEtaK(const std::map<std::string, std::string> &params, const std::string &id)
+std::tuple<bool, Spectrum, Spectrum> GetEtaK(const std::map<std::string, std::string> &params, const std::string &id)
 {
     auto material_name = GetString(params, "material").value_or("");
     if (material_name.empty())
@@ -318,13 +318,13 @@ std::tuple<bool, Vector3, Vector3> GetEtaK(const std::map<std::string, std::stri
                 exit(1);
             }
             else
-                return {true, Vector3(0), Vector3(1)};
+                return {true, Spectrum(0), Spectrum(1)};
         }
         else
             return {false, eta.value(), k.value()};
     }
     else if (material_name == "none")
-        return {true, Vector3(0), Vector3(1)};
+        return {true, Spectrum(0), Spectrum(1)};
     else if (IOR_eta.find(material_name) != IOR_eta.end())
         return {false, IOR_eta.at(material_name), IOR_k.at(material_name)};
     else
@@ -366,9 +366,6 @@ std::optional<MicrofacetDistribType> GetDistrbType(const std::map<std::string, s
         break;
     case "ggx"_hash:
         return MicrofacetDistribType::kGgx;
-        break;
-    case "phong"_hash:
-        return MicrofacetDistribType::kPhong;
         break;
     default:
         std::cout << "[warning] unkown microfacet distribution: " << it->second << ", use Beckmann instead.";

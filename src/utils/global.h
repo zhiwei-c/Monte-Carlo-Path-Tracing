@@ -19,6 +19,7 @@ NAMESPACE_BEGIN(simple_renderer)
 
 using Float = glm::f64;
 using Vector3 = glm::dvec3;
+using Spectrum = Vector3;
 using Vector2 = glm::dvec2;
 using Mat4 = glm::dmat4;
 using Mat3 = glm::dmat3;

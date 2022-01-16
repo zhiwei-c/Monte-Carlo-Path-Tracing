@@ -39,13 +39,13 @@ public:
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    virtual std::pair<Vector3, BsdfSamplingType> Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const = 0;
+    virtual BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const = 0;
 
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
-    virtual Vector3 Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const = 0;
+    virtual Spectrum Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const = 0;
 
     ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
-    virtual Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const = 0;
+    virtual Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const = 0;
 
 protected:
     MicrofacetDistribType distrib_type_; //用于模拟表面粗糙度的微表面分布的类型
@@ -81,7 +81,7 @@ private:
             auto wo = Vector3(std::sqrt(1 - Sqr(cos_n_o)), 0, cos_n_o);
             for (int i = 0; i < sample_count; i++)
             {
-                auto normal_micro = distrib->Sample(normal, Hammersley(i + 1, sample_count + 1));
+                auto [normal_micro, pdf] = distrib->Sample(normal, Hammersley(i + 1, sample_count + 1));
                 auto cos_m_o = std::max(glm::dot(wo, normal_micro),
                                         static_cast<Float>(0));
                 auto cos_m_n = std::max(glm::dot(normal, normal_micro),
@@ -104,7 +104,7 @@ private:
             Float avg_tmp = 0;
             for (int i = 0; i < sample_count; i++)
             {
-                auto normal_micro = distrib->Sample(normal, Hammersley(i + 1, sample_count + 1));
+                auto [normal_micro, pdf] = distrib->Sample(normal, Hammersley(i + 1, sample_count + 1));
                 auto wi = -Reflect(-wo, normal_micro);
                 auto cos_n_i = std::max(glm::dot(-wi, normal),
                                         static_cast<Float>(0));

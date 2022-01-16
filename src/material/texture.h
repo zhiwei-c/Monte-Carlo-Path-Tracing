@@ -23,7 +23,7 @@ public:
      * \param texcoord 纹理坐标
      * \return 像素值
     */
-    virtual Vector3 GetPixel(const Vector2 &coord) const = 0;
+    virtual Spectrum GetPixel(const Vector2 &coord) const = 0;
 
     /**
      * \brief 纹理在给定坐标处梯度

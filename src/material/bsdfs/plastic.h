@@ -19,12 +19,12 @@ public:
 	 * \param specular_reflectance 可选参数，镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
 	*/
     Plastic(const std::string &id,
-            const Vector3 &diffuse_reflectance,
+            const Spectrum &diffuse_reflectance,
             Texture *diffuse_map,
             bool nonlinear,
             Float ext_ior,
             Float int_ior,
-            const Vector3 &specular_reflectance = Vector3(1))
+            const Spectrum &specular_reflectance = Spectrum(1))
         : Material(id, MaterialType::kPlastic),
           diffuse_reflectance_(diffuse_reflectance),
           diffuse_map_(diffuse_map),
@@ -47,7 +47,7 @@ public:
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    std::pair<Vector3, BsdfSamplingType> Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
+    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
     {
         auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
@@ -61,36 +61,40 @@ public:
                 specular_sampling_weight = s_sum_ / (d_sum + s_sum_);
             }
         }
-        const auto &wi_pseudo = -wo;
-        auto kr_pseudo = Fresnel(wi_pseudo, normal, eta_inv);
-        auto pdf_specular = kr_pseudo * specular_sampling_weight,
-             pdf_diffuse = (1 - kr_pseudo) * (1 - specular_sampling_weight);
-        pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
-        pdf_diffuse = 1 - pdf_specular;
 
+        auto kr = Fresnel(-wo, normal, eta_inv);
+        auto pdf_specular = kr * specular_sampling_weight,
+             pdf_diffuse = (1 - kr) * (1 - specular_sampling_weight);
+        pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
+
+        BsdfSampling bs;
         auto sample_x = UniformFloat();
         if (sample_x < pdf_specular)
         {
-            auto wr_pseudo = Reflect(wi_pseudo, normal);
-            return {-wr_pseudo, BsdfSamplingType::kSpecularReflection};
+            bs.wi = -Reflect(-wo, normal);
         }
         else
         {
-            auto wo_pseudo_local = HemisCos();
-            return {-ToWorld(wo_pseudo_local, normal), BsdfSamplingType::kReflection};
+            auto [wi_local, pdf] = HemisCos();
+            bs.wi = -ToWorld(wi_local, normal);
         }
+        bs.pdf = Pdf(bs.wi, wo, normal, texcoord, inside);
+        if (bs.pdf < kEpsilon)
+            return BsdfSampling();
+        bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
+        return bs;
     }
 
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
-    Vector3 Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
+    Spectrum Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
     {
         if (NotSameHemis(wo, normal))
-            return Vector3(0);
+            return Spectrum(0);
 
         auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
         auto fdr_int = !inside ? fdr_int_ : fdr_ext_;
 
-        Vector3 weight(0);
+        Spectrum albedo(0);
         auto diffuse_reflectance = diffuse_reflectance_;
         if (texcoord != nullptr)
         {
@@ -99,27 +103,27 @@ public:
         }
         if (nonlinear_)
         {
-            weight = diffuse_reflectance / (static_cast<Float>(1) - diffuse_reflectance * fdr_int);
+            albedo = diffuse_reflectance / (static_cast<Float>(1) - diffuse_reflectance * fdr_int);
         }
         else
         {
-            weight = diffuse_reflectance / (1 - fdr_int);
+            albedo = diffuse_reflectance / (1 - fdr_int);
         }
 
         auto kr_i = Fresnel(wi, normal, eta_inv);
         auto kr_o = Fresnel(-wo, normal, eta_inv);
-        weight *= Sqr(eta_inv) * (1 - kr_i) * (1 - kr_o) * kPiInv;
+        albedo *= Sqr(eta_inv) * (1 - kr_i) * (1 - kr_o) * kPiInv;
 
-        if (bsdf_sampling_type == BsdfSamplingType::kSpecularReflection || SameDirection(Reflect(wi, normal), wo))
+        if (SameDirection(Reflect(wi, normal), wo))
         {
-            weight += kr_i * specular_reflectance_;
+            albedo += kr_i * specular_reflectance_;
         }
 
-        return weight;
+        return albedo;
     }
 
     ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
-    Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
+    Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
     {
         if (NotSameHemis(wo, normal))
             return 0;
@@ -146,7 +150,7 @@ public:
         auto pdf = PdfHemisCos(wo_local);
         auto result = pdf_diffuse * pdf;
 
-        if (bsdf_sampling_type == BsdfSamplingType::kSpecularReflection || SameDirection(wo, Reflect(wi, normal)))
+        if (SameDirection(wo, Reflect(wi, normal)))
         {
             result += pdf_specular;
         }
@@ -166,12 +170,12 @@ public:
     }
 
 private:
-    Vector3 diffuse_reflectance_;  // 漫反射系数，
-    Texture *diffuse_map_;         // 漫反射纹理
-    bool nonlinear_;               // 是否考虑因内部散射而引起的非线性色移
-    Float eta_;                    //光线射入材质的相对折射率
-    Float eta_inv_;                //光线射出材质的相对折射率
-    Vector3 specular_reflectance_; // 镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
+    Spectrum diffuse_reflectance_;  // 漫反射系数，
+    Texture *diffuse_map_;          // 漫反射纹理
+    bool nonlinear_;                // 是否考虑因内部散射而引起的非线性色移
+    Float eta_;                     //光线射入材质的相对折射率
+    Float eta_inv_;                 //光线射出材质的相对折射率
+    Spectrum specular_reflectance_; // 镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
 
     Float fdr_ext_;
     Float fdr_int_;

@@ -15,10 +15,12 @@ int main(int argc, char *argv[])
 	}
 
 	std::string output_name = "";
-	if (argc == 3){
+	if (argc == 3)
+	{
 		output_name = simple_renderer::ConvertBackSlash(argv[2]);
-		auto out_directory = std::filesystem::path(simple_renderer::GetDirectory(argv[2]));
-		if (!std::filesystem::exists(out_directory))
+		auto out_directory = simple_renderer::GetDirectory(argv[2]);
+		if (!out_directory.empty() &&
+			!std::filesystem::exists(std::filesystem::path(out_directory)))
 		{
 			std::cerr << "[error] invalid output directory :" << out_directory << std::endl;
 			exit(1);

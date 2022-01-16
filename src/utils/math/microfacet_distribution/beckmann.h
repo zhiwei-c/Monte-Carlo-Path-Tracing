@@ -13,7 +13,7 @@ public:
     Beckmann(Float alpha_u, Float alpha_v)
         : MicrofacetDistribution(MicrofacetDistribType::kBeckmann, alpha_u, alpha_v) {}
 
-    Vector3 Sample(const Vector3 &normal_macro, const Vector2 &sample) const
+    std::pair<Vector3, Float> Sample(const Vector3 &normal_macro, const Vector2 &sample) const
     {
         Float sin_phi, cos_phi, alpha_2;
 
@@ -26,24 +26,22 @@ public:
         }
         else
         {
-            Float ratio = alpha_v_ / alpha_u_,
-                  tmp = ratio * std::tan((2 * kPi) * sample.y);
-            cos_phi = 1 / std::sqrt(tmp * tmp + 1);
-            if (std::fabs(sample.y - .5) - .25 > 0)
-                cos_phi = -cos_phi;
-            sin_phi = cos_phi * tmp;
-            alpha_2 = 1 / (std::pow(cos_phi / alpha_u_, 2) +
-                           std::pow(sin_phi / alpha_v_, 2));
+            auto phi = std::atan(alpha_v_ / alpha_u_ * std::tan(kPi + 2 * kPi * sample.y)) + kPi * std::floor(2 * sample.y + 0.5);
+            cos_phi = std::cos(phi);
+            sin_phi = std::sin(phi);
+            alpha_2 = 1 / (Sqr(cos_phi / alpha_u_) + Sqr(sin_phi / alpha_v_));
         }
 
         auto cos_theta = 1 / std::sqrt(1 - alpha_2 * std::log(1 - sample.x)),
              sin_theta = std::sqrt(1 - cos_theta * cos_theta);
 
         auto normal_micro_local = Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
-        return ToWorld(normal_micro_local, normal_macro);
+        auto pdf = (1 - sample.x) / (kPiInv * alpha_u_ * alpha_v_ * std::pow(cos_theta, 3));
+
+        return {ToWorld(normal_micro_local, normal_macro), pdf};
     }
 
-    Float Eval(const Vector3 &normal_micro, const Vector3 &normal_macro) const
+    Float Pdf(const Vector3 &normal_micro, const Vector3 &normal_macro) const
     {
         auto cos_theta = glm::dot(normal_macro, normal_micro);
 
@@ -52,18 +50,18 @@ public:
 
         auto cos_theta_2 = std::pow(cos_theta, 2),
              tan_theta_2 = (1 - cos_theta_2) / cos_theta_2,
-             cos_theta_4 = std::pow(cos_theta, 4);
+             cos_theta_3 = std::pow(cos_theta, 3);
         auto alpha_2 = alpha_u_ * alpha_v_;
 
         Float result = 0;
         if (isotropic_)
-            result = std::exp(-tan_theta_2 / alpha_2) / (kPi * alpha_2 * cos_theta_4);
+            result = std::exp(-tan_theta_2 / alpha_2) / (kPi * alpha_2 * cos_theta_3);
         else
         {
             auto dir = ToLocal(normal_micro, normal_macro);
-            result = std::exp(-(std::pow(dir.x / alpha_u_, 2) + std::pow(dir.y / alpha_v_, 2)) / cos_theta_2) / (kPi * alpha_2 * cos_theta_4);
+            result = std::exp(-(Sqr(dir.x / alpha_u_) + Sqr(dir.y / alpha_v_)) / cos_theta_2) / (kPi * alpha_2 * cos_theta_3);
         }
-        return (result * cos_theta > 1e-20) ? result : 0;
+        return result;
     }
 
     Float SmithG1(const Vector3 &v, const Vector3 &normal_micro, const Vector3 &normal_macro) const

@@ -15,7 +15,7 @@ public:
      */
     PathIntegrator(Scene *scene, Float pdf_rr = 0.95) : Integrator(scene), pdf_rr_(pdf_rr) {}
 
-    Vector3 Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const override;
+    Spectrum Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const override;
 
 private:
     Float pdf_rr_; //递归地追踪光线俄罗斯轮盘赌的概率
@@ -26,7 +26,7 @@ private:
      * \param wo 当前交点处光线的出射方向
      * \return 当前交点处出射光线的辐射亮度
      */
-    Vector3 ShadeRecursively(const Intersection &obj, const Vector3 &wo) const;
+    Spectrum ShadeRecursively(const Intersection &obj, const Vector3 &wo) const;
 
     /**
      * \brief 对发光物体按表面积进行采样

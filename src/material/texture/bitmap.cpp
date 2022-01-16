@@ -130,7 +130,7 @@ void Bitmap::SetPixel(int x, int y, const Vector3 &value)
     data_[offset + 2] = ClampBottom<Float>(0, value.b);
 }
 
-Vector3 Bitmap::GetPixel(const Vector2 &coord) const
+Spectrum Bitmap::GetPixel(const Vector2 &coord) const
 {
     auto x = static_cast<int>(coord.x * width_),
          y = static_cast<int>(coord.y * height_);
@@ -140,7 +140,7 @@ Vector3 Bitmap::GetPixel(const Vector2 &coord) const
     auto r = data_[offset];
     auto g = data_[offset + 1];
     auto b = data_[offset + 2];
-    return Vector3(r, g, b);
+    return Spectrum(r, g, b);
 }
 
 Vector2 Bitmap::GetGradient(const Vector2 &coord) const

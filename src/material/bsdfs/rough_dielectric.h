@@ -24,8 +24,8 @@ public:
 					MicrofacetDistribType distrib_type,
 					Float alpha_u,
 					Float alpha_v,
-					std::unique_ptr<Vector3> specular_reflectance = nullptr,
-					std::unique_ptr<Vector3> specular_transmittance = nullptr)
+					std::unique_ptr<Spectrum> specular_reflectance = nullptr,
+					std::unique_ptr<Spectrum> specular_transmittance = nullptr)
 		: Microfacet(id,
 					 MaterialType::kRoughDielectric,
 					 distrib_type,
@@ -50,48 +50,54 @@ public:
 	}
 
 	///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-	std::pair<Vector3, BsdfSamplingType> Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
+	BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
 	{
+		auto eta = inside ? eta_inv_ : eta_;	 //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 		auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
-		const auto &wi_pseudo = -wo;
 		auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_v_);
 
-		// Walter 等人在《Microfacet Models for Refraction through Rough Surfaces》中提到的技巧，
-		// 略微缩放粗糙度，以减少重要性采样权重。
-		auto cos_i_n = glm::dot(wi_pseudo, normal);
-		distrib->ScaleAlpha(1.2 - 0.2 * std::sqrt(std::fabs(cos_i_n)));
+		// Walter 等人在《Microfacet Models for Refraction through Rough Surfaces》中提到的技巧，略微缩放粗糙度，以减少重要性采样权重。
+		distrib->ScaleAlpha(1.2 - 0.2 * std::sqrt(std::fabs(glm::dot(-wo, normal))));
 
-		auto normal_micro = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
+		auto [normal_micro, D] = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
 		DeleteDistribPointer(distrib);
 
-		auto kr_pseudo = Fresnel(wi_pseudo, normal_micro, eta_inv);
+		if (D < kEpsilon)
+			return BsdfSampling();
 
+		BsdfSampling bs;
+		auto normal_n = normal;
+		auto inside_n = inside;
+		auto F = Fresnel(-wo, normal_micro, eta_inv);
 		auto sample_x = UniformFloat();
-		if (sample_x < kr_pseudo)
+		if (sample_x < F)
 		{
-			auto wi = -Reflect(wi_pseudo, normal_micro);
-			if (glm::dot(wi, normal) * glm::dot(wo, normal) >= 0)
-				return {Vector3(0), BsdfSamplingType::kNone};
-			else
-				return {wi, BsdfSamplingType::kReflection};
+			bs.wi = -Reflect(-wo, normal_micro);
+			if (glm::dot(bs.wi, normal) >= 0)
+				return BsdfSampling();
 		}
 		else
 		{
-			auto wi = -Refract(wi_pseudo, normal_micro, eta_inv);
-			if (glm::dot(wi, normal) * glm::dot(wo, normal) <= 0)
-				return {Vector3(0), BsdfSamplingType::kNone};
-			else
-				return {wi, BsdfSamplingType::kTransmission};
+			bs.wi = -Refract(-wo, normal_micro, eta_inv);
+			if (glm::dot(bs.wi, normal) <= 0)
+				return BsdfSampling();
+			normal_n = -normal_n;
+			inside_n = !inside_n;
 		}
+
+		bs.pdf = Pdf(bs.wi, wo, normal_n, texcoord, inside_n);
+		if (bs.pdf < kEpsilonL)
+			return BsdfSampling();
+
+		bs.weight = Eval(bs.wi, wo, normal_n, texcoord, inside_n);
+
+		return bs;
 	}
 
 	///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
-	Vector3 Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
+	Spectrum Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
 	{
-		if (bsdf_sampling_type == BsdfSamplingType::kNone)
-			return Vector3(0);
-
 		auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 		auto ratio_t = inside ? ratio_t_inv_ : ratio_t_;
 
@@ -115,37 +121,37 @@ public:
 		}
 
 		auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_v_);
-		auto D = distrib->Eval(h, normal);
+		auto D = distrib->Pdf(h, normal);
 		auto G = distrib->SmithG1(-wi, h, normal) * distrib->SmithG1(wo, h, normal);
 		DeleteDistribPointer(distrib);
 
 		if (relfect)
 		{
-			auto weight = Vector3(F * D * G / (4 * std::fabs(cos_i_n * cos_o_n)));
+			auto albedo = Spectrum(F * D * G / (4 * std::fabs(cos_i_n * cos_o_n)));
 			if (specular_reflectance_)
-				weight *= *specular_reflectance_;
+				albedo *= *specular_reflectance_;
 
 			if (albedo_avg_ < kOneMinusEpsilon)
 			{
 				auto weight_loss = (1 - ratio_t) * EvalMultipleScatter(cos_i_n, cos_o_n, inside);
-				weight += Vector3(weight_loss);
+				albedo += Spectrum(weight_loss);
 			}
 
-			return weight;
+			return albedo;
 		}
 		else
 		{
 			auto cos_i_h = glm::dot(-wi, h),
 				 cos_o_h = glm::dot(wo, h);
-			auto weight = Vector3(std::fabs(cos_i_h * cos_o_h * (1 - F) * G * D /
-											(cos_i_n * cos_o_n * Sqr(eta_inv * cos_i_h + cos_o_h))));
+			auto weight = Spectrum(std::fabs(cos_i_h * cos_o_h * (1 - F) * G * D /
+											 (cos_i_n * cos_o_n * Sqr(eta_inv * cos_i_h + cos_o_h))));
 			if (specular_transmittance_)
 				weight *= *specular_transmittance_;
 
 			if (albedo_avg_ < kOneMinusEpsilon)
 			{
 				auto weight_loss = ratio_t * EvalMultipleScatter(cos_i_n, cos_o_n, inside);
-				weight += Vector3(weight_loss);
+				weight += Spectrum(weight_loss);
 			}
 
 			//光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
@@ -156,11 +162,8 @@ public:
 	}
 
 	///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
-	Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
+	Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
 	{
-		if (bsdf_sampling_type == BsdfSamplingType::kNone)
-			return 0;
-
 		auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
 		auto cos_i_n = glm::dot(-wi, normal),
@@ -182,8 +185,11 @@ public:
 		auto F = Fresnel(wi, h, eta_inv);
 
 		auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_v_);
-		auto D = distrib->Eval(h, normal);
+		auto D = distrib->Pdf(h, normal);
 		DeleteDistribPointer(distrib);
+
+		if (D < kEpsilon)
+			return 0;
 
 		if (relfect)
 		{
@@ -199,10 +205,10 @@ public:
 	}
 
 private:
-	Float eta_;										  //光线射入材质的相对折射率
-	Float eta_inv_;									  //光线射出材质的相对折射率
-	std::unique_ptr<Vector3> specular_reflectance_;	  // 镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
-	std::unique_ptr<Vector3> specular_transmittance_; // 镜面透射系数。注意，对于物理真实感绘制，不应设置此参数。
+	Float eta_;										   //光线射入材质的相对折射率
+	Float eta_inv_;									   //光线射出材质的相对折射率
+	std::unique_ptr<Spectrum> specular_reflectance_;   // 镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
+	std::unique_ptr<Spectrum> specular_transmittance_; // 镜面透射系数。注意，对于物理真实感绘制，不应设置此参数。
 	Float f_add_;
 	Float f_add_inv_;
 	Float ratio_t_;

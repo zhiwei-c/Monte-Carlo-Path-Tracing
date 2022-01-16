@@ -22,13 +22,13 @@ public:
 	*/
 	RoughConductor(const std::string &id,
 				   bool mirror,
-				   const Vector3 &eta,
-				   const Vector3 &k,
+				   const Spectrum &eta,
+				   const Spectrum &k,
 				   MicrofacetDistribType distrib_type,
 				   Float alpha_u,
 				   Float alpha_v,
 				   Float ext_ior = IOR.at("air"),
-				   std::unique_ptr<Vector3> specular_reflectance = nullptr)
+				   std::unique_ptr<Spectrum> specular_reflectance = nullptr)
 		: Microfacet(id,
 					 MaterialType::kRoughConductor,
 					 distrib_type,
@@ -41,88 +41,104 @@ public:
 	{
 		if (mirror)
 		{
-			eta_ = Vector3(0);
-			k_ = Vector3(1) / ext_ior;
+			eta_ = Spectrum(0);
+			k_ = Spectrum(1) / ext_ior;
 		}
 		auto [reflectivity, edgetint] = IorToReflectivityEdgetint(eta_, k_);
 		auto F_avg = AverageFresnelConductor(reflectivity, edgetint);
-		f_add_ = Sqr(F_avg) * albedo_avg_ / (Vector3(1) - F_avg * (1 - albedo_avg_));
+		f_add_ = Sqr(F_avg) * albedo_avg_ / (Spectrum(1) - F_avg * (1 - albedo_avg_));
 	}
 
 	///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-	std::pair<Vector3, BsdfSamplingType> Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
+	BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
 	{
 		auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_v_);
-		auto normal_micro = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
+		auto [normal_micro, pdf] = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
 		DeleteDistribPointer(distrib);
-		auto wi = -Reflect(-wo, normal_micro);
-		if (glm::dot(wi, normal) * glm::dot(wo, normal) >= 0)
-			return {Vector3(0), BsdfSamplingType::kNone};
-		else
-			return {wi, BsdfSamplingType::kReflection};
+
+		if (pdf < kEpsilon)
+			return BsdfSampling();
+
+		BsdfSampling bs;
+
+		bs.wi = -Reflect(-wo, normal_micro);
+		if (glm::dot(bs.wi, normal) >= 0)
+			return BsdfSampling();
+
+		auto jacobian = std::fabs(1 / (4 * glm::dot(wo, normal_micro)));
+		bs.pdf = pdf * jacobian;
+		if (bs.pdf < kEpsilon)
+			return BsdfSampling();
+
+		bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
+
+		return bs;
 	}
 
 	///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
-	Vector3 Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
+	Spectrum Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
 	{
-		if (bsdf_sampling_type == BsdfSamplingType::kNone || NotSameHemis(wo, normal))
-			return Vector3(0);
+		if (NotSameHemis(wo, normal))
+			return Spectrum(0);
 
 		auto cos_i_n = std::fabs(glm::dot(wi, normal)),
 			 cos_o_n = std::fabs(glm::dot(wo, normal));
 
 		auto h = glm::normalize(-wi + wo);
 
-		Vector3 F(0);
+		Spectrum F(0);
 		if (mirror_)
-			F = Vector3(1);
+			F = Spectrum(1);
 		else
 			F = FresnelConductor(wi, h, eta_, k_);
 
 		auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_v_);
 
-		auto D = distrib->Eval(h, normal);
+		auto D = distrib->Pdf(h, normal);
 		auto G = distrib->SmithG1(-wi, h, normal) * distrib->SmithG1(wo, h, normal);
 		DeleteDistribPointer(distrib);
 
-		auto weight = F * static_cast<Float>(D * G / (4 * cos_i_n * cos_o_n));
+		auto albedo = F * static_cast<Float>(D * G / (4 * cos_i_n * cos_o_n));
 		if (specular_reflectance_ != nullptr)
-			weight *= *specular_reflectance_;
+			albedo *= *specular_reflectance_;
 
 		if (albedo_avg_ < kOneMinusEpsilon)
-			weight += EvalMultipleScatter(cos_i_n, cos_o_n);
+			albedo += EvalMultipleScatter(cos_i_n, cos_o_n);
 
-		return weight;
+		return albedo;
 	}
 
 	///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
-	Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const override
+	Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
 	{
-		if (bsdf_sampling_type == BsdfSamplingType::kNone || NotSameHemis(wo, normal))
+		if (NotSameHemis(wo, normal))
 			return 0;
 
-		auto cos_i_n = glm::dot(wi, normal),
-			 cos_o_n = glm::dot(wo, normal);
+		if (glm::dot(wi, normal) * glm::dot(wo, normal) >= 0)
+			return 0;
 
 		auto h = glm::normalize(-wi + wo);
 
 		auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_v_);
-		auto D = distrib->Eval(h, normal);
+		auto D = distrib->Pdf(h, normal);
 		DeleteDistribPointer(distrib);
+
+		if (D < kEpsilon)
+			return 0;
 
 		auto jacobian = std::fabs(1 / (4 * glm::dot(wo, h)));
 		return D * jacobian;
 	}
 
 private:
-	bool mirror_;									//是否是镜面
-	Vector3 eta_;									//材质相对折射率的实部
-	Vector3 k_;										//材质相对折射率的虚部,
-	std::unique_ptr<Vector3> specular_reflectance_; //镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
+	bool mirror_;									 //是否是镜面
+	Spectrum eta_;									 //材质相对折射率的实部
+	Spectrum k_;									 //材质相对折射率的虚部,
+	std::unique_ptr<Spectrum> specular_reflectance_; //镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
 
-	Vector3 f_add_;
+	Spectrum f_add_;
 
-	Vector3 EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const
+	Spectrum EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const
 	{
 		auto albedo_i = GetAlbedo(std::fabs(cos_i_n));
 		auto albedo_o = GetAlbedo(std::fabs(cos_o_n));

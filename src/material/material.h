@@ -26,13 +26,13 @@ enum class MaterialType
     kRoughPlastic     //粗糙的塑料
 };
 
-enum class BsdfSamplingType
+struct BsdfSampling
 {
-    kNone,
-    kUnknown,
-    kReflection,
-    kSpecularReflection,
-    kTransmission,
+    Vector3 wi;
+    Spectrum weight;
+    Float pdf;
+
+    BsdfSampling() : wi(Vector3(0)), weight(Spectrum(0)), pdf(0) {}
 };
 
 class Material
@@ -52,7 +52,7 @@ public:
      * \param inside 表面法线方向是否朝向表面内侧
      * \return 由 Vector3 类型和 BsdfSamplingType 类型构成的 pair，分别代表抽样所得光线入射方向，和入射光线与出射光线之间的关系
      */
-    virtual std::pair<Vector3, BsdfSamplingType> Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const = 0;
+    virtual BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const = 0;
 
     /**
      * \brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
@@ -63,7 +63,7 @@ public:
      * \param inside 表面法线方向是否朝向表面内侧
      * \return BSDF 权重
      */
-    virtual Vector3 Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const = 0;
+    virtual Spectrum Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const = 0;
 
     /**
      * \brief 根据光线入射方向、出射方向和法线方向，计算光线因从入射方向入射，而从出射方向出射的概率
@@ -74,10 +74,10 @@ public:
      * \param inside 表面法线方向是否朝向表面内侧
      * \return 光线因从入射方向入射，而从出射方向出射的概率
      */
-    virtual Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, const BsdfSamplingType &bsdf_sampling_type) const = 0;
+    virtual Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const = 0;
 
     ///\return 辐射亮度
-    virtual Vector3 radiance() const { return Vector3(0); };
+    virtual Spectrum radiance() const { return Spectrum(0); };
 
     ///\return 是否发光
     virtual bool HasEmission() const { return false; }

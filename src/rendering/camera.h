@@ -106,6 +106,11 @@ public:
         std::mt19937 g(rd());
         std::shuffle(pixels.begin(), pixels.end(), g);
 
+        std::vector<Vector3> look_dirs_now = GetDirections(198, 413);
+        for (auto look_dir_now : look_dirs_now)
+        {
+             integrator->Shade(eye_pos_, look_dir_now);
+        }
         int count = 0;
         auto total_inv = static_cast<Float>(1) / (film_.height * film_.width);
         auto spp_inv = static_cast<Float>(1) / spp_;
@@ -117,7 +122,7 @@ public:
             auto pixels_now = std::vector<std::pair<int, int>>(beginning, ending);
             for (auto pixel : pixels_now)
             {
-                Vector3 color(0);
+                Spectrum color(0);
                 auto [i, j] = pixel;
                 std::vector<Vector3> look_dirs_now = GetDirections(i, j);
                 for (auto look_dir_now : look_dirs_now)

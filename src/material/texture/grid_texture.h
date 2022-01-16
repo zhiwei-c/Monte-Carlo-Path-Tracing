@@ -10,7 +10,7 @@ NAMESPACE_BEGIN(simple_renderer)
 class GridTexture : public Texture
 {
 public:
-    GridTexture(const Vector3 &color0, const Vector3 &color1, Float line_width, const Vector2 &uv_offset, const Vector2 &uv_scale)
+    GridTexture(const Spectrum &color0, const Spectrum &color1, Float line_width, const Vector2 &uv_offset, const Vector2 &uv_scale)
         : Texture(TextureType::kCheckerboard),
           color0_(color0),
           color1_(color1),
@@ -24,7 +24,7 @@ public:
             uv_scale_ = std::make_unique<Vector2>(uv_scale);
     }
 
-    Vector3 GetPixel(const Vector2 &coord) const override
+    Spectrum GetPixel(const Vector2 &coord) const override
     {
         auto u = coord.x, v = coord.y;
         if (uv_scale_)
@@ -65,8 +65,8 @@ public:
     }
 
 private:
-    Vector3 color0_;
-    Vector3 color1_;
+    Spectrum color0_;
+    Spectrum color1_;
     Float line_width_;
     std::unique_ptr<Vector2> uv_offset_;
     std::unique_ptr<Vector2> uv_scale_;
