@@ -40,10 +40,10 @@ Spectrum PathIntegrator::ShadeRecursively(const Intersection &obj, const Vector3
 	{
 		const auto &wi = -ray_light.dir();
 		auto cos_theta_l = glm::dot(wi, light.normal());
-		if (cos_theta_l > kEpsilonL)
+		if (cos_theta_l > kEpsilon)
 		{
 			auto f_r = obj.Eval(wi, wo);
-			if (f_r.r + f_r.g + f_r.b > kEpsilonL)
+			if (f_r.r + f_r.g + f_r.b > kEpsilon)
 			{
 				auto cos_theta = std::fabs(glm::dot(-wi, obj.normal()));
 				const auto &length = light.distance();
@@ -54,7 +54,7 @@ Spectrum PathIntegrator::ShadeRecursively(const Intersection &obj, const Vector3
 
 	//按BSDF采样光照
 	BsdfSampling bs = obj.SampleWi(wo);
-	if (bs.pdf > kEpsilonL)
+	if (bs.pdf > kEpsilonPdf)
 	{
 		auto cos_theta = std::fabs(glm::dot(-bs.wi, obj.normal()));
 		auto pre = this->bvh_->Intersect(Ray(obj.pos(), -bs.wi));

@@ -59,7 +59,7 @@ public:
             bs.pdf = 1 - kr;
         }
 
-        if (bs.pdf < kEpsilon)
+        if (bs.pdf < kEpsilonL)
             return BsdfSampling();
 
         return bs;

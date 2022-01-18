@@ -65,9 +65,8 @@ public:
 		if (glm::dot(bs.wi, normal) >= 0)
 			return BsdfSampling();
 
-		auto jacobian = std::fabs(1 / (4 * glm::dot(wo, normal_micro)));
-		bs.pdf = pdf * jacobian;
-		if (bs.pdf < kEpsilon)
+		bs.pdf = Pdf(bs.wi, wo, normal, texcoord, inside);
+		if (bs.pdf < kEpsilonL)
 			return BsdfSampling();
 
 		bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);

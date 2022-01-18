@@ -79,7 +79,7 @@ public:
             bs.wi = -ToWorld(wi_local, normal);
         }
         bs.pdf = Pdf(bs.wi, wo, normal, texcoord, inside);
-        if (bs.pdf < kEpsilon)
+        if (bs.pdf < kEpsilonL)
             return BsdfSampling();
         bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
         return bs;

@@ -30,6 +30,7 @@ constexpr auto kEpsilon = static_cast<Float>(1e-10);
 constexpr auto kOneMinusEpsilon = static_cast<Float>(1 - 1e-10);
 constexpr auto kEpsilonDistance = static_cast<Float>(1e-10);
 constexpr auto kEpsilonL = static_cast<Float>(1e-3);
+constexpr auto kEpsilonPdf = static_cast<Float>(1e-5);
 
 constexpr size_t Hash(const char *str)
 {

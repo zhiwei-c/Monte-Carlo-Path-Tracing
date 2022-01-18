@@ -30,7 +30,7 @@ public:
         BsdfSampling bs;
 
         auto [wi_local, pdf] = HemisCos();
-        if (pdf < kEpsilon)
+        if (pdf < kEpsilonL)
             return BsdfSampling();
 
         bs.wi = -ToWorld(wi_local, normal);

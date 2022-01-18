@@ -87,7 +87,7 @@ public:
 		}
 
 		bs.pdf = Pdf(bs.wi, wo, normal_n, texcoord, inside_n);
-		if (bs.pdf < kEpsilonL)
+		if (bs.pdf < kEpsilonPdf || alpha_u_ > 0.01 && alpha_v_ > 0.01 && bs.pdf < kEpsilonL)
 			return BsdfSampling();
 
 		bs.weight = Eval(bs.wi, wo, normal_n, texcoord, inside_n);
