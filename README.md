@@ -3,6 +3,16 @@
 
 A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)).
 
+---
+
+绘制示例：
+
+- 《[Country Kitchen](http://www.blendswap.com/blends/view/42851)》 by [Jay-Artist](http://www.blendswap.com/user/Jay-Artist)，来源于 [Rendering Resources | Benedikt Bitterli's Portfolio](https://benedikt-bitterli.me/resources/) 
+
+- 以16K，4 spp 绘制；
+
+![kitchen](resources/rendering_results/kitchen.png)
+
 ## 1 支持的绘制配置文件格式
 
 - 自拟的[ json 格式文件](resources/rendering_resources/cornell-box/scene.json)；

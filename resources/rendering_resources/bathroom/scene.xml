@@ -14,9 +14,9 @@
 			<integer name="sampleCount" value="9" />
 		</sampler>
 		<film type="ldrfilm" >
-			<integer name="width" value="11520" />
-			<integer name="height" value="11520" />
-			<string name="fileFormat" value="exr" />
+			<integer name="width" value="10000" />
+			<integer name="height" value="10000" />
+			<string name="fileFormat" value="png" />
 			<string name="pixelFormat" value="rgb" />
 			<float name="gamma" value="2.2" />
 			<boolean name="banner" value="false" />
