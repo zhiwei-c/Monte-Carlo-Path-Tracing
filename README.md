@@ -49,7 +49,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
   ![plastic](resources/rendering_results/plastic.png)
 
-- [粗糙的塑料材质（rough plastic material）](src/material/bsdfs/rough_plastic.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-plastic-material-roughplastic)；（可能存在错误，may contain errors）
+- [粗糙的塑料材质（rough plastic material）](src/material/bsdfs/rough_plastic.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-plastic-material-roughplastic)；
 
   ![rough_plastic](resources/rendering_results/rough_plastic.png)
 
