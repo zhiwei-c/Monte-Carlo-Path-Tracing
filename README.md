@@ -60,7 +60,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
   - 重要性抽样（importance sampling），给定光线入射方向和表面法线方向，根据 BSDF 对光线出射方向进行重要性抽样；
   - 多重重要性抽样（multiple importance sampling）：
     - 按发光物体表面积直接采样光源；
-    - 按 BSDF 采样光源；（可能存在错误，may contain errors）
+    - 按 BSDF 采样光源；
   - 俄罗斯轮盘赌（Russian roulette）控制路径追踪深度；
 
 ### 2.3 其它
