@@ -1,0 +1,27 @@
+{
+    "integrator": {
+        "type": "path"
+    },
+    "scene": "box.obj",
+    "camera": {
+        "eye_pos": [
+            278,
+            274,
+            -475
+        ],
+        "look_at": [
+            278,
+            274,
+            0
+        ],
+        "up": [
+            0,
+            1,
+            0
+        ],
+        "fov_height": 60,
+        "width": 640,
+        "height": 640,
+        "spp": 4
+    }
+}

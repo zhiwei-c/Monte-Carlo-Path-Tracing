@@ -9,7 +9,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 - 《[Country Kitchen](http://www.blendswap.com/blends/view/42851)》 by [Jay-Artist](http://www.blendswap.com/user/Jay-Artist)，来源于 [Rendering Resources | Benedikt Bitterli's Portfolio](https://benedikt-bitterli.me/resources/) 
 
-- 以16K，4 spp 绘制；
+- 路径追踪算法，16K 分辨率，4 spp 绘制；
 
 ![kitchen](resources/rendering_results/kitchen.png)
 
@@ -29,6 +29,10 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
     - 按 BSDF 采样光源；
   - 俄罗斯轮盘赌（Russian roulette）控制路径追踪深度； 
 - 基于双向路径追踪（bidirectional path tracing，BDPT）算法的积分器
+
+| 路径追踪算法（Path Tracing）<br />640*640 分辨率，4 spp    | 双向路径追踪算法（Bi-directional Path Tracing）<br />640*640 分辨率，4 spp |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| ![](resources/rendering_results/box-path_trcing-4_spp.png) | ![](resources/rendering_results/box-bdpt-4_spp.png)          |
 
 ### 2.2 表面散射模型（Surface scattering models）
 
