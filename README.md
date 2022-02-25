@@ -30,7 +30,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
   - 俄罗斯轮盘赌（Russian roulette）控制路径追踪深度； 
 - 基于双向路径追踪（bidirectional path tracing，BDPT）算法的积分器
 
-| 路径追踪算法（Path Tracing）<br />640*640 分辨率，4 spp    | 双向路径追踪算法（Bi-directional Path Tracing）<br />640*640 分辨率，4 spp |
+| 路径追踪算法（Path Tracing）<br />640*640 分辨率，4 spp    | 双向路径追踪算法（Bidirectional Path Tracing）<br />640*640 分辨率，4 spp |
 | ---------------------------------------------------------- | ------------------------------------------------------------ |
 | ![](resources/rendering_results/box-path_trcing-4_spp.png) | ![](resources/rendering_results/box-bdpt-4_spp.png)          |
 
