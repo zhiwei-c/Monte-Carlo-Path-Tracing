@@ -65,7 +65,7 @@ class BdptIntegrator : public Integrator
 {
 public:
     /**
-     * \brief 路径追踪算法类
+     * \brief 双向路径追踪算法类
      * \param max_depth 递归地追踪光线最大深度
      */
     BdptIntegrator(int max_depth) : Integrator(IntegratorType::kBdpt, max_depth) {}

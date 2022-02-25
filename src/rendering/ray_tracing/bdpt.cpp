@@ -55,8 +55,14 @@ Spectrum BdptIntegrator::ProcessBdpt(const Intersection &its, const Vector3 &wo)
         if (c_idx < camera_path.size() - 1)
         {
             auto L_temp = camera_path[c_idx + 1].L * c.bsdf * (c.cos_theta_abs / c.pdf);
+            auto pdf_temp = c.pdf;
+            if (c_idx > rr_depth_)
+            {
+                L_temp /= pdf_rr_;
+                pdf_temp *= pdf_rr_;
+            }
             L_indirects.push_back(L_temp);
-            pdfs.push_back(c.pdf);
+            pdfs.push_back(pdf_temp);
         }
         //总间接光照
         auto L_indirect = WeightPowerHeuristic(L_indirects, pdfs);
@@ -75,7 +81,7 @@ std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
         return emitter_path;
 
     auto wo_first = Vector3(0);
-    std::tie(wo_first, std::ignore) = HemisUniform();
+    std::tie(wo_first, std::ignore) = HemisCos();
     wo_first = ToWorld(wo_first, its_first.normal());
     emitter_path.push_back({its_first, Vector3(0), wo_first});
 
@@ -143,6 +149,8 @@ std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
         auto &e = emitter_path[i];
 
         auto L_indirect = e_pre.L * e.bsdf * (e.cos_theta_abs / e.pdf);
+        if (i > rr_depth_)
+            L_indirect /= pdf_rr_;
 
         Spectrum L_direct(0);
         Spectrum L_env(0);
@@ -270,12 +278,20 @@ std::pair<Spectrum, Float> BdptIntegrator::PrepareOtherEmitter2OneC(const std::v
                 if (pdf_e > kEpsilonPdf2)
                 {
                     auto bsdf_e = e.Eval(e.wi, wi);
-                    L_pre += e_pre.L * bsdf_e * (e.cos_theta_abs / pdf_e);
+                    auto L_pre_indirect = e_pre.L * bsdf_e * (e.cos_theta_abs / pdf_e);
+                    if (e_index - 1 > rr_depth_)
+                        L_pre_indirect /= pdf_rr_;
+                    L_pre += L_pre_indirect;
                 }
             }
             auto bsdf = c.Eval(wi, wo);
             auto cos_theta = std::abs(glm::dot(wi, normal));
             auto L_indirect = L_pre * bsdf * (cos_theta / pdf);
+            if (e_index > rr_depth_)
+            {
+                L_indirect /= pdf_rr_;
+                pdf *= pdf_rr_;
+            }
             return {L_indirect, pdf};
         }
     }
