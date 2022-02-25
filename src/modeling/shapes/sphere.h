@@ -147,10 +147,10 @@ public:
         }
 
         auto distance = glm::length(pos - ray.origin());
-        return Intersection(pos, normal, texcoord, inside, distance, this->material_);
+        return Intersection(pos, normal, texcoord, inside, distance, this->material_, area_);
     }
 
-    std::pair<Intersection, Float> SampleP(const Vector3 &pos_pre) const override
+    std::pair<Intersection, Float> SampleP() const override
     {
         auto normal = SphereUniform();
         auto pos = center_ + radius_ * normal;
@@ -160,9 +160,8 @@ public:
             pos = TransfromPt(*to_world_, pos);
             normal = TransfromDir(*to_world_norm_, normal);
         }
-        auto distance = glm::length(pos - pos_pre);
 
-        return {Intersection(pos, normal, Vector2(-1), false, distance, this->material_), area_inv_};
+        return {Intersection(pos, normal, Vector2(-1), false, INFINITY, this->material_, area_), area_inv_};
     }
 
 private:

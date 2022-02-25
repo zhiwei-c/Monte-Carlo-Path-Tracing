@@ -17,7 +17,8 @@ public:
           inside_(false),
           distance_(INFINITY),
           texcoord_(Vector2(0)),
-          material_(nullptr) {}
+          material_(nullptr),
+          shape_area_(INFINITY) {}
 
     /**
      * \brief 光线与物体模型面片交点，光线与物体相交
@@ -33,29 +34,31 @@ public:
                  const Vector2 &texcoord,
                  bool inside,
                  Float distance,
-                 Material *material)
+                 Material *material,
+                 Float shape_area)
         : valid_(true),
           pos_(pos),
           normal_(normal),
           inside_(inside),
           distance_(distance),
           texcoord_(texcoord),
-          material_(material) {}
+          material_(material),
+          shape_area_(shape_area) {}
 
     /**
      * \brief 交点处给定光线出射方向，采样入射方向
      * \param wo 给定的光线出射方向
      * \return 采样得到的光线入射方向
      */
-    BsdfSampling SampleWi(const Vector3 &wo) const
+    BsdfSampling Sample(const Vector3 &wo, bool get_weight = true) const
     {
         auto one_side = glm::dot(wo, normal_) > 0; //光线与交点法线是否同侧
         auto normal = one_side ? normal_ : -normal_;
         auto inside = one_side ? inside_ : !inside_;
 
         return material_->TextureMapping()
-                   ? material_->Sample(wo, normal, &texcoord_, inside)
-                   : material_->Sample(wo, normal, nullptr, inside);
+                   ? material_->Sample(wo, normal, &texcoord_, inside, get_weight)
+                   : material_->Sample(wo, normal, nullptr, inside, get_weight);
     }
 
     /**
@@ -112,6 +115,27 @@ public:
     ///\return 交点处的物体表面的辐射亮度
     Spectrum radiance() const { return material_->radiance(); }
 
+    Float shape_area() const { return shape_area_; }
+
+    bool smooth_material() const
+    {
+        switch (material_->type())
+        {
+        case MaterialType::kDielectric:
+            return true;
+            break;
+        case MaterialType::kConductor:
+            return true;
+            break;
+        case MaterialType::kThinDielectric:
+            return true;
+            break;
+        default:
+            return false;
+            break;
+        }
+    }
+
 private:
     bool valid_;         //光线与物体的相交是否发生
     bool inside_;        //交点处法线是否朝内
@@ -120,6 +144,7 @@ private:
     Vector2 texcoord_;   //交点纹理坐标
     Float distance_;     //从光线起点到该交点的距离
     Material *material_; //交点面片对应的材质
+    Float shape_area_;
 };
 
 NAMESPACE_END(simple_renderer)

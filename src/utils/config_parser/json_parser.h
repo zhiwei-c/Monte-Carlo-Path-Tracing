@@ -9,10 +9,11 @@
 #include "../../rendering/camera.h"
 #include "../../modeling/envmap.h"
 #include "../../modeling/scene.h"
+#include "../../rendering/integrator.h"
 
 NAMESPACE_BEGIN(simple_renderer)
 
-std::pair<Scene *, Camera *> ParseJsonCfg(const std::string &file_path);
+std::tuple<Scene *, Camera *, Integrator *> ParseJsonCfg(const std::string &file_path);
 
 //\brief 从 json 格式数据内解析待绘制的模型信息
 //
@@ -20,6 +21,13 @@ std::pair<Scene *, Camera *> ParseJsonCfg(const std::string &file_path);
 //
 //\return 获取到的待绘制模型信息
 static Scene *InitScene(const std::string &dir_path, nlohmann::json &data);
+
+//\brief 从 json 格式数据内解析绘制方程积分求解方法的信息
+//
+//\param data 待解析的 json 数据
+//
+//\return 获取到的绘制方程积分求解方法
+static Integrator* InitIntegrator(nlohmann::json &data);
 
 //\brief 从json格式数据内解析相机信息
 //

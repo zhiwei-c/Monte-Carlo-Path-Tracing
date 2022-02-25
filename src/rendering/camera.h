@@ -6,7 +6,7 @@
 #include "../utils/math/maths.h"
 #include "../utils/timer.h"
 #include "../modeling/scene.h"
-#include "ray_tracing/integrators.h"
+#include "integrator.h"
 
 NAMESPACE_BEGIN(simple_renderer)
 
@@ -81,14 +81,15 @@ public:
     /**
      * \brief 使用相机信息生成一张给定场景的图像，并将图像保存到相应的位置。
      * \param scene 待生成图像的场景
+     * \param integrator 绘制方程积分求解方法
      * \param output_name 保存生成图像的文件名
      */
-    void Shoot(Scene *scene, std::string output_name)
+    void Shoot(Scene *scene, Integrator *integrator, std::string output_name)
     {
         Timer timer;
         std::cout << "[info] Begin render......\t\t\t\r";
 
-        auto integrator = new PathIntegrator(scene);
+        integrator->SetScene(scene);
         auto frame = Bitmap(film_.width, film_.height, 3, film_.gamma);
         if (output_name.empty())
         {
@@ -106,11 +107,6 @@ public:
         std::mt19937 g(rd());
         std::shuffle(pixels.begin(), pixels.end(), g);
 
-        std::vector<Vector3> look_dirs_now = GetDirections(198, 413);
-        for (auto look_dir_now : look_dirs_now)
-        {
-             integrator->Shade(eye_pos_, look_dir_now);
-        }
         int count = 0;
         auto total_inv = static_cast<Float>(1) / (film_.height * film_.width);
         auto spp_inv = static_cast<Float>(1) / spp_;
@@ -138,8 +134,6 @@ public:
                 }
             }
         }
-        delete integrator;
-        integrator = nullptr;
         frame.Write(output_name);
         timer.PrintTimePassed();
         std::cout << std::endl;

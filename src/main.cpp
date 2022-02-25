@@ -4,6 +4,7 @@
 #include "utils/config_parser/xml_parser.h"
 #include "utils/timer.h"
 #include "utils/file_path.h"
+#include "rendering/ray_tracing/integrators.h"
 
 int main(int argc, char *argv[])
 {
@@ -39,13 +40,14 @@ int main(int argc, char *argv[])
 
 	simple_renderer::Scene *scene = nullptr;
 	simple_renderer::Camera *camera = nullptr;
+	simple_renderer::Integrator *integrator = nullptr;
 	auto suffix = simple_renderer::GetSuffix(file_path);
 	if (suffix == "json")
-		std::tie(scene, camera) = simple_renderer::ParseJsonCfg(file_path);
+		std::tie(scene, camera, integrator) = simple_renderer::ParseJsonCfg(file_path);
 	else if (suffix == "xml")
 	{
 		auto parser = simple_renderer::XmlParser();
-		std::tie(scene, camera) = parser.Parse(file_path);
+		std::tie(scene, camera, integrator) = parser.Parse(file_path);
 	}
 	else
 	{
@@ -54,7 +56,9 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	camera->Shoot(scene, output_name);
+	camera->Shoot(scene, integrator, output_name);
+
+	DeleteIntegrator(integrator);
 
 	delete scene;
 	delete camera;

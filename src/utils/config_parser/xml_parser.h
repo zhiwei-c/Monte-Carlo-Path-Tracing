@@ -14,6 +14,7 @@
 #include "../../modeling/envmap.h"
 #include "../../modeling/scene.h"
 #include "../../material/texture/textures.h"
+#include "../../rendering/integrator.h"
 
 NAMESPACE_BEGIN(simple_renderer)
 
@@ -22,7 +23,7 @@ class XmlParser
 public:
 	XmlParser() : bsdf_cnt_(0), gamma_(-1) {}
 
-	std::tuple<Scene *, Camera *> Parse(const std::string &path);
+	std::tuple<Scene *, Camera *, Integrator *> Parse(const std::string &path);
 
 private:
 	std::string xml_directory_;
@@ -40,6 +41,8 @@ private:
 		shapes_.clear();
 		bsdf_cnt_ = 0;
 	}
+	
+	Integrator* ParseIntegrator(rapidxml::xml_node<> *node_integrator);
 
 	Camera *ParseCamera(rapidxml::xml_node<> *node_sensor);
 

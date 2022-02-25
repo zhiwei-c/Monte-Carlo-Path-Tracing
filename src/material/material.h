@@ -52,7 +52,7 @@ public:
      * \param inside 表面法线方向是否朝向表面内侧
      * \return 由 Vector3 类型和 BsdfSamplingType 类型构成的 pair，分别代表抽样所得光线入射方向，和入射光线与出射光线之间的关系
      */
-    virtual BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const = 0;
+    virtual BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const = 0;
 
     /**
      * \brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重

@@ -7,7 +7,7 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
-//\brief 获取一个在0-1之间的随机数
+//\brief 获取一个在 [0,1] 之间的随机数
 //
 //\return 得到的随机数
 inline Float UniformFloat()
@@ -17,6 +17,17 @@ inline Float UniformFloat()
     std::uniform_real_distribution<Float> dist;
 
     return std::fabs(1 - dist(e) * 2);
+}
+
+//\brief 获取一个在 [0,1) 之间的随机数
+//
+//\return 得到的随机数
+inline Float UniformFloat2()
+{
+    std::random_device dev;
+    std::default_random_engine e(dev());
+    std::uniform_real_distribution<Float> dist;
+    return dist(e);
 }
 
 inline Vector2 Hammersley(uint32_t i, uint32_t N)
@@ -76,6 +87,20 @@ inline Vector2 DiskUnifrom()
     return Vector2(r * cos_phi, r * sin_phi);
 }
 
+inline std::pair<Vector3, Float> HemisUniform()
+{
+    auto x_1 = UniformFloat();
+    auto x_2 = UniformFloat();
+    auto cos_theta = x_1,
+         phi = 2.f * kPi * x_2;
+    auto sin_theta = std::sqrt(1.f - cos_theta * cos_theta),
+         cos_phi = std::cos(phi),
+         sin_phi = std::sin(phi);
+    auto dir = Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
+    auto pdf = kPiInv * 0.5;
+    return {dir, pdf};
+}
+
 inline std::pair<Vector3, Float> HemisCos()
 {
     auto x_1 = UniformFloat();
@@ -115,36 +140,6 @@ inline Float PdfHemisCosN(const Vector3 &dir_local, const Float n)
     auto cos_theta = dir_local.z;
     auto pdf = (n + 1) * 0.5 * kPiInv * std::pow(cos_theta, n);
     return pdf;
-}
-
-inline std::pair<Float, Float> WeightPowerHeuristic(Float p1, Float p2, int beta = 2)
-{
-    Float w1, w2;
-    auto tmp1 = std::pow(p1, beta);
-    auto tmp2 = std::pow(p2, beta);
-    if (p1 > 0)
-    {
-        if (p2 > 0)
-        {
-            auto div = 1 / (tmp1 + tmp2);
-            w1 = tmp1 * div;
-            w2 = tmp2 * div;
-        }
-        else
-        {
-            w1 = 1, w2 = 0;
-        }
-    }
-    else if (p2 > 0)
-    {
-        w1 = 0, w2 = 1;
-    }
-    else
-    {
-        w1 = 0, w2 = 0;
-    }
-
-    return {w1, w2};
 }
 
 NAMESPACE_END(simple_renderer)

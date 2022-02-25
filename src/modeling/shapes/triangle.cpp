@@ -143,10 +143,10 @@ Intersection Triangle::Intersect(const Ray &ray) const
         inside = !inside;
     }
 
-    return Intersection(pos, normal, texcoord, inside, t, this->material_);
+    return Intersection(pos, normal, texcoord, inside, t, this->material_, ShapeArea());
 }
 
-std::pair<Intersection, Float> Triangle::SampleP(const Vector3 &pos_pre) const
+std::pair<Intersection, Float> Triangle::SampleP() const
 {
     auto u = UniformFloat();
     auto v = UniformFloat();
@@ -157,9 +157,8 @@ std::pair<Intersection, Float> Triangle::SampleP(const Vector3 &pos_pre) const
 
     auto pos = alpha * this->vertices_[0] + beta * this->vertices_[1] + gamma * this->vertices_[2];
     auto normal = alpha * this->normals_[0] + beta * this->normals_[1] + gamma * this->normals_[2];
-    auto distance = glm::length(pos - pos_pre);
 
-    return {Intersection(pos, normal, Vector2(-1), false, distance, this->material_), 1 / this->area_};
+    return {Intersection(pos, normal, Vector2(-1), false, INFINITY, this->material_, ShapeArea()), 1 / this->area_};
 }
 
 NAMESPACE_END(simple_renderer)

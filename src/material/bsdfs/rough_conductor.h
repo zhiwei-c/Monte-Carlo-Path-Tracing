@@ -19,7 +19,7 @@ public:
 	 * \param distrib_type 用于模拟表面粗糙度的微表面分布的类型
 	 * \param alpha_u 沿切线（tangent）方向的粗糙度
 	 * \param alpha_v 沿副切线（bitangent）方向的粗糙度
-	*/
+	 */
 	RoughConductor(const std::string &id,
 				   bool mirror,
 				   const Spectrum &eta,
@@ -50,7 +50,7 @@ public:
 	}
 
 	///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-	BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
+	BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
 	{
 		auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_v_);
 		auto [normal_micro, pdf] = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
@@ -69,7 +69,8 @@ public:
 		if (bs.pdf < kEpsilonL)
 			return BsdfSampling();
 
-		bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
+		if (get_weight)
+			bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
 
 		return bs;
 	}

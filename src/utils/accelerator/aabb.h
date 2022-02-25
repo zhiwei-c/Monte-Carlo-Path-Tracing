@@ -37,27 +37,23 @@ public:
 			//检查光线是否与包围盒某一对平面平行
 			if (ray.dir()[i] == 0)
 			{
-				for (int j = 0; j < 3; j++)
-				{
-					if (j == i)
-						continue;
-					if ((ray.dir()[j] > 0.0 && ray.origin()[j] > this->max_[j]) ||
-						(ray.dir()[j] < 0.0 && ray.origin()[j] < this->min_[j]))
-						return false;
-				}
+				if (ray.origin()[i] > this->max_[i] ||
+					ray.origin()[i] < this->min_[i])
+					return false;
 			}
 			else
 			{
 				t_min = (this->min_[i] - ray.origin()[i]) * ray.dir_inv()[i];
 				t_max = (this->max_[i] - ray.origin()[i]) * ray.dir_inv()[i];
-				if (ray.dir()[i] <= 0.0)
+				if (ray.dir()[i] < 0)
 					std::swap(t_min, t_max);
 
 				t_enter = std::max(t_min, t_enter);
 				t_exit = std::min(t_max, t_exit);
 			}
 		}
-		return t_exit >= 0 && t_enter <= t_exit;
+		t_exit *= 1 + 2 * GammaError(3);
+		return t_exit > 0 && t_enter < t_exit;
 	}
 
 	///\return 底边界

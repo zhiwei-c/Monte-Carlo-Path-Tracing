@@ -28,9 +28,17 @@ const std::string kFstr = "%lf";
 
 constexpr auto kEpsilon = static_cast<Float>(1e-10);
 constexpr auto kOneMinusEpsilon = static_cast<Float>(1 - 1e-10);
-constexpr auto kEpsilonDistance = static_cast<Float>(1e-10);
+constexpr auto kEpsilonDistance = static_cast<Float>(1e-6);
 constexpr auto kEpsilonL = static_cast<Float>(1e-3);
 constexpr auto kEpsilonPdf = static_cast<Float>(1e-5);
+constexpr auto kEpsilonPdf2 = static_cast<Float>(5e-2);
+
+
+constexpr auto kEpsilonMachine =std::numeric_limits<Float>::epsilon() * 0.5;
+
+inline Float GammaError(int n){
+    return (n * kEpsilonMachine) / (1 - n * kEpsilonMachine);
+}
 
 constexpr size_t Hash(const char *str)
 {

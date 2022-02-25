@@ -42,7 +42,7 @@ public:
 
 	Intersection Intersect(const Ray &ray) const override;
 
-	std::pair<Intersection, Float> SampleP(const Vector3 &pos_pre) const override;
+	std::pair<Intersection, Float> SampleP() const override;
 
 private:
 	std::vector<Vector3> vertices_;	  //面片包含的点

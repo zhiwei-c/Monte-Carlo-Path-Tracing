@@ -4,10 +4,11 @@
 #include <iostream>
 
 #include "../file_path.h"
+#include "../../rendering/ray_tracing/integrators.h"
 
 NAMESPACE_BEGIN(simple_renderer)
 
-std::pair<Scene *, Camera *> ParseJsonCfg(const std::string &file_path)
+std::tuple<Scene *, Camera *, Integrator *> ParseJsonCfg(const std::string &file_path)
 {
 	std::ifstream in(file_path);
 	std::string dir_path = GetDirectory(file_path);
@@ -25,8 +26,9 @@ std::pair<Scene *, Camera *> ParseJsonCfg(const std::string &file_path)
 
 	auto scene = InitScene(dir_path, json_data);
 	auto camera = InitCamera(json_data);
+	auto integrator = InitIntegrator(json_data);
 
-	return {scene, camera};
+	return {scene, camera, integrator};
 }
 
 Scene *InitScene(const std::string &dir_path, nlohmann::json &data)
@@ -40,6 +42,45 @@ Scene *InitScene(const std::string &dir_path, nlohmann::json &data)
 	scene->setEnvmap(envmap);
 
 	return scene;
+}
+
+Integrator *InitIntegrator(nlohmann::json &data)
+{
+	std::string type = "path";
+	int max_depth = -1;
+	if (!data.contains("integrator"))
+	{
+		std::cout << "[warning] "
+				  << "missing \"integrator\", use default integrator" << std::endl;
+	}
+	else if (!data["integrator"].is_object())
+	{
+		std::cerr << "[error] "
+				  << "error format for \"integrator\"" << std::endl;
+		exit(1);
+	}
+	else
+	{
+		type = GetString(data["integrator"], "type", true).value_or("path");
+		max_depth = GetInt(data["integrator"], "max_depth", true).value_or(-1);
+	}
+
+	Integrator *integrator = nullptr;
+	switch (Hash(type.c_str()))
+	{
+	case "path"_hash:
+		integrator = new PathIntegrator(max_depth);
+		break;
+	case "bdpt"_hash:
+		integrator = new BdptIntegrator(max_depth);
+		break;
+	default:
+		std::cerr << "[error] cannot handle integrator type" << type << "\"" << std::endl;
+		exit(1);
+		break;
+	}
+
+	return integrator;
 }
 
 Camera *InitCamera(nlohmann::json &data)

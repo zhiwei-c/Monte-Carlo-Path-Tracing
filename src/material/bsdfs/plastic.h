@@ -47,7 +47,7 @@ public:
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
+    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
     {
         auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
@@ -81,7 +81,10 @@ public:
         bs.pdf = Pdf(bs.wi, wo, normal, texcoord, inside);
         if (bs.pdf < kEpsilonL)
             return BsdfSampling();
-        bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
+
+        if(get_weight)
+            bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
+
         return bs;
     }
 

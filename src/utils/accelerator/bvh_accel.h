@@ -22,10 +22,10 @@ public:
 		return root_->Intersect(ray);
 	}
 
-	std::pair<Intersection, Float> Sample(const Vector3 &obj_pos) const
+	std::pair<Intersection, Float> Sample() const
 	{
 		auto p = UniformFloat();
-		auto [point, pdf] = root_->SampleP(p, obj_pos);
+		auto [point, pdf] = root_->SampleP(p);
 		return {point, pdf / this->root_->area()};
 	}
 

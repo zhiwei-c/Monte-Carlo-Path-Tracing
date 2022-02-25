@@ -17,7 +17,7 @@ public:
 	 * \param alpha_v 沿副切线（bitangent）方向的粗糙度
 	 * \param specular_reflectance 可选参数，镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
 	 * \param specular_transmittance 可选参数，镜面透射系数。注意，对于物理真实感绘制，不应设置此参数。
-	*/
+	 */
 	RoughDielectric(const std::string &id,
 					Float ext_ior,
 					Float int_ior,
@@ -50,7 +50,7 @@ public:
 	}
 
 	///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-	BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
+	BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
 	{
 		auto eta = inside ? eta_inv_ : eta_;	 //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 		auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
@@ -90,7 +90,8 @@ public:
 		if (bs.pdf < kEpsilonPdf || alpha_u_ > 0.01 && alpha_v_ > 0.01 && bs.pdf < kEpsilonL)
 			return BsdfSampling();
 
-		bs.weight = Eval(bs.wi, wo, normal_n, texcoord, inside_n);
+		if (get_weight)
+			bs.weight = Eval(bs.wi, wo, normal_n, texcoord, inside_n);
 
 		return bs;
 	}

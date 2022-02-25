@@ -27,7 +27,7 @@ public:
           specular_transmittance_(std::move(specular_transmittance)) {}
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
+    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
     {
         auto eta = inside ? eta_ : eta_inv_;     //相对折射率，即光线透射侧介质折射率与入透射侧介质折射率之比
         auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比

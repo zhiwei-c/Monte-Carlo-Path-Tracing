@@ -9,17 +9,17 @@ class RoughPlastic : public Microfacet
 {
 public:
     /**
-	 * \brief 粗糙的塑料材质
-	 * \param id 材质id
-	 * \param diffuse_reflectance 漫反射分量
-	 * \param diffuse_map  漫反射纹理
-	 * \param nonlinear 是否考虑因内部散射而引起的非线性色移
-	 * \param ext_ior 外折射率
-	 * \param int_ior 内折射率
-	 * \param distrib_type 用于模拟表面粗糙度的微表面分布的类型
-	 * \param alpha 粗糙度
-	 * \param specular_reflectance 镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
-	*/
+     * \brief 粗糙的塑料材质
+     * \param id 材质id
+     * \param diffuse_reflectance 漫反射分量
+     * \param diffuse_map  漫反射纹理
+     * \param nonlinear 是否考虑因内部散射而引起的非线性色移
+     * \param ext_ior 外折射率
+     * \param int_ior 内折射率
+     * \param distrib_type 用于模拟表面粗糙度的微表面分布的类型
+     * \param alpha 粗糙度
+     * \param specular_reflectance 镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
+     */
     RoughPlastic(const std::string &id,
                  const Spectrum &diffuse_reflectance,
                  Texture *diffuse_map,
@@ -58,7 +58,7 @@ public:
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
+    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
     {
         auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
@@ -99,7 +99,8 @@ public:
         if (bs.pdf < kEpsilonL)
             return BsdfSampling();
 
-        bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
+        if (get_weight)
+            bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
 
         return bs;
     }

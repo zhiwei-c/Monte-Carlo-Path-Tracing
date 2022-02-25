@@ -68,7 +68,7 @@ public:
 private:
     std::string file_name_;
 
-    std::vector<float> data_; //图像的数据
+    std::vector<Float> data_; //图像的数据
     int width_;               //图像的宽
     int height_;              //图像的高
     int channels_;            //图像的通道数

@@ -78,6 +78,11 @@ public:
         bvh_ = std::make_unique<BvhAccel>(meshes_);
         area_ = bvh_->area();
         aabb_ = bvh_->aabb();
+        
+        for (auto &mesh : meshes_)
+        {
+            mesh->SetParent(this);
+        }
     }
 
     ~Rectangle()
@@ -98,9 +103,9 @@ public:
         return this->bvh_->Intersect(ray);
     }
 
-    std::pair<Intersection, Float> SampleP(const Vector3 &obj_pos) const override
+    std::pair<Intersection, Float> SampleP() const override
     {
-        return this->bvh_->Sample(obj_pos);
+        return this->bvh_->Sample();
     }
 
 private:

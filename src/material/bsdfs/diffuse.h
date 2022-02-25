@@ -25,7 +25,7 @@ public:
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
+    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
     {
         BsdfSampling bs;
 
@@ -36,10 +36,13 @@ public:
         bs.wi = -ToWorld(wi_local, normal);
         bs.pdf = pdf;
 
-        if (texcoord != nullptr && diffuse_map_)
-            bs.weight = diffuse_map_->GetPixel(*texcoord) * kPiInv;
-        else
-            bs.weight = reflectance_ * kPiInv;
+        if (get_weight)
+        {
+            if (texcoord != nullptr && diffuse_map_)
+                bs.weight = diffuse_map_->GetPixel(*texcoord) * kPiInv;
+            else
+                bs.weight = reflectance_ * kPiInv;
+        }
 
         return bs;
     }
@@ -79,7 +82,7 @@ public:
     }
 
 private:
-    Spectrum reflectance_;  //漫反射系数
+    Spectrum reflectance_; //漫反射系数
     Texture *diffuse_map_; //纹理，用于映射漫反射系数
 };
 

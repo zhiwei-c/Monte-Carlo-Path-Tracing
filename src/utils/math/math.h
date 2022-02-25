@@ -1,11 +1,37 @@
 #pragma once
 
+#include <vector>
+
 #include "../global.h"
 
 NAMESPACE_BEGIN(simple_renderer)
 
 constexpr auto kPi = glm::pi<Float>();
 constexpr auto kPiInv = static_cast<Float>(1 / glm::pi<Float>());
+
+inline Float MisWeight(Float pdf1, Float pdf2)
+{
+    pdf1 *= pdf1;
+    pdf2 *= pdf2;
+    return pdf1 / (pdf1 + pdf2);
+}
+
+inline Spectrum WeightPowerHeuristic(const std::vector<Spectrum> &values, std::vector<Float> pdfs)
+{
+    Float weight_sum = 0;
+    for (auto &pdf: pdfs)
+    {
+        pdf *= pdf;
+        weight_sum += pdf;
+    }
+
+    Spectrum result(0);
+    for (int i = 0; i < values.size(); i++)
+    {
+        result += values[i] * (pdfs[i] / weight_sum);
+    }
+    return result;
+}
 
 inline bool FloatEqual(Float a, Float b, Float epsilon = kEpsilon)
 {

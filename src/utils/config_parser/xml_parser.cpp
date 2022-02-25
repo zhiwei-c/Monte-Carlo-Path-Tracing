@@ -8,7 +8,9 @@
 
 #include "rapidxml/rapidxml_utils.hpp"
 #include "glm/gtx/matrix_query.hpp"
+
 #include "../../modeling/model_loader/obj_parser.h"
+#include "../../rendering/ray_tracing/integrators.h"
 #include "../file_path.h"
 
 NAMESPACE_BEGIN(simple_renderer)
@@ -37,7 +39,7 @@ static std::optional<Vector3> GetPoint(rapidxml::xml_node<> *node_parent, std::s
 
 static MicrofacetDistribType GetDistrbType(const std::string &name);
 
-std::tuple<Scene *, Camera *> XmlParser::Parse(const std::string &path)
+std::tuple<Scene *, Camera *, Integrator *> XmlParser::Parse(const std::string &path)
 {
 	Reset();
 	xml_directory_ = GetDirectory(ConvertBackSlash(path));
@@ -47,18 +49,43 @@ std::tuple<Scene *, Camera *> XmlParser::Parse(const std::string &path)
 
 	auto node_scene = xml_doc->first_node("scene");
 
+	auto integrator = ParseIntegrator(node_scene->first_node("integrator"));
 	auto camera = ParseCamera(node_scene->first_node("sensor"));
 	auto scene = ParseScene(node_scene);
 
 	delete file_doc;
 	delete xml_doc;
 
-	return {scene, camera};
+	return {scene, camera, integrator};
+}
+
+Integrator *XmlParser::ParseIntegrator(rapidxml::xml_node<> *node_integrator)
+{
+	auto type = GetAttri(node_integrator, "type").value();
+	auto max_depth = GetInt(node_integrator, "maxDepth", true).value_or(-1);
+
+	Integrator *integrator = nullptr;
+	switch (Hash(type.c_str()))
+	{
+	case "path"_hash:
+		integrator = new PathIntegrator(max_depth);
+		break;
+	case "bdpt"_hash:
+		integrator = new BdptIntegrator(max_depth);
+		break;
+	default:
+		std::cerr << "[error] " << GetTreeName(node_integrator) << std::endl
+				  << "\tcannot handle integrator type" << type << "\"" << std::endl;
+		exit(1);
+		break;
+	}
+
+	return integrator;
 }
 
 Scene *XmlParser::ParseScene(rapidxml::xml_node<> *node_scene)
 {
-	std::cout<<"[info] load bsdfs..."<<std::endl;
+	std::cout << "[info] load bsdfs..." << std::endl;
 	auto node_bsdf = node_scene->first_node("bsdf");
 	while (node_bsdf)
 	{
@@ -66,7 +93,7 @@ Scene *XmlParser::ParseScene(rapidxml::xml_node<> *node_scene)
 		node_bsdf = node_bsdf->next_sibling("bsdf");
 	}
 
-	std::cout<<"[info] load shapes..."<<std::endl;
+	std::cout << "[info] load shapes..." << std::endl;
 	auto node_shape = node_scene->first_node("shape");
 	while (node_shape)
 	{
@@ -770,19 +797,12 @@ std::unique_ptr<Mat4> GetToWorld(rapidxml::xml_node<> *node_parent)
 	}
 	auto in_format_c = in_format_str.c_str();
 
-#ifdef WIN32
-	sscanf_s(matrix_str.c_str(), in_format_c,
-			 &result[0][0], &result[1][0], &result[2][0], &result[3][0],
-			 &result[0][1], &result[1][1], &result[2][1], &result[3][1],
-			 &result[0][2], &result[1][2], &result[2][2], &result[3][2],
-			 &result[0][3], &result[1][3], &result[2][3], &result[3][3]);
-#else
 	sscanf(matrix_str.c_str(), in_format_c,
 		   &result[0][0], &result[1][0], &result[2][0], &result[3][0],
 		   &result[0][1], &result[1][1], &result[2][1], &result[3][1],
 		   &result[0][2], &result[1][2], &result[2][2], &result[3][2],
 		   &result[0][3], &result[1][3], &result[2][3], &result[3][3]);
-#endif
+
 	if (glm::isIdentity(result, kEpsilon))
 		return nullptr;
 	else
@@ -807,11 +827,8 @@ Spectrum GetSpectrum(rapidxml::xml_node<> *node_spectrum)
 	}
 	auto in_format_c = in_format_str.c_str();
 
-#ifdef WIN32
-	sscanf_s(value_str.c_str(), in_format_c, &result[0], &result[1], &result[2]);
-#else
 	sscanf(value_str.c_str(), in_format_c, &result[0], &result[1], &result[2]);
-#endif
+
 	return result;
 }
 

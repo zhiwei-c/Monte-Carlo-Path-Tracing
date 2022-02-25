@@ -181,10 +181,10 @@ void Bitmap::Write(const std::string &path)
         auto data = new float[width_ * height_ * channels_];
         if (gamma_ == 1)
             for (auto i = 0; i < data_.size(); i++)
-                data[i] = data_[i];
+                data[i] = static_cast<float>(data_[i]);
         else
             for (auto i = 0; i < data_.size(); i++)
-                data[i] = ApplyGamma(data_[i], gamma_inv_);
+                data[i] = static_cast<float>(ApplyGamma(data_[i], gamma_inv_));
 
         ret = stbi_write_hdr(path.c_str(), width_, height_, channels_, data);
         stbi_image_free(data);
@@ -194,11 +194,15 @@ void Bitmap::Write(const std::string &path)
     {
         auto data = new unsigned char[width_ * height_ * channels_];
         if (gamma_ == 1)
+        {
             for (auto i = 0; i < data_.size(); i++)
-                data[i] = static_cast<unsigned char>(ClampTop<int>(255, 255 * data_[i]));
+                data[i] = static_cast<unsigned char>(ClampTop<int>(255, static_cast<int>(255 * data_[i])));
+        }
         else
+        {
             for (auto i = 0; i < data_.size(); i++)
-                data[i] = static_cast<unsigned char>(ClampTop<int>(255, 255 * ApplyGamma(data_[i], gamma_inv_)));
+                data[i] = static_cast<unsigned char>(ClampTop<int>(255, static_cast<int>(255 * ApplyGamma(data_[i], gamma_inv_))));
+        }
 
         switch (Hash(suffix.c_str()))
         {
@@ -273,9 +277,9 @@ int Bitmap::WriteOpenexr(const std::string &path)
 
     for (size_t i = 0; i < resolution_; i++)
     {
-        images[0][i] = data_[3 * i + 0];
-        images[1][i] = data_[3 * i + 1];
-        images[2][i] = data_[3 * i + 2];
+        images[0][i] = static_cast<float>(data_[3 * i + 0]);
+        images[1][i] = static_cast<float>(data_[3 * i + 1]);
+        images[2][i] = static_cast<float>(data_[3 * i + 2]);
     }
 
     float *image_ptr[3];

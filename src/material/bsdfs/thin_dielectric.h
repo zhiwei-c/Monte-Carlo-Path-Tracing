@@ -8,13 +8,13 @@ class ThinDielectric : public Material
 {
 public:
     /**
-	 * \brief 薄的电介质材质
-	 * \param id 材质id
-	 * \param ext_ior 外折射率
-	 * \param int_ior 内折射率
-	 * \param specular_reflectance 可选参数，镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
-	 * \param specular_transmittance 可选参数，镜面透射系数。注意，对于物理真实感绘制，不应设置此参数。
-	*/
+     * \brief 薄的电介质材质
+     * \param id 材质id
+     * \param ext_ior 外折射率
+     * \param int_ior 内折射率
+     * \param specular_reflectance 可选参数，镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
+     * \param specular_transmittance 可选参数，镜面透射系数。注意，对于物理真实感绘制，不应设置此参数。
+     */
     ThinDielectric(const std::string &id,
                    Float ext_ior,
                    Float int_ior,
@@ -26,7 +26,7 @@ public:
           specular_transmittance_(std::move(specular_transmittance)) {}
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override
+    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
     {
         auto kr = Fresnel(-wo, normal, eta_inv_);
 

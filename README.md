@@ -20,8 +20,17 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 - mitsuba 0.5 定义的[ xml 格式文件](resources/rendering_resources/bathroom/scene.xml)（部分支持）；
 
 ## 2 实现的功能
+### 2.1 积分器（Integrators）
+- 基于路径追踪（path tracing）算法的积分器，包括：
+  - 使用蒙特卡洛方法（Monte Carlo method）计算辐射亮度（radiance）的数学期望；
+  - 重要性抽样（importance sampling），给定光线入射方向和表面法线方向，根据 BSDF 对光线出射方向进行重要性抽样；
+  - 多重重要性抽样（multiple importance sampling）：
+    - 按发光物体表面积直接采样光源；
+    - 按 BSDF 采样光源；
+  - 俄罗斯轮盘赌（Russian roulette）控制路径追踪深度； 
+- 基于双向路径追踪（bidirectional path tracing，BDPT）算法的积分器
 
-### 2.1 表面散射模型（Surface scattering models）
+### 2.2 表面散射模型（Surface scattering models）
 
 - 朗伯模型（Lambert's model）定义的，[平滑的漫反射材质（smooth diffuse material）](src/material/bsdfs/diffuse.h)；
 
@@ -53,15 +62,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
   ![rough_plastic](resources/rendering_results/rough_plastic.png)
 
-### 2.2 积分器（Integrators）
 
-- 基于路径追踪（path tracing）算法的积分器，包括：
-  - 使用蒙特卡洛方法（Monte Carlo method）计算辐射亮度（radiance）的数学期望；
-  - 重要性抽样（importance sampling），给定光线入射方向和表面法线方向，根据 BSDF 对光线出射方向进行重要性抽样；
-  - 多重重要性抽样（multiple importance sampling）：
-    - 按发光物体表面积直接采样光源；
-    - 按 BSDF 采样光源；
-  - 俄罗斯轮盘赌（Russian roulette）控制路径追踪深度；
 
 ### 2.3 其它
 
