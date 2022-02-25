@@ -1,4 +1,4 @@
-#include "bdpt_integrator.h"
+#include "bdpt.h"
 
 NAMESPACE_BEGIN(simple_renderer)
 
@@ -35,7 +35,9 @@ Spectrum BdptIntegrator::ProcessBdpt(const Intersection &start_obj, const Vector
     {
         const auto &c = camera_path[c_idx];
 
-        auto L_direct = PrepareFisrtEmitter2OneV(emitter_path[0], c);
+        auto L_direct = Spectrum(0);
+        if (!emitter_path.empty())
+            L_direct = PrepareFisrtEmitter2OneV(emitter_path[0], c);
 
         std::vector<Spectrum> L_indirects;
         std::vector<Float> pdfs;
@@ -89,10 +91,11 @@ std::vector<PathVertex> BdptIntegrator::CreateCameraPath(const Intersection &its
 
 std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
 {
-    auto its_first = Intersection();
-    SampleEmitterDirectIts(its_first);
-
     std::vector<PathVertex> emitter_path;
+
+    auto its_first = Intersection();
+    if (!SampleEmitterDirectIts(its_first))
+        return emitter_path;
 
     auto wo_first = Vector3(0);
     std::tie(wo_first, std::ignore) = HemisUniform();

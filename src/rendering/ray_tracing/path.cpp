@@ -1,4 +1,4 @@
-#include "path_integrator.h"
+#include "path.h"
 
 NAMESPACE_BEGIN(simple_renderer)
 
