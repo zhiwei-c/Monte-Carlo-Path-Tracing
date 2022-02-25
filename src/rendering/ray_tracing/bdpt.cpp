@@ -6,17 +6,13 @@ Spectrum BdptIntegrator::Shade(const Vector3 &eye_pos, const Vector3 &look_dir) 
 {
     if (this->bvh_ != nullptr)
     {
-        auto hit = this->bvh_->Intersect(Ray(eye_pos, look_dir));
-        if (hit.valid())
+        auto its = this->bvh_->Intersect(Ray(eye_pos, look_dir));
+        if (its.valid())
         {
-            if (hit.HasEmission())
-            {
-                return hit.radiance();
-            }
+            if (its.HasEmission())
+                return its.radiance();
             else
-            {
-                return ProcessBdpt(hit, -look_dir);
-            }
+                return ProcessBdpt(its, -look_dir);
         }
     }
 
@@ -26,23 +22,28 @@ Spectrum BdptIntegrator::Shade(const Vector3 &eye_pos, const Vector3 &look_dir) 
     return Spectrum(0);
 }
 
-Spectrum BdptIntegrator::ProcessBdpt(const Intersection &start_obj, const Vector3 &start_wo) const
+Spectrum BdptIntegrator::ProcessBdpt(const Intersection &its, const Vector3 &wo) const
 {
     auto emitter_path = CreateEmitterPath();
-    auto camera_path = CreateCameraPath(start_obj, start_wo);
+    auto camera_path = CreateCameraPath(its, wo);
 
     for (int c_idx = camera_path.size() - 1; c_idx >= 0; c_idx--)
     {
         const auto &c = camera_path[c_idx];
 
+        //直接光照
         auto L_direct = Spectrum(0);
         if (!emitter_path.empty())
             L_direct = PrepareFisrtEmitter2OneV(emitter_path[0], c);
 
+        //来自光源路径的间接光照
         std::vector<Spectrum> L_indirects;
         std::vector<Float> pdfs;
         for (int e_idx = 1; e_idx < emitter_path.size(); e_idx++)
         {
+            if (max_depth_ > 0 && c_idx + e_idx + 2 > max_depth_)
+                break;
+
             auto [L_temp, pdf_temp] = PrepareOtherEmitter2OneC(emitter_path, e_idx, c);
             if (pdf_temp > kEpsilonPdf)
             {
@@ -50,43 +51,19 @@ Spectrum BdptIntegrator::ProcessBdpt(const Intersection &start_obj, const Vector
                 pdfs.push_back(pdf_temp);
             }
         }
+        //来自照相机路径的间接光照
         if (c_idx < camera_path.size() - 1)
         {
             auto L_temp = camera_path[c_idx + 1].L * c.bsdf * (c.cos_theta_abs / c.pdf);
             L_indirects.push_back(L_temp);
             pdfs.push_back(c.pdf);
         }
+        //总间接光照
         auto L_indirect = WeightPowerHeuristic(L_indirects, pdfs);
 
         camera_path[c_idx].L = L_indirect + L_direct;
     }
     return camera_path[0].L;
-}
-
-std::vector<PathVertex> BdptIntegrator::CreateCameraPath(const Intersection &its_first, const Vector3 &start_wo) const
-{
-    std::vector<PathVertex> camera_path;
-    camera_path.push_back({its_first, Vector3(0), start_wo});
-
-    while (max_depth_ > 0 && camera_path.size() < max_depth_ ||
-           max_depth_ <= 0 && UniformFloat() < pdf_rr_)
-    {
-        auto &c = camera_path.back();
-        auto b_rec = c.its.Sample(c.wo);
-        if (b_rec.pdf > kEpsilonPdf2)
-        {
-            auto its_pre = this->bvh_->Intersect(Ray(c.its.pos(), -b_rec.wi));
-            if (!its_pre.valid() || its_pre.HasEmission())
-                break;
-
-            c.wi = b_rec.wi;
-            c.cos_theta_abs = std::fabs(glm::dot(c.wi, c.its.normal()));
-            c.pdf = b_rec.pdf;
-            c.bsdf = b_rec.weight;
-            camera_path.push_back({its_pre, Vector3(0), b_rec.wi});
-        }
-    }
-    return camera_path;
 }
 
 std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
@@ -102,8 +79,9 @@ std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
     wo_first = ToWorld(wo_first, its_first.normal());
     emitter_path.push_back({its_first, Vector3(0), wo_first});
 
+    int depth = 1;
     while (max_depth_ > 0 && emitter_path.size() < max_depth_ ||
-           max_depth_ <= 0 && UniformFloat() < pdf_rr_)
+           max_depth_ <= 0 && (depth <= rr_depth_ || UniformFloat() < pdf_rr_))
     {
         auto &e = emitter_path.back();
         auto its_next = this->bvh_->Intersect(Ray(e.pos(), e.wo));
@@ -111,6 +89,7 @@ std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
             break;
 
         emitter_path.push_back({its_next, e.wo, Vector3(0)});
+        depth += 1;
         auto &e_next = emitter_path.back();
         e_next.cos_theta_abs = std::fabs(glm::dot(e_next.wi, e_next.normal()));
 
@@ -190,9 +169,33 @@ std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
     return emitter_path;
 }
 
-/**
- * \brief 第一个光源路径点（光源）或环境光 -> 某个路径点
- */
+std::vector<PathVertex> BdptIntegrator::CreateCameraPath(const Intersection &its_first, const Vector3 &wo_first) const
+{
+    std::vector<PathVertex> camera_path;
+    camera_path.push_back({its_first, Vector3(0), wo_first});
+    int depth = 1;
+    while (max_depth_ > 0 && camera_path.size() < max_depth_ ||
+           max_depth_ <= 0 && (depth <= rr_depth_ || UniformFloat() < pdf_rr_))
+    {
+        auto &c = camera_path.back();
+        auto b_rec = c.SampleWi(c.wo);
+        if (b_rec.pdf < kEpsilonPdf2)
+            break;
+
+        auto its_pre = this->bvh_->Intersect(Ray(c.pos(), -b_rec.wi));
+        if (!its_pre.valid() || its_pre.HasEmission())
+            break;
+
+        c.wi = b_rec.wi;
+        c.cos_theta_abs = std::fabs(glm::dot(c.wi, c.normal()));
+        c.pdf = b_rec.pdf;
+        c.bsdf = b_rec.weight;
+        camera_path.push_back({its_pre, Vector3(0), b_rec.wi});
+        depth += 1;
+    }
+    return camera_path;
+}
+
 Spectrum BdptIntegrator::PrepareFisrtEmitter2OneV(const PathVertex &e_first, const PathVertex &v) const
 {
     auto wo = v.wo;
@@ -242,9 +245,6 @@ Spectrum BdptIntegrator::PrepareFisrtEmitter2OneV(const PathVertex &e_first, con
     return res;
 }
 
-/**
- * \brief 第二个及之后的某个光源路径点 -> 某个相机路径点
- */
 std::pair<Spectrum, Float> BdptIntegrator::PrepareOtherEmitter2OneC(const std::vector<PathVertex> &emitter_path, const int e_index, const PathVertex &c) const
 {
     const auto &e_first = emitter_path[0];

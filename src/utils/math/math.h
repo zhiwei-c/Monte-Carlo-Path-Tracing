@@ -9,6 +9,7 @@ NAMESPACE_BEGIN(simple_renderer)
 constexpr auto kPi = glm::pi<Float>();
 constexpr auto kPiInv = static_cast<Float>(1 / glm::pi<Float>());
 
+///\brief 计算多重重要性采样的权重
 inline Float MisWeight(Float pdf1, Float pdf2)
 {
     pdf1 *= pdf1;
@@ -16,10 +17,11 @@ inline Float MisWeight(Float pdf1, Float pdf2)
     return pdf1 / (pdf1 + pdf2);
 }
 
+///\brief 多重重要性采样
 inline Spectrum WeightPowerHeuristic(const std::vector<Spectrum> &values, std::vector<Float> pdfs)
 {
     Float weight_sum = 0;
-    for (auto &pdf: pdfs)
+    for (auto &pdf : pdfs)
     {
         pdf *= pdf;
         weight_sum += pdf;

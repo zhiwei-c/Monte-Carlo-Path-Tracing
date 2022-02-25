@@ -15,23 +15,6 @@ enum class IntegratorType
     kBdpt, //双向路径跟踪
 };
 
-struct DirectSampling
-{
-    bool valid;
-    Intersection its;
-    Vector3 wi;
-    Spectrum bsdf;
-    Float pdf;
-
-    DirectSampling() : valid(false), its(Intersection()), pdf(0), wi(Vector3(0)), bsdf(Spectrum(0)) {}
-
-    DirectSampling(const Intersection &its)
-        : valid(true), its(its), pdf(0), wi(Vector3(0)), bsdf(Spectrum(0)) {}
-
-    DirectSampling(const Intersection &its, const Vector3 &wi, const Spectrum &bsdf, const Float pdf)
-        : valid(true), its(its), pdf(pdf), wi(wi), bsdf(bsdf) {}
-};
-
 //全局光照模型基类
 class Integrator
 {
@@ -40,8 +23,10 @@ public:
      * \brief 全局光照模型
      * \param type 全局光照模型类型
      * \param max_depth 递归地追踪光线的最大深度
+     * \param rr_depth 最小的光线追踪深度，超过该深度后进行俄罗斯轮盘赌抽样控制光线追踪深度
      */
-    Integrator(IntegratorType type, int max_depth) : type_(type), max_depth_(max_depth), pdf_rr_(0.95) {}
+    Integrator(IntegratorType type, int max_depth, int rr_depth = 5, Float pdf_rr = 0.95)
+        : type_(type), max_depth_(max_depth), rr_depth_(rr_depth), pdf_rr_(0.95) {}
 
     /**
      * \brief 设置待着色的场景
@@ -81,8 +66,14 @@ protected:
     Float emit_area_;               //发光物体的总表面积
     Envmap *envmap_;                //用于绘制的天空盒
     int max_depth_;                 //递归地追踪光线的最大深度
+    int rr_depth_;                  //最小的光线追踪深度，超过该深度后进行俄罗斯轮盘赌抽样控制光线追踪深度
     Float pdf_rr_;                  //递归地追踪光线俄罗斯轮盘赌的概率
 
+    /**
+     * \brief 按面积直接采样发光物体上一点
+     * \param its 采样到的发光物体上一点（输入/输出参数）
+     * \return 是否采样成功
+     */
     bool SampleEmitterDirectIts(Intersection &its) const
     {
         if (this->emitters_.empty())
@@ -92,6 +83,12 @@ protected:
         return true;
     }
 
+    /**
+     * \brief 按面积直接采样发光物体上一点，累计多重重要性采样下直接来自光源的辐射亮度（光亮度）
+     * \param its 采样时当前所在的光线与物体表面交点
+     * \param wo 采样时当前所在的光线与物体表面交点处，光线的出射方向
+     * \param value 直接来自光源的辐射亮度（光亮度） （输入/输出参数）
+     */
     void EmitterDirectArea(const Intersection &its, const Vector3 &wo, Spectrum &value) const
     {
         if (this->emitters_.empty())
@@ -123,17 +120,30 @@ protected:
         value += weight_direct * its_pre.radiance() * bsdf * cos_theta / pdf_direct;
     }
 
+    /**
+     * \brief 计算光线从某个发光物体向给定方向射出的概率（相对于光线出射后与物体表面交点处的立体角）
+     * \param its_pre 光线从发光物体射出的起点
+     * \param wi 光线出射方向
+     * \param distance_sqr 光线出射后与物体表面的交点和光源上光线出射点之间距离的平方 （可选参数）
+     * \return 光线从某个发光物体向给定方向射出的概率（相对于光线出射后与物体表面交点处的立体角）
+     */
     Float PdfEmitterDirect(const Intersection &its_pre, const Vector3 &wi, Float *distance_sqr = nullptr) const
     {
         auto cos_theta_prime = glm::dot(wi, its_pre.normal());
         if (cos_theta_prime < 0)
             return 0;
-
         auto pdf_area = 1 / (its_pre.shape_area() * emitters_.size());
         auto distance_sqr_ = distance_sqr == nullptr ? std::pow(its_pre.distance(), 2) : *distance_sqr;
         return pdf_area * distance_sqr_ / cos_theta_prime;
     }
 
+    /**
+     * \brief 判断场景中某两个物体表面点之间是否被遮挡
+     * \param its1 待判断是否被遮挡的场景中某个物体表面点
+     * \param its2 待判断是否被遮挡的场景中另一个物体表面点
+     * \param distance_sqr 两个物体表面点之间距离的平方 （输入/输出参数）
+     * \return 两点之间是否被遮挡的结果
+     */
     bool Visible(const Intersection &its1, const Intersection &its2, Float *distance_sqr = nullptr) const
     {
         auto d_vec = its2.pos() - its1.pos();

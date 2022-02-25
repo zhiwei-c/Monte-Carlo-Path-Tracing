@@ -26,12 +26,14 @@ enum class MaterialType
     kRoughPlastic     //粗糙的塑料
 };
 
+//按 BSDF 采样记录
 struct BsdfSampling
 {
-    Vector3 wi;
-    Spectrum weight;
-    Float pdf;
+    Vector3 wi;      //光线入射方向
+    Spectrum weight; // BSDF 系数
+    Float pdf;       //光线从该方向入射的概率
 
+    //按 BSDF 采样记录
     BsdfSampling() : wi(Vector3(0)), weight(Spectrum(0)), pdf(0) {}
 };
 
@@ -121,7 +123,7 @@ public:
     /**
      * \param texcoord 纹理坐标
      * \return 材质在给定的纹理坐标处是否透明
-    */
+     */
     virtual bool Transparent(const Vector2 &texcoord) const
     {
         if (opacity_)
@@ -167,7 +169,7 @@ public:
      * \param bitangent 副切线
      * \param texcoord 纹理坐标
      * \return 映射后的法线
-    */
+     */
     Vector3 PerturbNormal(const Vector3 &normal, const Vector3 &tangent, const Vector3 &bitangent, const Vector2 &texcoord) const
     {
         if (bump_map_ == nullptr)
