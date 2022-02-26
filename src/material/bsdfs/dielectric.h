@@ -29,34 +29,28 @@ public:
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
     {
-        auto eta = inside ? eta_ : eta_inv_;     //相对折射率，即光线透射侧介质折射率与入透射侧介质折射率之比
+        auto eta = inside ? eta_inv_ : eta_;     //相对折射率，即光线透射侧介质折射率与入透射侧介质折射率之比
         auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
         BsdfSampling bs;
-        auto angle = std::acos(glm::dot(wo, normal)) * kPiInv * 180;
         auto kr = Fresnel(-wo, normal, eta_inv);
-        auto r_0 = Sqr((eta_inv - 1) / (eta_inv + 1));
-        auto kr_tmp = r_0 + (1 - r_0) * std::pow(1 - glm::dot(wo, normal), 5);
         auto sample_x = UniformFloat();
         if (sample_x < kr)
         {
             bs.wi = -Reflect(-wo, normal);
-
             bs.weight = Spectrum(kr);
-
             bs.pdf = kr;
         }
         else
         {
             bs.wi = -Refract(-wo, normal, eta_inv);
-
-            bs.weight = Spectrum(1 - kr);
+            auto kr_t = Fresnel(bs.wi, -normal, eta);
+            bs.weight = Spectrum(1 - kr_t);
             if (specular_transmittance_)
                 bs.weight *= *specular_transmittance_;
             //光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
             bs.weight *= Sqr(eta);
-
-            bs.pdf = 1 - kr;
+            bs.pdf = 1 - kr_t;
         }
 
         if (bs.pdf < kEpsilonL)
