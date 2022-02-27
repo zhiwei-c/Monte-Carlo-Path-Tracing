@@ -320,73 +320,66 @@ void XmlParser::ParseBsdf(rapidxml::xml_node<> *node_bsdf, const std::string *id
 
 void XmlParser::ParseDiffuse(rapidxml::xml_node<> *node_diffuse, std::string id)
 {
-	auto node_reflectance = GetChild(node_diffuse, "reflectance", false);
-	auto reflectance_type = node_reflectance->name();
-	switch (Hash(reflectance_type))
-	{
-	case "rgb"_hash:
-	case "spectrum"_hash:
-	{
-		auto reflectance = GetSpectrum(node_reflectance);
-		bsdfs_.push_back(new Diffuse(id, reflectance, nullptr));
-		break;
-	}
-	case "texture"_hash:
-	{
-		auto diffuse_map = ParseTexture(node_reflectance);
-		bsdfs_.push_back(new Diffuse(id, Spectrum(0.7), diffuse_map));
-		break;
-	}
-	default:
-		std::cerr << "[error] " << GetTreeName(node_reflectance) << std::endl
-				  << "\tcannot handle diffuse bsdf info except from spectrum or texture" << std::endl;
-		exit(1);
-	}
+	auto reflectance = ParseTextureOrOther(node_diffuse, "reflectance");
+	if (!reflectance)
+		reflectance = new ConstantTexture(Spectrum(0.5));
+
+	bsdfs_.push_back(new Diffuse(id, reflectance));
 }
 
 void XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, std::string id, bool thin)
 {
 	auto int_ior = GetIor(node_dielectric, "intIOR", "bk7");
 	auto ext_ior = GetIor(node_dielectric, "extIOR", "air");
+	auto specular_reflectance = ParseTextureOrOther(node_dielectric, "specularReflectance");
+	auto specular_transmittance = ParseTextureOrOther(node_dielectric, "specularTransmittance");
 	if (thin)
-		bsdfs_.push_back(new ThinDielectric(id, ext_ior, int_ior));
+		bsdfs_.push_back(new ThinDielectric(id, int_ior, ext_ior, specular_reflectance, specular_transmittance));
 	else
-		bsdfs_.push_back(new Dielectric(id, ext_ior, int_ior));
+		bsdfs_.push_back(new Dielectric(id, int_ior, ext_ior, specular_reflectance, specular_transmittance));
 }
 
 void XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric, std::string id)
 {
 	auto distri = GetString(node_rough_dielectric, "distribution").value_or("beckmann");
-	auto alpha = GetFloat(node_rough_dielectric, "alpha").value_or(0.1);
-	auto alpha_u = GetFloat(node_rough_dielectric, "alphaU").value_or(alpha);
-	auto alpha_v = GetFloat(node_rough_dielectric, "alphaV").value_or(alpha);
-	auto ior_int = GetIor(node_rough_dielectric, "intIOR", "bk7");
-	auto ior_ext = GetIor(node_rough_dielectric, "extIOR", "air");
-	bsdfs_.push_back(new RoughDielectric(id, ior_ext, ior_int, GetDistrbType(distri), alpha_u, alpha_v));
+
+	auto alpha = ParseTextureOrOther(node_rough_dielectric, "alpha");
+	if (!alpha)
+		alpha = new ConstantTexture(Spectrum(0.1));
+
+	auto alpha_u = ParseTextureOrOther(node_rough_dielectric, "alphaU");
+	if (!alpha_u)
+		alpha_u = alpha;
+
+	auto alpha_v = ParseTextureOrOther(node_rough_dielectric, "alphaV");
+
+	auto int_ior = GetIor(node_rough_dielectric, "intIOR", "bk7");
+	auto ext_ior = GetIor(node_rough_dielectric, "extIOR", "air");
+
+	auto specular_reflectance = ParseTextureOrOther(node_rough_dielectric, "specularReflectance");
+	auto specular_transmittance = ParseTextureOrOther(node_rough_dielectric, "specularTransmittance");
+	bsdfs_.push_back(new RoughDielectric(id, GetDistrbType(distri), alpha_u, alpha_v, int_ior, ext_ior, specular_reflectance, specular_transmittance));
 }
 
 void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string id)
 {
+	bool mirror = true;
+	auto eta = Spectrum(0);
+	auto k = Spectrum(1);
 	auto ext_eta = GetIor(node_conductor, "extEta", "air");
 	auto node_material = GetChild(node_conductor, "material");
+	auto specular_reflectance = ParseTextureOrOther(node_conductor, "specularReflectance");
+
 	if (node_material)
 	{
 		auto material_name = GetAttri(node_material, "value").value();
 		if (material_name == "none")
-		{
-			bsdfs_.push_back(new Conductor(id,
-										   true,
-										   Spectrum(0),
-										   Spectrum(1),
-										   ext_eta));
-		}
+			mirror = true;
 		else if (IOR_eta.find(material_name) != IOR_eta.end())
 		{
-			bsdfs_.push_back(new Conductor(id,
-										   false,
-										   IOR_eta.at(material_name),
-										   IOR_k.at(material_name),
-										   ext_eta));
+			mirror = false;
+			eta = IOR_eta.at(material_name),
+			k = IOR_k.at(material_name);
 		}
 		else
 		{
@@ -397,52 +390,51 @@ void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string
 		}
 	}
 	else if (node_conductor->first_node() == nullptr)
-		bsdfs_.push_back(new Conductor(id, true, Spectrum(0), Spectrum(1), ext_eta));
+		mirror = true;
 	else
 	{
+		mirror = false;
 		auto node_eta = GetChild(node_conductor, "eta", false);
-		auto eta = GetSpectrum(node_eta);
+		eta = GetSpectrum(node_eta);
 		auto node_k = GetChild(node_conductor, "k", false);
-		auto k = GetSpectrum(node_k);
-		bsdfs_.push_back(new Conductor(id, false, eta, k, ext_eta));
+		k = GetSpectrum(node_k);
 	}
+
+	bsdfs_.push_back(new Conductor(id, mirror, eta, k, ext_eta, specular_reflectance));
 }
 
 void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, std::string id)
 {
 	auto distri = GetString(node_rough_conductor, "distribution").value_or("beckmann");
 
-	auto alpha = GetFloat(node_rough_conductor, "alpha").value_or(0.1);
-	auto alpha_u = GetFloat(node_rough_conductor, "alphaU").value_or(alpha);
-	auto alpha_v = GetFloat(node_rough_conductor, "alphaV").value_or(alpha);
+	auto alpha = ParseTextureOrOther(node_rough_conductor, "alpha");
+	if (!alpha)
+		alpha = new ConstantTexture(Spectrum(0.1));
 
+	auto alpha_u = ParseTextureOrOther(node_rough_conductor, "alphaU");
+	if (!alpha_u)
+		alpha_u = alpha;
+
+	auto alpha_v = ParseTextureOrOther(node_rough_conductor, "alphaV");
+
+	bool mirror = true;
+	auto eta = Spectrum(0);
+	auto k = Spectrum(1);
 	auto ext_eta = GetIor(node_rough_conductor, "extEta", "air");
-	auto node_material = GetChild(node_rough_conductor, "material");
+	auto specular_reflectance = ParseTextureOrOther(node_rough_conductor, "specularReflectance");
 
+	auto node_material = GetChild(node_rough_conductor, "material");
 	if (node_material)
 	{
 		auto material_name = GetAttri(node_material, "value").value();
 		if (material_name == "none")
-		{
-			bsdfs_.push_back(new RoughConductor(id,
-												true,
-												Spectrum(0),
-												Spectrum(1),
-												GetDistrbType(distri),
-												alpha_u,
-												alpha_v,
-												ext_eta));
-		}
+			mirror = true;
+
 		else if (IOR_eta.find(material_name) != IOR_eta.end())
 		{
-			bsdfs_.push_back(new RoughConductor(id,
-												false,
-												IOR_eta.at(material_name),
-												IOR_k.at(material_name),
-												GetDistrbType(distri),
-												alpha_u,
-												alpha_v,
-												ext_eta));
+			mirror = false;
+			eta = IOR_eta.at(material_name),
+			k = IOR_k.at(material_name);
 		}
 		else
 		{
@@ -454,90 +446,47 @@ void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, 
 	}
 	else
 	{
+		mirror = false;
 		auto node_eta = GetChild(node_rough_conductor, "eta", false);
-		auto eta = GetSpectrum(node_eta);
+		eta = GetSpectrum(node_eta);
 		auto node_k = GetChild(node_rough_conductor, "k", false);
-		auto k = GetSpectrum(node_k);
-		bsdfs_.push_back(new RoughConductor(id, false, eta, k, GetDistrbType(distri), alpha_u, alpha_v, ext_eta));
+		k = GetSpectrum(node_k);
 	}
+	bsdfs_.push_back(new RoughConductor(id, GetDistrbType(distri), alpha_u, alpha_v, mirror, eta, k, ext_eta, specular_reflectance));
 }
 
 void XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic, std::string id)
 {
-	auto ior_int = GetIor(node_plastic, "intIOR", "polypropylene");
-	auto ior_ext = GetIor(node_plastic, "extIOR", "air");
+	auto int_ior = GetIor(node_plastic, "intIOR", "polypropylene");
+	auto ext_ior = GetIor(node_plastic, "extIOR", "air");
+	auto specular_reflectance = ParseTextureOrOther(node_plastic, "specularReflectance");
+	auto diffuse_reflectance = ParseTextureOrOther(node_plastic, "diffuseReflectance");
+	if (!diffuse_reflectance)
+		diffuse_reflectance = new ConstantTexture(Spectrum(0.5));
 	bool nonlinear = GetBoolean(node_plastic, "nonlinear").value_or(false);
-	auto node_reflectance = GetChild(node_plastic, "diffuseReflectance");
-	if (!node_reflectance)
-	{
-		bsdfs_.push_back(new Plastic(id, Spectrum(0.5), nullptr, nonlinear, ior_ext, ior_int));
-	}
-	else
-	{
-		auto reflectance_type = std::string(node_reflectance->name());
-		switch (Hash(reflectance_type.c_str()))
-		{
-		case "rgb"_hash:
-		case "spectrum"_hash:
-		{
-			auto diffuse_reflectance = GetSpectrum(node_reflectance);
-			bsdfs_.push_back(new Plastic(id, diffuse_reflectance, nullptr, nonlinear, ior_ext, ior_int));
-			break;
-		}
-		case "texture"_hash:
-		{
-			auto diffuse_map = ParseTexture(node_reflectance);
-			bsdfs_.push_back(new Plastic(id, Spectrum(0.5), diffuse_map, nonlinear, ior_ext, ior_int));
-			break;
-		}
-		default:
-		{
-			std::cerr << "[error] " << GetTreeName(node_reflectance) << std::endl
-					  << "\tcannot handle plastic bsdf reflectance info type except from rgb or texture" << std::endl;
-			exit(1);
-		}
-		}
-	}
+
+	bsdfs_.push_back(new Plastic(id, int_ior, ext_ior, diffuse_reflectance, nonlinear, specular_reflectance));
 }
 
 void XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std::string id)
 {
 	auto distri = GetString(node_rough_plastic, "distribution").value_or("beckmann");
-	auto alpha = GetFloat(node_rough_plastic, "alpha").value_or(0.1f);
-	auto ior_int = GetIor(node_rough_plastic, "intIOR", "polypropylene");
-	auto ior_ext = GetIor(node_rough_plastic, "extIOR", "air");
+
+	auto alpha = ParseTextureOrOther(node_rough_plastic, "alpha");
+	if (!alpha)
+		alpha = new ConstantTexture(Spectrum(0.1));
+
+	auto int_ior = GetIor(node_rough_plastic, "intIOR", "polypropylene");
+	auto ext_ior = GetIor(node_rough_plastic, "extIOR", "air");
+
+	auto specular_reflectance = ParseTextureOrOther(node_rough_plastic, "specularReflectance");
+	auto diffuse_reflectance = ParseTextureOrOther(node_rough_plastic, "diffuseReflectance");
+	if (!diffuse_reflectance)
+		diffuse_reflectance = new ConstantTexture(Spectrum(0.5));
+
 	auto nonlinear = GetBoolean(node_rough_plastic, "nonlinear").value_or(false);
-	auto node_reflectance = GetChild(node_rough_plastic, "diffuseReflectance");
-	if (!node_reflectance)
-	{
-		bsdfs_.push_back(new RoughPlastic(id, Spectrum(0.5), nullptr, nonlinear, ior_ext, ior_int, GetDistrbType(distri), alpha));
-	}
-	else
-	{
-		auto reflectance_type = std::string(node_reflectance->name());
-		switch (Hash(reflectance_type.c_str()))
-		{
-		case "rgb"_hash:
-		case "spectrum"_hash:
-		{
-			auto diffuse_reflectance = GetSpectrum(node_reflectance);
-			bsdfs_.push_back(new RoughPlastic(id, diffuse_reflectance, nullptr, nonlinear, ior_ext, ior_int, GetDistrbType(distri), alpha));
-			break;
-		}
-		case "texture"_hash:
-		{
-			auto diffuse_map = ParseTexture(node_reflectance);
-			bsdfs_.push_back(new RoughPlastic(id, Spectrum(0.5), diffuse_map, nonlinear, ior_ext, ior_int, GetDistrbType(distri), alpha));
-			break;
-		}
-		default:
-		{
-			std::cerr << "[error] " << GetTreeName(node_reflectance) << std::endl
-					  << "\tcannot handle plastic bsdf reflectance info type except from rgb or texture" << std::endl;
-			exit(1);
-		}
-		}
-	}
+
+	bsdfs_.push_back(new RoughPlastic(id, GetDistrbType(distri), alpha, int_ior, ext_ior, diffuse_reflectance, nonlinear, specular_reflectance));
 }
 
 void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape)
@@ -682,6 +631,42 @@ Envmap *XmlParser::ParseEnvmap(rapidxml::xml_node<> *node_envmap)
 	}
 }
 
+Texture *XmlParser::ParseTextureOrOther(rapidxml::xml_node<> *node_parent, std::string name)
+{
+	auto node = GetChild(node_parent, name, true);
+	if (!node)
+		return nullptr;
+
+	auto node_type = node->name();
+	switch (Hash(node_type))
+	{
+	case "float"_hash:
+	{
+		auto value = std::stof(GetAttri(node, "value").value());
+		return new ConstantTexture(Spectrum(value));
+		break;
+	}
+	case "rgb"_hash:
+	case "spectrum"_hash:
+	{
+		auto value = GetSpectrum(node);
+		return new ConstantTexture(value);
+		break;
+	}
+	case "texture"_hash:
+	{
+		auto texture = ParseTexture(node);
+		return texture;
+		break;
+	}
+	default:
+		std::cerr << "[error] " << GetTreeName(node) << std::endl
+				  << "\tcannot handle texture" << std::endl;
+		exit(1);
+	}
+	return nullptr;
+}
+
 Texture *XmlParser::ParseTexture(rapidxml::xml_node<> *node_texture)
 {
 	auto texture_type = GetAttri(node_texture, "type").value();
@@ -735,6 +720,7 @@ Texture *XmlParser::ParseTexture(rapidxml::xml_node<> *node_texture)
 		exit(1);
 		break;
 	}
+	return nullptr;
 }
 
 std::optional<std::string> GetAttri(rapidxml::xml_node<> *node, std::string key, bool not_exist_ok)

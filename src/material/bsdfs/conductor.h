@@ -13,24 +13,34 @@ public:
      * \param mirror 是否是镜面（全反射）
      * \param eta 材质折射率的实部
      * \param k 材质折射率的虚部（消光系数）
-     * \param specular_reflectance 可选参数，调节镜面反射分量。注意，对于物理真实感绘制，不应设置此参数
+     * \param ext_ior 外折射率
+     * \param specular_reflectance 调节镜面反射分量。注意，对于物理真实感绘制，默认为 1，表示为空指针。
      */
     Conductor(const std::string &id,
               bool mirror,
               const Spectrum &eta,
               const Spectrum &k,
-              Float ext_ior = IOR.at("air"),
-              std::unique_ptr<Spectrum> specular_reflectance = nullptr)
+              Float ext_ior,
+              Texture *specular_reflectance = nullptr)
         : Material(id, MaterialType::kConductor),
           mirror_(mirror),
           eta_(eta / ext_ior),
           k_(k / ext_ior),
-          specular_reflectance_(std::move(specular_reflectance))
+          specular_reflectance_(specular_reflectance)
     {
         if (mirror)
         {
             eta_ = Spectrum(0);
             k_ = Spectrum(1) / ext_ior;
+        }
+    }
+
+    ~Conductor()
+    {
+        if (specular_reflectance_)
+        {
+            delete specular_reflectance_;
+            specular_reflectance_ = nullptr;
         }
     }
 
@@ -46,7 +56,12 @@ public:
         {
             bs.weight = mirror_ ? Spectrum(1) : FresnelConductor(bs.wi, normal, eta_, k_);
             if (specular_reflectance_)
-                bs.weight *= *specular_reflectance_;
+            {
+                if (texcoord != nullptr)
+                    bs.weight *= specular_reflectance_->GetPixel(*texcoord);
+                else
+                    bs.weight *= specular_reflectance_->GetPixel(Vector2(0));
+            }
         }
 
         return bs;
@@ -61,7 +76,12 @@ public:
         auto albedo = mirror_ ? Spectrum(1) : FresnelConductor(wi, normal, eta_, k_);
 
         if (specular_reflectance_)
-            albedo *= *specular_reflectance_;
+        {
+            if (texcoord != nullptr)
+                albedo *= specular_reflectance_->GetPixel(*texcoord);
+            else
+                albedo *= specular_reflectance_->GetPixel(Vector2(0));
+        }
 
         return albedo;
     }
@@ -75,11 +95,13 @@ public:
             return 0;
     }
 
+    bool TextureMapping() const override { return specular_reflectance_ && !specular_reflectance_->Constant(); }
+
 private:
-    bool mirror_;                                    //是否是镜面
-    Spectrum eta_;                                   //材质相对折射率的实部
-    Spectrum k_;                                     //材质相对折射率的虚部（消光系数）
-    std::unique_ptr<Spectrum> specular_reflectance_; //调节镜面反射分量的可选参数。注意，对于物理真实感绘制，不应设置此参数。
+    bool mirror_;                   //是否是镜面
+    Spectrum eta_;                  //材质相对折射率的实部
+    Spectrum k_;                    //材质相对折射率的虚部（消光系数）
+    Texture *specular_reflectance_; //调节镜面反射分量。对于物理真实感绘制，默认为 1，表示为空指针。
 };
 
 NAMESPACE_END(simple_renderer)

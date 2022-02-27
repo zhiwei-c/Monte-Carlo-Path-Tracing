@@ -71,6 +71,8 @@ private:
 	void ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std::string id);
 
 	Texture *ParseTexture(rapidxml::xml_node<> *node_texture);
+	
+	Texture* ParseTextureOrOther(rapidxml::xml_node<> *node_parent, std::string name);
 };
 
 NAMESPACE_END(simple_renderer)

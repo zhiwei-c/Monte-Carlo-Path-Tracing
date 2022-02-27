@@ -18,43 +18,45 @@ public:
      * \param diffuse_map 漫反射纹理
      */
     Glossy(const std::string &id,
-           const Spectrum &diffuse_reflectance,
-           const Spectrum &specular_reflectance,
-           Float exponent,
-           Texture *diffuse_map)
+           Texture *diffuse_reflectance,
+           Texture *specular_reflectance,
+           Float exponent)
         : Material(id, MaterialType::kGlossy),
           diffuse_reflectance_(diffuse_reflectance),
           specular_reflectance_(specular_reflectance),
-          exponent_(exponent),
-          diffuse_map_(diffuse_map)
+          exponent_(exponent)
     {
-        diffuse_reflectance_sum_ = diffuse_reflectance.r + diffuse_reflectance.g + diffuse_reflectance.b;
-        specular_reflectance_sum_ = specular_reflectance.r + specular_reflectance.g + specular_reflectance.b;
+        diffuse_reflectance_sum_ = 0,
+        specular_reflectance_sum_ = 0;
+        if (diffuse_reflectance_->Constant())
+        {
+            auto kd = diffuse_reflectance->GetPixel(Vector2(0));
+            diffuse_reflectance_sum_ = kd.r + kd.g + kd.b;
+        }
+        if (specular_reflectance->Constant())
+        {
+            auto ks = specular_reflectance->GetPixel(Vector2(0));
+            specular_reflectance_sum_ = ks.r + ks.g + ks.b;
+        }
+        if (diffuse_reflectance_->Constant() && specular_reflectance->Constant())
+            diffuse_sampling_weight_ = diffuse_reflectance_sum_ / (diffuse_reflectance_sum_ + specular_reflectance_sum_);
     }
 
     ~Glossy()
     {
-        if (diffuse_map_)
-            DeleteTexturePointer(diffuse_map_);
+        delete diffuse_reflectance_;
+        diffuse_reflectance_ = nullptr;
+        delete specular_reflectance_;
+        specular_reflectance_ = nullptr;
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
     {
-        auto diffuse_reflectance_sum = diffuse_reflectance_sum_;
-        if (texcoord != nullptr)
-        {
-            if (diffuse_map_)
-            {
-                auto diffuse_reflectance = diffuse_map_->GetPixel(*texcoord);
-                diffuse_reflectance_sum = diffuse_reflectance.r + diffuse_reflectance.g + diffuse_reflectance.b;
-            }
-        }
-
         BsdfSampling bs;
-        auto thresh = diffuse_reflectance_sum / (diffuse_reflectance_sum + specular_reflectance_sum_);
+        auto pdf_diffuse = get_diffuse_sampling_weight(texcoord);
         auto sample_x = UniformFloat();
-        if (sample_x < thresh)
+        if (sample_x < pdf_diffuse)
         {
             auto [wi_local, pdf] = HemisCos();
             bs.wi = -ToWorld(wi_local, normal);
@@ -71,9 +73,9 @@ public:
         if (bs.pdf < kEpsilonL)
             return BsdfSampling();
 
-        if(get_weight)
+        if (get_weight)
             bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
-            
+
         return bs;
     }
 
@@ -86,15 +88,12 @@ public:
 
         Spectrum albedo(0);
         // 计算漫反射分量的贡献
-        if (texcoord != nullptr && diffuse_map_)
-            albedo += diffuse_map_->GetPixel(*texcoord) * kPiInv;
-        else
-            albedo += diffuse_reflectance_ * kPiInv;
+        albedo += get_diffuse_reflectance(texcoord) * kPiInv;
         // 计算镜面反射分量的贡献
         auto wr = Reflect(wi, normal);
         auto cos_alpha = glm::dot(wr, wo);
         if (cos_alpha > kEpsilon)
-            albedo += specular_reflectance_ * static_cast<Float>((exponent_ + 2) * kPiInv * 0.5 * std::pow(cos_alpha, exponent_));
+            albedo += get_specular_reflectance(texcoord) * static_cast<Float>((exponent_ + 2) * kPiInv * 0.5 * std::pow(cos_alpha, exponent_));
 
         return albedo;
     }
@@ -105,60 +104,86 @@ public:
         if (NotSameHemis(wo, normal))
             return 0;
 
-        auto diffuse_reflectance_sum = diffuse_reflectance_sum_;
-        if (texcoord != nullptr)
-        {
-            if (diffuse_map_)
-            {
-                auto diffuse_reflectance = diffuse_map_->GetPixel(*texcoord);
-                diffuse_reflectance_sum = diffuse_reflectance.r + diffuse_reflectance.g + diffuse_reflectance.b;
-            }
-        }
-
-        auto thresh = diffuse_reflectance_sum / (diffuse_reflectance_sum + specular_reflectance_sum_);
+        auto pdf_diffuse = get_diffuse_sampling_weight(texcoord);
 
         auto wr = Reflect(wi, normal);
         if (NotSameHemis(wo, wr))
         {
             auto wo_local = ToLocal(wo, normal);
-            return thresh * PdfHemisCos(wo_local);
+            return pdf_diffuse * PdfHemisCos(wo_local);
         }
         else
         {
             auto sample_x = UniformFloat();
-            if (sample_x < thresh)
+            if (sample_x < pdf_diffuse)
             {
                 auto wo_local = ToLocal(wo, normal);
-                return thresh * PdfHemisCos(wo_local);
+                return pdf_diffuse * PdfHemisCos(wo_local);
             }
             else
             {
                 auto wo_local = ToLocal(wo, wr);
-                return (1 - thresh) * PdfHemisCosN(wo_local, exponent_);
+                return (1 - pdf_diffuse) * PdfHemisCosN(wo_local, exponent_);
             }
         }
     }
 
-    bool TextureMapping() const override { return diffuse_map_ != nullptr; }
+    bool TextureMapping() const override { return !diffuse_reflectance_->Constant() || !specular_reflectance_->Constant(); }
 
     bool Transparent(const Vector2 &texcoord) const override
     {
         if (Material::Transparent(texcoord))
             return true;
-        else if (diffuse_map_)
-            return diffuse_map_->Transparent(texcoord);
         else
-            return false;
+            return diffuse_reflectance_->Transparent(texcoord);
     }
 
 private:
-    Spectrum diffuse_reflectance_;  //漫反射系数
-    Texture *diffuse_map_;         //漫反射纹理
-    Spectrum specular_reflectance_; //镜面反射系数
-    Float exponent_;               //镜面反射指数系数
+    Texture *diffuse_reflectance_;  //漫反射系数
+    Texture *specular_reflectance_; //镜面反射系数
+    Float exponent_;                //镜面反射指数系数
 
     Float diffuse_reflectance_sum_;
     Float specular_reflectance_sum_;
+    Float diffuse_sampling_weight_;
+
+    Spectrum get_specular_reflectance(const Vector2 *texcoord) const
+    {
+        if (specular_reflectance_->Constant())
+            return specular_reflectance_->GetPixel(Vector2(0));
+        else
+            return specular_reflectance_->GetPixel(*texcoord);
+    }
+
+    Spectrum get_diffuse_reflectance(const Vector2 *texcoord) const
+    {
+        if (diffuse_reflectance_->Constant())
+            return diffuse_reflectance_->GetPixel(Vector2(0));
+        else
+            return diffuse_reflectance_->GetPixel(*texcoord);
+    }
+
+    Float get_diffuse_sampling_weight(const Vector2 *texcoord) const
+    {
+        if (diffuse_reflectance_->Constant() && specular_reflectance_)
+            return diffuse_sampling_weight_;
+
+        auto ks_sum = specular_reflectance_sum_;
+        if (!specular_reflectance_->Constant())
+        {
+            auto ks = get_specular_reflectance(texcoord);
+            ks_sum = ks.r + ks.g + ks.b;
+        }
+
+        auto kd_sum = diffuse_reflectance_sum_;
+        if (!diffuse_reflectance_->Constant())
+        {
+            auto kd = get_diffuse_reflectance(texcoord);
+            kd_sum = kd.r + kd.g + kd.b;
+        }
+
+        return kd_sum / (kd_sum + ks_sum);
+    }
 };
 
 NAMESPACE_END(simple_renderer)

@@ -15,13 +15,13 @@ public:
      * \param ns 镜面反射指数系数
      * \param diffuse_map_name 用于漫反射纹理的图片路径
      */
-    Diffuse(const std::string &id, const Spectrum &reflectance, Texture *diffuse_map)
-        : Material(id, MaterialType::kDiffuse), reflectance_(reflectance), diffuse_map_(diffuse_map) {}
+    Diffuse(const std::string &id, Texture *reflectance)
+        : Material(id, MaterialType::kDiffuse), reflectance_(reflectance) {}
 
     ~Diffuse()
     {
-        if (diffuse_map_)
-            DeleteTexturePointer(diffuse_map_);
+        delete reflectance_;
+        reflectance_ = nullptr;
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
@@ -38,10 +38,10 @@ public:
 
         if (get_weight)
         {
-            if (texcoord != nullptr && diffuse_map_)
-                bs.weight = diffuse_map_->GetPixel(*texcoord) * kPiInv;
+            if (texcoord != nullptr)
+                bs.weight = reflectance_->GetPixel(*texcoord) * kPiInv;
             else
-                bs.weight = reflectance_ * kPiInv;
+                bs.weight = reflectance_->GetPixel(Vector2(0)) * kPiInv;
         }
 
         return bs;
@@ -53,10 +53,10 @@ public:
         if (NotSameHemis(wo, normal))
             return Spectrum(0);
 
-        if (texcoord != nullptr && diffuse_map_)
-            return diffuse_map_->GetPixel(*texcoord) * kPiInv;
+        if (texcoord != nullptr)
+            return reflectance_->GetPixel(*texcoord) * kPiInv;
         else
-            return reflectance_ * kPiInv;
+            return reflectance_->GetPixel(Vector2(0)) * kPiInv;
     }
 
     ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
@@ -69,21 +69,18 @@ public:
         return PdfHemisCos(wo_local);
     }
 
-    bool TextureMapping() const override { return diffuse_map_ != nullptr; }
+    bool TextureMapping() const override { return !reflectance_->Constant(); }
 
     bool Transparent(const Vector2 &texcoord) const override
     {
         if (Material::Transparent(texcoord))
             return true;
-        else if (diffuse_map_)
-            return diffuse_map_->Transparent(texcoord);
         else
-            return false;
+            return reflectance_->Transparent(texcoord);
     }
 
 private:
-    Spectrum reflectance_; //漫反射系数
-    Texture *diffuse_map_; //纹理，用于映射漫反射系数
+    Texture *reflectance_; //漫反射系数
 };
 
 NAMESPACE_END(simple_renderer)

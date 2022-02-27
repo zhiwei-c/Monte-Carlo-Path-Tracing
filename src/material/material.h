@@ -40,10 +40,13 @@ struct BsdfSampling
 class Material
 {
 public:
-    ~Material()
+    virtual ~Material()
     {
         if (opacity_map_)
-            DeleteTexturePointer(opacity_map_);
+        {
+            delete opacity_map_;
+            opacity_map_ = nullptr;
+        }
     }
 
     /**

@@ -10,21 +10,34 @@ public:
     /**
      * \brief 薄的电介质材质
      * \param id 材质id
-     * \param ext_ior 外折射率
      * \param int_ior 内折射率
-     * \param specular_reflectance 可选参数，镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
-     * \param specular_transmittance 可选参数，镜面透射系数。注意，对于物理真实感绘制，不应设置此参数。
+     * \param ext_ior 外折射率
+     * \param specular_reflectance 镜面反射系数。注意，对于物理真实感绘制，应默认为 1。
+     * \param specular_transmittance 镜面透射系数。注意，对于物理真实感绘制，应默认为 1。
      */
     ThinDielectric(const std::string &id,
-                   Float ext_ior,
                    Float int_ior,
-                   std::unique_ptr<Vector3> specular_reflectance = nullptr,
-                   std::unique_ptr<Vector3> specular_transmittance = nullptr)
+                   Float ext_ior,
+                   Texture *specular_reflectance = nullptr,
+                   Texture *specular_transmittance = nullptr)
         : Material(id, MaterialType::kThinDielectric),
           eta_inv_(ext_ior / int_ior),
-          specular_reflectance_(std::move(specular_reflectance)),
-          specular_transmittance_(std::move(specular_transmittance)) {}
+          specular_reflectance_(specular_reflectance),
+          specular_transmittance_(specular_transmittance) {}
 
+    ~ThinDielectric()
+    {
+        if (specular_reflectance_)
+        {
+            delete specular_reflectance_;
+            specular_reflectance_ = nullptr;
+        }
+        if (specular_transmittance_)
+        {
+            delete specular_transmittance_;
+            specular_transmittance_ = nullptr;
+        }
+    }
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
     {
@@ -41,7 +54,12 @@ public:
             bs.wi = -Reflect(-wo, normal);
             bs.weight = Vector3(kr);
             if (specular_reflectance_)
-                bs.weight *= *specular_reflectance_;
+            {
+                if (texcoord != nullptr)
+                    bs.weight *= specular_reflectance_->GetPixel(*texcoord);
+                else
+                    bs.weight *= specular_reflectance_->GetPixel(Vector2(0));
+            }
             bs.pdf = kr;
         }
         else
@@ -49,7 +67,12 @@ public:
             bs.wi = wo;
             bs.weight = Vector3(1 - kr);
             if (specular_transmittance_)
-                bs.weight *= *specular_transmittance_;
+            {
+                if (texcoord != nullptr)
+                    bs.weight *= specular_transmittance_->GetPixel(*texcoord);
+                else
+                    bs.weight *= specular_transmittance_->GetPixel(Vector2(0));
+            }
             bs.pdf = 1 - kr;
         }
         if (bs.pdf < kEpsilon)
@@ -71,13 +94,23 @@ public:
         {
             weight = Vector3(kr);
             if (specular_reflectance_)
-                weight *= *specular_reflectance_;
+            {
+                if (texcoord != nullptr)
+                    weight *= specular_reflectance_->GetPixel(*texcoord);
+                else
+                    weight *= specular_reflectance_->GetPixel(Vector2(0));
+            }
         }
         else if (SameDirection(wo, wi))
         {
             weight = Vector3(1 - kr);
             if (specular_transmittance_)
-                weight *= *specular_transmittance_;
+            {
+                if (texcoord != nullptr)
+                    weight *= specular_transmittance_->GetPixel(*texcoord);
+                else
+                    weight *= specular_transmittance_->GetPixel(Vector2(0));
+            }
         }
         return weight;
     }
@@ -102,10 +135,13 @@ public:
             return 0;
     }
 
+    bool TextureMapping() const override { return (specular_reflectance_ && !specular_reflectance_->Constant()) ||
+                                                  (specular_transmittance_ && !specular_transmittance_->Constant()); }
+
 private:
-    Float eta_inv_;                                   //光线射出材质的相对折射率
-    std::unique_ptr<Vector3> specular_reflectance_;   //镜面反射系数。（注意：对于物理真实感绘制，不应设置此参数）
-    std::unique_ptr<Vector3> specular_transmittance_; //镜面透射系数。（注意：对于物理真实感绘制，不应设置此参数）
+    Float eta_inv_;                   //光线射出材质的相对折射率
+    Texture *specular_reflectance_;   //镜面反射系数。（注意：对于物理真实感绘制，应默认为 1）
+    Texture *specular_transmittance_; //镜面透射系数。（注意：对于物理真实感绘制，应默认为 1）
 };
 
 NAMESPACE_END(simple_renderer)

@@ -14,28 +14,40 @@ class Microfacet : public Material
 {
 public:
     /**
-	 * \brief 微表面模型。参数 alpha 控制表面的粗糙程度：
+     * \brief 微表面模型。参数 alpha 控制表面的粗糙程度：
      *      0.001 到 0.01 的 alpha 对应于有轻微瑕疵的光滑表面；
      *      0.1 的 alpha 是相对粗糙的表面；
      *      0.3 到 0.7 的 alpha 是极其粗糙的表面，例如被蚀刻或研磨的表面；
      *      过高的 alpha 可能不太接近实际情况。
-	 * \param id 材质id
-	 * \param type 材质类型
-	 * \param distrib_type 用于模拟表面粗糙度的微表面分布的类型
-	 * \param alpha_u 沿切线（tangent）方向的粗糙度
-	 * \param alpha_v 沿副切线（bitangent）方向的粗糙度
-    */
+     * \param id 材质id
+     * \param type 材质类型
+     * \param distrib_type 用于模拟表面粗糙度的微表面分布的类型
+     * \param alpha_u 沿切线（tangent）方向的粗糙度
+     * \param alpha_v 沿副切线（bitangent）方向的粗糙度
+     */
     Microfacet(const std::string &id,
                MaterialType type,
                MicrofacetDistribType distrib_type,
-               Float alpha_u,
-               Float alpha_v)
+               Texture *alpha_u,
+               Texture *alpha_v)
         : Material(id, type),
           distrib_type_(distrib_type),
           alpha_u_(alpha_u),
           alpha_v_(alpha_v)
     {
-        PrecomputeAlbedo();
+        if (!TextureMapping())
+            ComputeAlbedo();
+    }
+
+    virtual ~Microfacet()
+    {
+        delete alpha_u_;
+        alpha_u_ = nullptr;
+        if (alpha_v_)
+        {
+            delete alpha_v_;
+            alpha_v_ = nullptr;
+        }
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
@@ -47,11 +59,35 @@ public:
     ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
     virtual Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const = 0;
 
+    virtual bool TextureMapping() const override { return !alpha_u_->Constant() || (alpha_v_ && !alpha_v_->Constant()); }
+
 protected:
     MicrofacetDistribType distrib_type_; //用于模拟表面粗糙度的微表面分布的类型
-    Float alpha_u_;                      //沿切线（tangent）方向的粗糙度
-    Float alpha_v_;                      //沿副切线（bitangent）方向的粗糙度
+    Texture *alpha_u_;                   //沿切线（tangent）方向的粗糙度
+    Texture *alpha_v_;                   //沿副切线（bitangent）方向的粗糙度
     Float albedo_avg_;                   //平均反照率
+
+    std::pair<Float, Float> GetAlpha(const Vector2 *texcoord) const
+    {
+        Float alpha_u = 0, alpha_v = 0;
+        if (TextureMapping())
+        {
+            alpha_u = GetLuminance(alpha_u_->GetPixel(*texcoord));
+            if (alpha_v_)
+                alpha_v = GetLuminance(alpha_v_->GetPixel(*texcoord));
+            else
+                alpha_v = alpha_u;
+        }
+        else
+        {
+            alpha_u = alpha_u_->GetPixel(Vector2(0))[0];
+            if (alpha_v_)
+                alpha_v = alpha_v_->GetPixel(Vector2(0))[0];
+            else
+                alpha_v = alpha_u;
+        }
+        return {alpha_u, alpha_v};
+    }
 
     ///\brief 给定光线出射方向与法线方向夹角的余弦，获取反照率
     Float GetAlbedo(Float cos_theta) const
@@ -68,10 +104,14 @@ private:
     Float albedo_[kResolution]; //光线出射方向与法线方向夹角的余弦从0到1的一系列反照率
 
     ///\brief 预计算光线出射方向与法线方向夹角的余弦从0到1的一系列反照率和平均反照率
-    void PrecomputeAlbedo()
+    void ComputeAlbedo()
     {
         auto normal = Vector3(0, 0, 1);
-        auto distrib = InitDistrib(distrib_type_, alpha_u_, alpha_v_);
+
+        auto alpha_u = alpha_u_->GetPixel(Vector2(0))[0],
+             alpha_v = alpha_v_ ? alpha_v_->GetPixel(Vector2(0))[0] : alpha_u;
+
+        auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);
 
         //预计算光线出射方向与法线方向夹角的余弦从0到1的一系列反照率
         std::fill(albedo_, albedo_ + kResolution, 0);
