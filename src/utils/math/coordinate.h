@@ -49,6 +49,11 @@ inline bool SameHemis(const Vector3 &a, const Vector3 &b)
     return glm::dot(a, b) > kEpsilon;
 }
 
+inline bool Perpendicular(const Vector3 &a, const Vector3 &b)
+{
+    return FloatEqual(glm::dot(a, b), 0, kEpsilonL);
+}
+
 //\brief 将向量转换至目标坐标系下
 //
 //\param dir 待转换的向量

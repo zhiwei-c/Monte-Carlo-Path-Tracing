@@ -32,9 +32,7 @@ Spectrum BdptIntegrator::ProcessBdpt(const Intersection &its, const Vector3 &wo)
         const auto &c = camera_path[c_idx];
 
         //直接光照
-        auto L_direct = Spectrum(0);
-        if (!emitter_path.empty())
-            L_direct = EmitterEnv2OneV(c);
+        auto L_direct = EmitterEnv2OneV(c, !emitter_path.empty() ? &emitter_path[0].its : nullptr);
 
         //来自光源路径的间接光照
         std::vector<Spectrum> L_indirects;
@@ -61,8 +59,11 @@ Spectrum BdptIntegrator::ProcessBdpt(const Intersection &its, const Vector3 &wo)
                 L_temp /= pdf_rr_;
                 pdf_temp *= pdf_rr_;
             }
-            L_indirects.push_back(L_temp);
-            pdfs.push_back(pdf_temp);
+            if (L_temp.r + L_temp.g + L_temp.b > kEpsilon)
+            {
+                L_indirects.push_back(L_temp);
+                pdfs.push_back(pdf_temp);
+            }
         }
         //总间接光照
         auto L_indirect = WeightPowerHeuristic(L_indirects, pdfs);
@@ -119,17 +120,17 @@ std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
         e_next.bsdf = its_next.Eval(e_next.wi, e_next.wo);
     }
 
-    emitter_path[0].L = emitter_path[0].its.radiance();
+    auto &e_first = emitter_path[0];
+    e_first.L = e_first.its.radiance();
 
-    //预计算第二个光源路径点向第三个光源路径点传递的辐射亮度（光亮度）期望
+    //第一个光源路径点 -> 第二个光源路径点 -> 第三个光源路径点，预计算传递的辐射亮度（光亮度）期望
     if (emitter_path.size() > 2)
     {
-        auto &e_first = emitter_path[0];
-        auto &e = emitter_path[1];
-        e.L = EmitterEnv2OneV(e);
+        auto &e_second = emitter_path[1];
+        e_second.L = EmitterEnv2OneV(e_second);
     }
 
-    //预计算第三个及之后的光源路径点向后一个光源路径点传递的辐射亮度（光亮度）期望
+    //第二个及之后的光源路径点 -> 下一个光源路径点 -> 下一个光源路径点，预计算传递的辐射亮度（光亮度）期望
     for (int i = 2; i < emitter_path.size() - 1; i++)
     {
         auto &e_pre = emitter_path[i - 1];
@@ -139,7 +140,7 @@ std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
         if (i > rr_depth_)
             L_indirect /= pdf_rr_;
 
-        auto L_direct_env = EmitterEnv2OneV(e);
+        auto L_direct_env = EmitterEnv2OneV(e, &e_first.its);
         e.L = L_indirect + L_direct_env;
     }
     return emitter_path;
@@ -183,7 +184,14 @@ Spectrum BdptIntegrator::EmitterEnv2OneV(const PathVertex &v, const Intersection
          L_env = Spectrum(0);
 
     //直接采样光源，并按多重重要性采样合并
-    EmitterDirectArea(v.its, wo, L_emitter);
+    if (its_emitter_ptr)
+    {
+        if (!EmitterDirectArea(v.its, wo, L_emitter, its_emitter_ptr))
+            EmitterDirectArea(v.its, wo, L_emitter);
+    }
+    else
+        EmitterDirectArea(v.its, wo, L_emitter);
+
     auto b_rec = v.its.Sample(wo);
     auto cos_theta = std::fabs(glm::dot(b_rec.wi, v.its.normal()));
     auto its_pre = this->bvh_->Intersect(Ray(v.its.pos(), -b_rec.wi));
@@ -217,13 +225,18 @@ std::pair<Spectrum, Float> BdptIntegrator::PrepareOtherEmitter2OneC(const std::v
         return {Spectrum(0), 0};
 
     v.wi = glm::normalize(v.its.pos() - e.its.pos());
+    if (Perpendicular(-v.wi, v.its.normal()))
+        return {Spectrum(0), 0};
+
+    e.wo = v.wi;
+    if (Perpendicular(e.wo, e.its.normal()))
+        return {Spectrum(0), 0};
+
     v.pdf = v.its.Pdf(v.wi, v.wo);
     if (v.pdf < kEpsilonPdf2)
         return {Spectrum(0), 0};
 
-    e.wo = v.wi;
-
-    Spectrum L_pre = EmitterEnv2OneV(e);
+    Spectrum L_pre = e_index == 1 ? EmitterEnv2OneV(e) : EmitterEnv2OneV(e, &e_first.its);
     if (e_index > 1)
     {
         e.pdf = e.its.Pdf(e.wi, e.wo);
@@ -236,6 +249,9 @@ std::pair<Spectrum, Float> BdptIntegrator::PrepareOtherEmitter2OneC(const std::v
             L_pre += L_pre_indirect;
         }
     }
+    if (L_pre.r + L_pre.g + L_pre.b < kEpsilon)
+        return {Spectrum(0), 0};
+
     v.bsdf = v.its.Eval(v.wi, v.wo);
     v.cos_theta_abs = std::abs(glm::dot(v.wi, v.its.normal()));
     auto L_indirect = L_pre * v.bsdf * (v.cos_theta_abs / v.pdf);

@@ -28,6 +28,8 @@ public:
     Integrator(IntegratorType type, int max_depth, int rr_depth = 5, Float pdf_rr = 0.95)
         : type_(type), max_depth_(max_depth), rr_depth_(rr_depth), pdf_rr_(0.95) {}
 
+    virtual ~Integrator() {}
+
     /**
      * \brief 设置待着色的场景
      * \param scene 待着色的场景
@@ -89,35 +91,49 @@ protected:
      * \param wo 采样时当前所在的光线与物体表面交点处，光线的出射方向
      * \param value 直接来自光源的辐射亮度（光亮度） （输入/输出参数）
      */
-    void EmitterDirectArea(const Intersection &its, const Vector3 &wo, Spectrum &value) const
+    bool EmitterDirectArea(const Intersection &its, const Vector3 &wo, Spectrum &value, const Intersection *its_emitter_ptr = nullptr) const
     {
         if (this->emitters_.empty())
-            return;
+            return false;
 
-        auto index = static_cast<int>(UniformFloat2() * this->emitters_.size());
-        auto [its_pre, pdf_area] = this->emitters_[index]->SampleP();
-        pdf_area /= this->emitters_.size();
+        auto its_pre = Intersection();
+        Float pdf_area = 0;
+        if (its_emitter_ptr)
+        {
+            its_pre = *its_emitter_ptr;
+            pdf_area = 1 / (its_pre.shape_area() * this->emitters_.size());
+        }
+        else
+        {
+            auto index = static_cast<int>(UniformFloat2() * this->emitters_.size());
+            std::tie(its_pre, pdf_area) = this->emitters_[index]->SampleP();
+            pdf_area /= this->emitters_.size();
+        }
 
         Float distance_sqr = 0;
         if (!Visible(its_pre, its, &distance_sqr))
-            return;
+            return false;
 
         auto wi = glm::normalize(its.pos() - its_pre.pos());
         auto cos_theta_prime = glm::dot(wi, its_pre.normal());
         if (cos_theta_prime < 0)
-            return;
+            return false;
+
+        if (Perpendicular(-wi, its.normal()))
+            return false;
 
         auto pdf_direct = pdf_area * distance_sqr / cos_theta_prime;
 
         auto bsdf = its.Eval(wi, wo);
         if (bsdf.r + bsdf.g + bsdf.b < kEpsilon)
-            return;
+            return false;
 
         auto pdf_bsdf = its.Pdf(wi, wo);
         auto weight_direct = MisWeight(pdf_direct, pdf_bsdf);
         auto cos_theta = std::abs(glm::dot(wi, its.normal()));
 
         value += weight_direct * its_pre.radiance() * bsdf * cos_theta / pdf_direct;
+        return true;
     }
 
     /**
