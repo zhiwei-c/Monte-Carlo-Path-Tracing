@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<scene version="0.5.0" >
+	<integrator type="bdpt" >
+		<integer name="maxDepth" value="13" />
+		<boolean name="strictNormals" value="true" />
+	</integrator>
+	<sensor type="perspective" >
+		<float name="fov" value="60" />
+		<transform name="toWorld" >
+			<matrix value="-0.137283 -0.0319925 -0.990015 4.05402 2.71355e-008 0.999478 -0.0322983 1.61647 0.990532 -0.00443408 -0.137213 -2.30652 0 0 0 1"/>
+		</transform>
+		<sampler type="sobol" >
+			<integer name="sampleCount" value="4" />
+		</sampler>
+		<film type="ldrfilm" >
+			<integer name="width" value="3840" />
+			<integer name="height" value="2160" />
+			<string name="fileFormat" value="png" />
+			<string name="pixelFormat" value="rgb" />
+			<float name="gamma" value="2.2" />
+			<boolean name="banner" value="false" />
+			<rfilter type="tent" />
+		</film>
+	</sensor>
+	<bsdf type="twosided" id="Landscape" >
+		<bsdf type="diffuse" >
+			<texture name="reflectance" type="bitmap" >
+				<string name="filename" value="textures/landscape-with-a-lake.jpg" />
+				<string name="filterType" value="trilinear" />
+			</texture>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Table" >
+		<bsdf type="diffuse" >
+			<texture name="reflectance" type="bitmap" >
+				<string name="filename" value="textures/Good Textures_005844.jpg" />
+				<string name="filterType" value="trilinear" />
+			</texture>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="DoorHandle" >
+		<bsdf type="roughconductor" >
+			<float name="alpha" value="0.25" />
+			<string name="distribution" value="beckmann" />
+			<float name="extEta" value="1" />
+			<rgb name="specularReflectance" value="1, 1, 1"/>
+			<rgb name="eta" value="1.65746, 0.880369, 0.521229"/>
+			<rgb name="k" value="9.22387, 6.26952, 4.837"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Door" >
+		<bsdf type="diffuse" >
+			<texture name="reflectance" type="bitmap" >
+				<string name="filename" value="textures/cherry-wood-texture.jpg" />
+				<string name="filterType" value="trilinear" />
+			</texture>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Diffuse" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0.8, 0.8, 0.8"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Floor" >
+		<bsdf type="roughconductor" >
+			<float name="alpha" value="0.1" />
+			<string name="distribution" value="ggx" />
+			<float name="extEta" value="1" />
+			<texture name="specularReflectance" type="checkerboard" >
+				<rgb name="color1" value="0.2, 0.2, 0.2"/>
+				<rgb name="color0" value="0.8, 0.8, 0.8"/>
+				<float name="uoffset" value="0" />
+				<float name="voffset" value="0" />
+				<float name="uscale" value="20" />
+				<float name="vscale" value="80" />
+			</texture>
+			<rgb name="eta" value="1.65746, 0.880369, 0.521229"/>
+			<rgb name="k" value="9.22387, 6.26952, 4.837"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="DoorFrame" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0.247059, 0.168627, 0.0901961"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="PictureFrame" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0.258824, 0.207843, 0.145098"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Hinge" >
+		<bsdf type="roughconductor" >
+			<float name="alpha" value="0.1" />
+			<string name="distribution" value="ggx" />
+			<float name="extEta" value="1" />
+			<rgb name="specularReflectance" value="1, 1, 1"/>
+			<rgb name="eta" value="1.65746, 0.880369, 0.521229"/>
+			<rgb name="k" value="9.22387, 6.26952, 4.837"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Light" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0, 0, 0"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Pot2" >
+		<bsdf type="roughconductor" >
+			<float name="alpha" value="0.15" />
+			<string name="distribution" value="ggx" />
+			<float name="extEta" value="1" />
+			<rgb name="specularReflectance" value="1, 1, 1"/>
+			<rgb name="eta" value="1.65746, 0.880369, 0.521229"/>
+			<rgb name="k" value="9.22387, 6.26952, 4.837"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="roughdielectric" id="Material" >
+		<float name="intIOR" value="1.5" />
+		<float name="extIOR" value="1" />
+		<float name="alpha" value="0.001" />
+		<string name="distribution" value="ggx" />
+	</bsdf>
+	<bsdf type="twosided" id="Pot3" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0.8, 0.8, 0.8"/>
+		</bsdf>
+	</bsdf>
+	<shape type="rectangle" >
+		<transform name="toWorld" >
+			<matrix value="0.730445 0 0 -4.4391 0 -1.32136 -1.42138e-007 1.50656 0 1.42138e-007 -1.93037 -4.44377 0 0 0 1"/>
+		</transform>
+		<ref id="Light" />
+		<emitter type="area" >
+			<rgb name="radiance" value="1000, 1000, 1000"/>
+		</emitter>
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh008.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Landscape" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh013.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="PictureFrame" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh011.obj" />
+		<transform name="toWorld" >
+			<matrix value="1.8 0 0 2.3 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Floor" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh015.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<ref id="DoorHandle" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh016.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Hinge" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh012.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Hinge" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh010.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Hinge" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh006.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Door" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh005.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="DoorFrame" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh007.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Diffuse" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh003.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Diffuse" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh002.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Diffuse" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh001.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Diffuse" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh004.obj" />
+		<transform name="toWorld" >
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Table" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh014.obj" />
+		<transform name="toWorld" >
+			<matrix value="1.8 0 0 2.3 0 1 0 0 0 0 1 0 0 0 0 1"/>
+		</transform>
+		<boolean name="faceNormals" value="true" />
+		<ref id="Diffuse" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh009.obj" />
+		<transform name="toWorld" >
+			<matrix value="-0.0757886 0 -0.0468591 -1.95645 0 0.0891049 0 0.648205 0.0468591 0 -0.0757886 -1.77687 0 0 0 1"/>
+		</transform>
+		<ref id="Pot2" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh000.obj" />
+		<transform name="toWorld" >
+			<matrix value="-0.0757886 0 -0.0468591 -1.95645 0 0.0891049 0 0.648205 0.0468591 0 -0.0757886 -1.77687 0 0 0 1"/>
+		</transform>
+		<ref id="Pot2" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh000.obj" />
+		<transform name="toWorld" >
+			<matrix value="-0.0891049 0 7.7898e-009 -1.95645 0 0.0891049 0 0.648205 -7.7898e-009 0 -0.0891049 -2.67687 0 0 0 1"/>
+		</transform>
+		<ref id="Pot3" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh009.obj" />
+		<transform name="toWorld" >
+			<matrix value="-0.0891049 0 7.7898e-009 -1.95645 0 0.0891049 0 0.648205 -7.7898e-009 0 -0.0891049 -2.67687 0 0 0 1"/>
+		</transform>
+		<ref id="Pot3" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh009.obj" />
+		<transform name="toWorld" >
+			<matrix value="-0.0837611 0 0.0303939 -1.95645 0 0.0891049 0 0.651268 -0.0303939 0 -0.0837611 -3.57687 0 0 0 1"/>
+		</transform>
+		<ref id="Material" />
+	</shape>
+	<shape type="obj" >
+		<string name="filename" value="models/Mesh000.obj" />
+		<transform name="toWorld" >
+			<matrix value="-0.083761 0 0.0303938 -1.95645 0 0.0891049 0 0.651268 -0.0303938 0 -0.083761 -3.57687 0 0 0 1"/>
+		</transform>
+		<ref id="Material" />
+	</shape>
+</scene>
