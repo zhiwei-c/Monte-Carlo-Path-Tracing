@@ -93,7 +93,7 @@ public:
         {
             if (mesh)
             {
-                delete ((Triangle *)mesh);
+                delete mesh;
                 mesh = nullptr;
             }
         }

@@ -20,6 +20,8 @@ enum class ShapeType
 class Shape
 {
 public:
+    virtual ~Shape() {}
+
     /**
      * \brief 判断光线是否与物体相交，获取交点。
      * \param ray 待判断的光线
@@ -54,6 +56,7 @@ public:
     ///\return 物体类型
     ShapeType type() const { return type_; }
 
+    ///\return 当前物体元素归属的物体
     void SetParent(Shape *parent) { parent_ = parent; }
 
 protected:
@@ -67,7 +70,7 @@ protected:
 
 private:
     ShapeType type_; //物体类型
-    Shape *parent_;
+    Shape *parent_;  //当前物体元素归属的物体
 };
 
 NAMESPACE_END(simple_renderer)

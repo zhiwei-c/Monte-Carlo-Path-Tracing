@@ -29,9 +29,21 @@ public:
 	~Scene()
 	{
 		for (auto &shape : shapes_)
-			DeleteShapePointer(shape);
+		{
+			if (shape)
+			{
+				delete shape;
+				shape = nullptr;
+			}
+		}
 		for (auto &material : materials_)
-			DeleteMaterialPointer(material);
+		{
+			if (material)
+			{
+				delete material;
+				material = nullptr;
+			}
+		}
 
 		if (envmap_)
 		{

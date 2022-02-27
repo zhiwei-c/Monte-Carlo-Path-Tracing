@@ -58,11 +58,10 @@ int main(int argc, char *argv[])
 
 	camera->Shoot(scene, integrator, output_name);
 
-	DeleteIntegrator(integrator);
-
+	delete integrator;
 	delete scene;
 	delete camera;
-
+	integrator = nullptr;
 	scene = nullptr;
 	camera = nullptr;
 
