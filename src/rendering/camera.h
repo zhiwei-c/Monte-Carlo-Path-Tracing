@@ -25,6 +25,7 @@ class Camera
 public:
     /**
      * \brief 相机
+     * \param integrator 全局光照模型部分的求解绘制方程积分的方法
      * \param film 相片（生成图像）信息
      * \param eye_pos 相机位置
      * \param look_at 观察的目标点
@@ -32,10 +33,9 @@ public:
      * \param fov_height 垂直方向的视角（弧度制）
      * \param spp 每个像素点采样的次数
      */
-    Camera(Film film, Vector3 eye_pos, Vector3 look_at, Vector3 up, Float fov_height, int spp)
-        : film_(film), eye_pos_(eye_pos), up_(glm::normalize(up)), fov_height_(fov_height), spp_(spp)
+    Camera(Integrator *integrator, Film film, Vector3 eye_pos, Vector3 look_at, Vector3 up, Float fov_height, int spp)
+        : integrator_(integrator), film_(film), eye_pos_(eye_pos), up_(glm::normalize(up)), fov_height_(fov_height), spp_(spp)
     {
-
         auto fov_width = fov_height_ * film_.width / film_.height;
         look_dir_ = glm::normalize(look_at - eye_pos_);
         Vector3 right_dir_ = glm::normalize(glm::cross(look_dir_, up_));
@@ -47,6 +47,12 @@ public:
         spp_r_ = spp - spp_x_ * spp_y_;
         dxx_ = static_cast<Float>(1) / spp_x_;
         dyy_ = static_cast<Float>(1) / spp_y_;
+    }
+
+    ~Camera()
+    {
+        delete integrator_;
+        integrator_ = nullptr;
     }
 
     /**
@@ -81,15 +87,15 @@ public:
     /**
      * \brief 使用相机信息生成一张给定场景的图像，并将图像保存到相应的位置。
      * \param scene 待生成图像的场景
-     * \param integrator 绘制方程积分求解方法
      * \param output_name 保存生成图像的文件名
      */
-    void Shoot(Scene *scene, Integrator *integrator, std::string output_name)
+    void Shoot(Scene *scene, std::string output_name)
     {
         Timer timer;
         std::cout << "[info] Begin render......\t\t\t\r";
+        
+        integrator_->SetScene(scene);
 
-        integrator->SetScene(scene);
         auto frame = Bitmap(film_.width, film_.height, 3, film_.gamma);
         if (output_name.empty())
         {
@@ -123,7 +129,7 @@ public:
                 std::vector<Vector3> look_dirs_now = GetDirections(i, j);
                 for (auto look_dir_now : look_dirs_now)
                 {
-                    color += integrator->Shade(eye_pos_, look_dir_now) * spp_inv;
+                    color += integrator_->Shade(eye_pos_, look_dir_now) * spp_inv;
                 }
                 frame.SetPixel(i, j, color);
 #pragma omp critical
@@ -140,12 +146,13 @@ public:
     }
 
 private:
-    Vector3 eye_pos_;  //相机位置
-    Vector3 look_dir_; //观察方向
-    Vector3 up_;       //观察坐标系的竖直向上方向
-    Float fov_height_; //垂直方向的视角（弧度制）
-    Film film_;        //相片（生成图像）信息
-    int spp_;          //对每个像素进行采样的次数
+    Vector3 eye_pos_;        //相机位置
+    Vector3 look_dir_;       //观察方向
+    Vector3 up_;             //观察坐标系的竖直向上方向
+    Float fov_height_;       //垂直方向的视角（弧度制）
+    Film film_;              //相片（生成图像）信息
+    int spp_;                //对每个像素进行采样的次数
+    Integrator *integrator_; //全局光照模型部分的求解绘制方程积分的方法
 
     int spp_x_;
     int spp_y_;

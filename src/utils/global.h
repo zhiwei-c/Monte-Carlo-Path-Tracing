@@ -33,10 +33,10 @@ constexpr auto kEpsilonL = static_cast<Float>(1e-3);
 constexpr auto kEpsilonPdf = static_cast<Float>(1e-5);
 constexpr auto kEpsilonPdf2 = static_cast<Float>(5e-2);
 
+constexpr auto kEpsilonMachine = std::numeric_limits<Float>::epsilon() * 0.5;
 
-constexpr auto kEpsilonMachine =std::numeric_limits<Float>::epsilon() * 0.5;
-
-inline Float GammaError(int n){
+inline Float GammaError(int n)
+{
     return (n * kEpsilonMachine) / (1 - n * kEpsilonMachine);
 }
 

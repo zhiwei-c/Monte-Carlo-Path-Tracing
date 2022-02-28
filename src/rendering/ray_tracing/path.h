@@ -12,7 +12,8 @@ public:
      * \brief 路径追踪算法类
      * \param max_depth 递归地追踪光线最大深度
      */
-    PathIntegrator(int max_depth) : Integrator(IntegratorType::kPath, max_depth) {}
+    PathIntegrator(int max_depth, int rr_depth)
+        : Integrator(max_depth, rr_depth) {}
 
     Spectrum Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const override;
 

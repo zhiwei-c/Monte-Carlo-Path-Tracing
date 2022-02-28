@@ -8,13 +8,6 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
-//全局光照模型类型
-enum class IntegratorType
-{
-    kPath, //路径跟踪
-    kBdpt, //双向路径跟踪
-};
-
 //全局光照模型基类
 class Integrator
 {
@@ -22,30 +15,23 @@ public:
     /**
      * \brief 全局光照模型
      * \param type 全局光照模型类型
+     * \param scene 待着色的场景
      * \param max_depth 递归地追踪光线的最大深度
      * \param rr_depth 最小的光线追踪深度，超过该深度后进行俄罗斯轮盘赌抽样控制光线追踪深度
      */
-    Integrator(IntegratorType type, int max_depth, int rr_depth = 5, Float pdf_rr = 0.95)
-        : type_(type), max_depth_(max_depth), rr_depth_(rr_depth), pdf_rr_(0.95) {}
+    Integrator(int max_depth, int rr_depth)
+        : max_depth_(max_depth), rr_depth_(rr_depth), pdf_rr_(0.95) {}
 
     virtual ~Integrator() {}
 
-    /**
-     * \brief 设置待着色的场景
-     * \param scene 待着色的场景
-     */
     void SetScene(Scene *scene)
     {
         envmap_ = scene->envmap();
         emitters_.clear();
-        emit_area_ = 0;
         for (auto &shape : scene->shapes())
         {
             if (shape->HasEmission())
-            {
                 emitters_.push_back(shape);
-                emit_area_ += shape->area();
-            }
         }
         if (!scene->shapes().empty())
             bvh_ = std::make_unique<BvhAccel>(scene->shapes());
@@ -59,13 +45,9 @@ public:
      */
     virtual Spectrum Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const = 0;
 
-    ///\brief 全局光照模型类型
-    IntegratorType type() const { return type_; }
-
 protected:
     std::unique_ptr<BvhAccel> bvh_; //层次包围盒
     std::vector<Shape *> emitters_; //包含的发光物体
-    Float emit_area_;               //发光物体的总表面积
     Envmap *envmap_;                //用于绘制的天空盒
     int max_depth_;                 //递归地追踪光线的最大深度
     int rr_depth_;                  //最小的光线追踪深度，超过该深度后进行俄罗斯轮盘赌抽样控制光线追踪深度
@@ -174,9 +156,6 @@ protected:
             return true;
         }
     }
-
-private:
-    IntegratorType type_; //全局光照模型类型
 };
 
 NAMESPACE_END(simple_renderer)

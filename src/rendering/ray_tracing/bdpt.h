@@ -27,7 +27,8 @@ public:
      * \brief 双向路径追踪算法类
      * \param max_depth 递归地追踪光线最大深度
      */
-    BdptIntegrator(int max_depth) : Integrator(IntegratorType::kBdpt, max_depth) {}
+    BdptIntegrator(int max_depth, int rr_depth)
+        : Integrator(max_depth, rr_depth) {}
 
     ///\brief 着色
     Spectrum Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const override;

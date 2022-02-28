@@ -8,13 +8,14 @@
 
 int main(int argc, char *argv[])
 {
-
+	// usage example: SimpleRenderer.exe  render_config.xml [output_path.png]
 	if (argc > 3 || argc < 2)
 	{
 		std::cerr << "[error] incorrect argument num" << std::endl;
 		exit(1);
 	}
 
+	//绘制图像保存路径
 	std::string output_name = "";
 	if (argc == 3)
 	{
@@ -28,6 +29,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	//绘制图像配置文件路径
 	auto file_path = simple_renderer::ConvertBackSlash(argv[1]);
 	std::filesystem::path file_path_now = file_path;
 	if (!std::filesystem::exists(file_path_now))
@@ -40,14 +42,13 @@ int main(int argc, char *argv[])
 
 	simple_renderer::Scene *scene = nullptr;
 	simple_renderer::Camera *camera = nullptr;
-	simple_renderer::Integrator *integrator = nullptr;
 	auto suffix = simple_renderer::GetSuffix(file_path);
 	if (suffix == "json")
-		std::tie(scene, camera, integrator) = simple_renderer::ParseJsonCfg(file_path);
+		std::tie(scene, camera) = simple_renderer::ParseJsonCfg(file_path);
 	else if (suffix == "xml")
 	{
 		auto parser = simple_renderer::XmlParser();
-		std::tie(scene, camera, integrator) = parser.Parse(file_path);
+		std::tie(scene, camera) = parser.Parse(file_path);
 	}
 	else
 	{
@@ -56,12 +57,10 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	camera->Shoot(scene, integrator, output_name);
+	camera->Shoot(scene, output_name);
 
-	delete integrator;
 	delete scene;
 	delete camera;
-	integrator = nullptr;
 	scene = nullptr;
 	camera = nullptr;
 

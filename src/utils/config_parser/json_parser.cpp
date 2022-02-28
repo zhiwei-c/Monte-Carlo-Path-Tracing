@@ -8,7 +8,7 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
-std::tuple<Scene *, Camera *, Integrator *> ParseJsonCfg(const std::string &file_path)
+std::tuple<Scene *, Camera *> ParseJsonCfg(const std::string &file_path)
 {
 	std::ifstream in(file_path);
 	std::string dir_path = GetDirectory(file_path);
@@ -25,10 +25,10 @@ std::tuple<Scene *, Camera *, Integrator *> ParseJsonCfg(const std::string &file
 	auto json_data = nlohmann::json::parse(contents.c_str());
 
 	auto scene = InitScene(dir_path, json_data);
-	auto camera = InitCamera(json_data);
 	auto integrator = InitIntegrator(json_data);
+	auto camera = InitCamera(json_data, integrator);
 
-	return {scene, camera, integrator};
+	return {scene, camera};
 }
 
 Scene *InitScene(const std::string &dir_path, nlohmann::json &data)
@@ -48,6 +48,7 @@ Integrator *InitIntegrator(nlohmann::json &data)
 {
 	std::string type = "path";
 	int max_depth = -1;
+	int rr_depth = 5;
 	if (!data.contains("integrator"))
 	{
 		std::cout << "[warning] "
@@ -63,16 +64,17 @@ Integrator *InitIntegrator(nlohmann::json &data)
 	{
 		type = GetString(data["integrator"], "type", true).value_or("path");
 		max_depth = GetInt(data["integrator"], "max_depth", true).value_or(-1);
+		rr_depth = GetInt(data["integrator"], "rr_depth", true).value_or(5);
 	}
 
 	Integrator *integrator = nullptr;
 	switch (Hash(type.c_str()))
 	{
 	case "path"_hash:
-		integrator = new PathIntegrator(max_depth);
+		integrator = new PathIntegrator(max_depth, rr_depth);
 		break;
 	case "bdpt"_hash:
-		integrator = new BdptIntegrator(max_depth);
+		integrator = new BdptIntegrator(max_depth, rr_depth);
 		break;
 	default:
 		std::cerr << "[error] cannot handle integrator type" << type << "\"" << std::endl;
@@ -83,7 +85,7 @@ Integrator *InitIntegrator(nlohmann::json &data)
 	return integrator;
 }
 
-Camera *InitCamera(nlohmann::json &data)
+Camera *InitCamera(nlohmann::json &data, Integrator *integrator)
 {
 	if (!data.contains("camera"))
 	{
@@ -103,7 +105,7 @@ Camera *InitCamera(nlohmann::json &data)
 	auto fov_height = GetFloat(data["camera"], "fov_height", false).value();
 	auto spp = GetInt(data["camera"], "spp", false).value();
 	auto film = InitFilm(data);
-	return new Camera(film, eye_pos, look_at, up, fov_height, spp);
+	return new Camera(integrator, film, eye_pos, look_at, up, fov_height, spp);
 }
 
 Film InitFilm(nlohmann::json &data)

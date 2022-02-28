@@ -13,7 +13,7 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
-std::tuple<Scene *, Camera *, Integrator *> ParseJsonCfg(const std::string &file_path);
+std::tuple<Scene *, Camera *> ParseJsonCfg(const std::string &file_path);
 
 //\brief 从 json 格式数据内解析待绘制的模型信息
 //
@@ -33,8 +33,10 @@ static Integrator* InitIntegrator(nlohmann::json &data);
 //
 //\param data 待解析的 json 数据
 //
+//\param integrator 获取到的绘制方程积分求解方法
+//
 //\return 获取到的相机信息
-static Camera *InitCamera(nlohmann::json &data);
+static Camera *InitCamera(nlohmann::json &data, Integrator *integrator);
 
 //\brief 从json格式数据内解析相机信息
 //

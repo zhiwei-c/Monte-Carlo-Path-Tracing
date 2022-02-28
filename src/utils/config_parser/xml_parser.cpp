@@ -39,7 +39,7 @@ static std::optional<Vector3> GetPoint(rapidxml::xml_node<> *node_parent, std::s
 
 static MicrofacetDistribType GetDistrbType(const std::string &name);
 
-std::tuple<Scene *, Camera *, Integrator *> XmlParser::Parse(const std::string &path)
+std::tuple<Scene *, Camera *> XmlParser::Parse(const std::string &path)
 {
 	Reset();
 	xml_directory_ = GetDirectory(ConvertBackSlash(path));
@@ -48,30 +48,30 @@ std::tuple<Scene *, Camera *, Integrator *> XmlParser::Parse(const std::string &
 	xml_doc->parse<0>(file_doc->data());
 
 	auto node_scene = xml_doc->first_node("scene");
-
-	auto integrator = ParseIntegrator(node_scene->first_node("integrator"));
-	auto camera = ParseCamera(node_scene->first_node("sensor"));
 	auto scene = ParseScene(node_scene);
+	integrator_ = ParseIntegrator(node_scene->first_node("integrator"));
+	auto camera = ParseCamera(node_scene->first_node("sensor"));
 
 	delete file_doc;
 	delete xml_doc;
 
-	return {scene, camera, integrator};
+	return {scene, camera};
 }
 
 Integrator *XmlParser::ParseIntegrator(rapidxml::xml_node<> *node_integrator)
 {
 	auto type = GetAttri(node_integrator, "type").value();
 	auto max_depth = GetInt(node_integrator, "maxDepth", true).value_or(-1);
+	auto rr_depth = GetInt(node_integrator, "rrDepth", true).value_or(5);
 
 	Integrator *integrator = nullptr;
 	switch (Hash(type.c_str()))
 	{
 	case "path"_hash:
-		integrator = new PathIntegrator(max_depth);
+		integrator = new PathIntegrator(max_depth, rr_depth);
 		break;
 	case "bdpt"_hash:
-		integrator = new BdptIntegrator(max_depth);
+		integrator = new BdptIntegrator(max_depth, rr_depth);
 		break;
 	default:
 		std::cerr << "[error] " << GetTreeName(node_integrator) << std::endl
@@ -134,7 +134,7 @@ Camera *XmlParser::ParseCamera(rapidxml::xml_node<> *node_sensor)
 	auto node_sampler = node_sensor->first_node("sampler");
 	auto sample_count = GetInt(node_sampler, "sampleCount", false).value();
 
-	return new Camera(film, eye_pos, eye_pos + look_dir, up, fov_height, sample_count);
+	return new Camera(integrator_, film, eye_pos, eye_pos + look_dir, up, fov_height, sample_count);
 }
 
 Film XmlParser::ParseFilm(rapidxml::xml_node<> *node_sensor)
