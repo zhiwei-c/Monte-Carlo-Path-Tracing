@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[])
 {
-	// usage example: SimpleRenderer.exe  render_config.xml [output_path.png]
+	// usage example: .\SimpleRenderer.exe  render_config.xml [output_path.png]
 	if (argc > 3 || argc < 2)
 	{
 		std::cerr << "[error] incorrect argument num" << std::endl;

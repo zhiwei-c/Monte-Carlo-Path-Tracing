@@ -13,14 +13,33 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 ![kitchen](resources/rendering_results/kitchen.png)
 
-## 1 支持的绘制配置文件格式
+## 1 依赖（Dependencies）
+
+项目使用 [vcpkg](https://github.com/microsoft/vcpkg) 进行 c++ 库管理。
+
+- [nlohmann json](https://github.com/nlohmann/json)
+
+- [RapidXML](http://rapidxml.sourceforge.net/)
+
+- [glm](https://github.com/g-truc/glm)
+
+- [assimp](https://github.com/assimp/assimp)
+
+- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader)
+
+- [stb](https://github.com/nothings/stb)
+
+- [tinyexr](https://github.com/syoyo/tinyexr)
+
+## 2 支持的绘制配置文件格式及使用说明
 
 - 自拟的[ json 格式文件](resources/rendering_resources/cornell-box/scene.json)；
-
 - mitsuba 0.5 定义的[ xml 格式文件](resources/rendering_resources/bathroom/scene.xml)（部分支持）；
+- 在 Windows 下编译后执行命令：`.\SimpleRenderer.exe render_config.xml [output_path.png]`
 
-## 2 实现的功能
-### 2.1 积分器（Integrators）
+## 3 实现的功能
+
+### 3.1 积分器（Integrators）
 - 基于路径追踪（path tracing）算法的积分器，包括：
   - 使用蒙特卡洛方法（Monte Carlo method）计算辐射亮度（radiance）的数学期望；
   - 重要性抽样（importance sampling），给定光线入射方向和表面法线方向，根据 BSDF 对光线出射方向进行重要性抽样；
@@ -28,7 +47,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
     - 按发光物体表面积直接采样光源；
     - 按 BSDF 采样光源；
   - 俄罗斯轮盘赌（Russian roulette）控制路径追踪深度； 
-- 基于双向路径追踪（bidirectional path tracing，BDPT）算法的积分器
+- 基于双向路径追踪（bidirectional path tracing，BDPT）算法的积分器；
 
 | 绘制参数                       | 路径追踪算法（Path Tracing）                           | 双向路径追踪算法（Bidirectional Path Tracing）         |
 | ------------------------------ | ------------------------------------------------------ | ------------------------------------------------------ |
@@ -36,7 +55,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 | 3840*2160 分辨率，<br />4 spp  | ![](resources/rendering_results/ajar-path-4_spp.png)   | ![](resources/rendering_results/ajar-bdpt-4_spp.png)   |
 | 960*960 分辨率，<br />64 spp | ![](resources/rendering_results/bidir-path-64_spp.png) | ![](resources/rendering_results/bidir-bdpt-64_spp.png) |
 
-### 2.2 表面散射模型（Surface scattering models）
+### 3.2 表面散射模型（Surface scattering models）
 
 - 朗伯模型（Lambert's model）定义的，[平滑的漫反射材质（smooth diffuse material）](src/material/bsdfs/diffuse.h)；
 
@@ -70,7 +89,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 
 
-### 2.3 其它
+### 3.3 其它
 
 - [使用Kulla和Conty提出的方法](https://fpsunflower.github.io/ckulla/data/s2017_pbs_imageworks_slides_v2.pdf)，尝试补上[微表面模型](https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf)没有建模的，微表面之间的多重散射；
 
@@ -121,24 +140,6 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
     | Ir<br />Ir_palik     | 铱 Iridium                            | W                    | 钨 Tungsten                                   |
     | K<br />K_palik       | 多晶钾 Polycrystalline potassium      | none                 | 全反射镜面 100% reflecting mirror             |
 
-## 3 依赖（Dependencies）
-
-建议使用 [vcpkg](https://github.com/microsoft/vcpkg) 进行 c++ 库管理。
-
-- [nlohmann json](https://github.com/nlohmann/json)
-
-- [RapidXML](http://rapidxml.sourceforge.net/)
-
-- [glm](https://github.com/g-truc/glm)
-
-- [assimp](https://github.com/assimp/assimp)
-
-- [tinyobjloader](https://github.com/tinyobjloader/tinyobjloader)
-
-- [stb](https://github.com/nothings/stb)
-
-- [tinyexr](https://github.com/syoyo/tinyexr)
-
 ## 4 参考（References）
 
 - 《[GAMES101: 现代计算机图形学入门 ](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》
@@ -146,6 +147,3 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 - [Mitsuba renderer](https://github.com/mitsuba-renderer/mitsuba)
 
 - 《[GAMES202: 高质量实时渲染](https://sites.cs.ucsb.edu/~lingqi/teaching/games202.html)》
-
-  
-
