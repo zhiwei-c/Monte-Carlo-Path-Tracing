@@ -1,6 +1,8 @@
 # 蒙特卡洛路径追踪（Monte Carlo Path Tracing）
 一个简单的路径追踪小程序，最初参考了《[GAMES101: 现代计算机图形学入门 ](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》的作业7，有大幅度的调整。
 
+[学习记录](https://zhuanlan.zhihu.com/p/459580639)
+
 A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)) originally.
 
 ---
