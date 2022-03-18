@@ -6,7 +6,7 @@
 
 #include "glm/gtx/matrix_query.hpp"
 #include "../utils/global.h"
-#include "texture/textures.h"
+#include "textures/textures.h"
 #include "../rendering/ray.h"
 
 NAMESPACE_BEGIN(simple_renderer)
@@ -14,7 +14,6 @@ NAMESPACE_BEGIN(simple_renderer)
 // 材质类型（表面散射模型类型）
 enum class MaterialType
 {
-    kAreaLight,       //面光源
     kDiffuse,         //漫反射
     kGlossy,          //冯模型定义的有光泽表面，含有漫反射和镜面反射
     kDielectric,      //平滑的电介质
@@ -23,7 +22,9 @@ enum class MaterialType
     kConductor,       //平滑的导体
     kRoughConductor,  //粗糙的导体
     kPlastic,         //平滑的塑料
-    kRoughPlastic     //粗糙的塑料
+    kRoughPlastic,    //粗糙的塑料
+
+    kAreaLight //面光源
 };
 
 //按 BSDF 采样记录
@@ -40,14 +41,7 @@ struct BsdfSampling
 class Material
 {
 public:
-    virtual ~Material()
-    {
-        if (opacity_map_)
-        {
-            delete opacity_map_;
-            opacity_map_ = nullptr;
-        }
-    }
+    virtual ~Material() {}
 
     /**
      * \brief 根据光线出射方向和表面法线方向，抽样光线入射方向
@@ -90,12 +84,6 @@ public:
     ///\return 是否映射纹理
     virtual bool TextureMapping() const { return false; }
 
-    ///\return 材质类型
-    MaterialType type() const { return type_; }
-
-    ///\return 材质id
-    std::string id() const { return id_; }
-
     ///\return 是否两面都有效
     bool twosided() const { return twosided_; }
 
@@ -106,22 +94,22 @@ public:
      * \brief 设置不透明度
      * \param opacity 不透明度（注意：目前仅支持每个通道不透明度都相同的不透明度）
      */
-    void setOpacity(const Vector3 &opacity) { opacity_ = std::make_unique<Float>(std::max(std::max(opacity.r, opacity.g), opacity.b)); }
+    void setOpacity(const Vector3 &opacity)
+    {
+        opacity_.reset(new ConstantTexture(opacity));
+    }
 
     /**
      * \brief 设置不透明度
      * \param opacity_map 不透明度映射纹理（注意：目前仅支持每个通道不透明度都相同的不透明度映射纹理）
      */
-    void setOpacity(Texture *opacity_map) { opacity_map_ = opacity_map; }
+    void setOpacity(std::unique_ptr<Texture> opacity)
+    {
+        opacity_.reset(opacity.release());
+    }
 
     ///\return 是否使用不透明度
-    bool OpacityMapping() const
-    {
-        if (opacity_ || opacity_map_)
-            return true;
-        else
-            return false;
-    }
+    bool OpacityMapping() const { return opacity_ != nullptr; }
 
     /**
      * \param texcoord 纹理坐标
@@ -129,41 +117,17 @@ public:
      */
     virtual bool Transparent(const Vector2 &texcoord) const
     {
-        if (opacity_)
-        {
-            auto x = UniformFloat();
-            if (x < *opacity_)
-                return false;
-            else
-                return true;
-        }
-        else if (opacity_map_)
-        {
-            auto x = UniformFloat();
-            auto opacity = GetLuminance(opacity_map_->GetPixel(texcoord));
-            if (x < opacity)
-                return false;
-            else
-                return true;
-        }
-        else
-            return false;
+        return opacity_ && UniformFloat() > GetLuminance(opacity_->GetPixel(texcoord));
     }
 
     /**
      * \brief 设置凹凸映射
      * \param opacity_map 凹凸映射纹理
      */
-    void setBump(Texture *bump_map) { bump_map_ = bump_map; }
+    void setBump(std::unique_ptr<Texture> bump_map) { bump_map_.reset(bump_map.release()); }
 
     ///\return 是否通过纹理映射更改法线
-    bool NormalPerturbing() const
-    {
-        if (bump_map_)
-            return true;
-        else
-            return false;
-    }
+    bool NormalPerturbing() const { return bump_map_ != nullptr; }
 
     /**
      * \brief 通过纹理映射更改法线
@@ -190,16 +154,14 @@ protected:
           type_(type),
           twosided_(true),
           opacity_(nullptr),
-          opacity_map_(nullptr),
           bump_map_(nullptr){};
 
 private:
-    std::string id_;                 // 材质id
-    MaterialType type_;              // 材质类型（表面散射模型类型）
-    bool twosided_;                  // 材质两面都有效
-    std::unique_ptr<Float> opacity_; // 不透明度
-    Texture *opacity_map_;           // 透明度纹理映射
-    Texture *bump_map_;              // 透明度纹理映射
+    bool twosided_;                     // 材质两面都有效
+    MaterialType type_;                 // 材质类型（表面散射模型类型）
+    std::string id_;                    // 材质id
+    std::unique_ptr<Texture> opacity_;  // 不透明度
+    std::unique_ptr<Texture> bump_map_; // 透明度纹理映射
 };
 
 NAMESPACE_END(simple_renderer)

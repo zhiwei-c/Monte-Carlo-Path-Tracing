@@ -4,7 +4,7 @@
 #include <iostream>
 
 #include "../file_path.h"
-#include "../../rendering/ray_tracing/integrators.h"
+#include "../../rendering/integrators/integrators.h"
 
 NAMESPACE_BEGIN(simple_renderer)
 
@@ -135,9 +135,8 @@ Envmap *InitEnvmap(const std::string &dir_path, nlohmann::json &data)
 	if (data["envmap"].empty())
 		return new Envmap();
 
-	auto phi_offset = GetFloat(data["envmap"], "offset").value_or(0);
 	auto path = dir_path + GetString(data["envmap"], "path").value_or("");
-	return new Envmap(path, 1, phi_offset);
+	return new Envmap(path, 1);
 }
 
 std::optional<Vector3> GetVec3(const nlohmann::json &data, const std::string &name, bool not_exist_ok)

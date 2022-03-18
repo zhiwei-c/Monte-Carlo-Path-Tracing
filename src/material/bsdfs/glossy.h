@@ -18,12 +18,12 @@ public:
      * \param diffuse_map 漫反射纹理
      */
     Glossy(const std::string &id,
-           Texture *diffuse_reflectance,
-           Texture *specular_reflectance,
+           std::unique_ptr<Texture> diffuse_reflectance,
+           std::unique_ptr<Texture> specular_reflectance,
            Float exponent)
         : Material(id, MaterialType::kGlossy),
-          diffuse_reflectance_(diffuse_reflectance),
-          specular_reflectance_(specular_reflectance),
+          diffuse_reflectance_(std::move(diffuse_reflectance)),
+          specular_reflectance_(std::move(specular_reflectance)),
           exponent_(exponent)
     {
         diffuse_reflectance_sum_ = 0,
@@ -40,14 +40,6 @@ public:
         }
         if (diffuse_reflectance_->Constant() && specular_reflectance->Constant())
             diffuse_sampling_weight_ = diffuse_reflectance_sum_ / (diffuse_reflectance_sum_ + specular_reflectance_sum_);
-    }
-
-    ~Glossy()
-    {
-        delete diffuse_reflectance_;
-        diffuse_reflectance_ = nullptr;
-        delete specular_reflectance_;
-        specular_reflectance_ = nullptr;
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
@@ -139,13 +131,12 @@ public:
     }
 
 private:
-    Texture *diffuse_reflectance_;  //漫反射系数
-    Texture *specular_reflectance_; //镜面反射系数
-    Float exponent_;                //镜面反射指数系数
-
+    Float exponent_; //镜面反射指数系数
     Float diffuse_reflectance_sum_;
     Float specular_reflectance_sum_;
     Float diffuse_sampling_weight_;
+    std::unique_ptr<Texture> diffuse_reflectance_;  //漫反射系数
+    std::unique_ptr<Texture> specular_reflectance_; //镜面反射系数
 
     Spectrum get_specular_reflectance(const Vector2 *texcoord) const
     {

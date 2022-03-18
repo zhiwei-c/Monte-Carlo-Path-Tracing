@@ -69,10 +69,10 @@ public:
 	AABB aabb() const { return aabb_; }
 
 private:
-	std::unique_ptr<BvhNode> left_, right_; //子节点
-	const Shape *shape_;					//节点包含的物体。仅在叶节点非空。
-	AABB aabb_;								//节点包围盒
 	Float area_;							//节点包含物体的总表面积
+	AABB aabb_;								//节点包围盒
+	const Shape *shape_;					//节点包含的物体。仅在叶节点非空。
+	std::unique_ptr<BvhNode> left_, right_; //子节点
 };
 
 NAMESPACE_END(simple_renderer)

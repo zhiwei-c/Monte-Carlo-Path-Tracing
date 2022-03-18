@@ -4,7 +4,7 @@
 #include "utils/config_parser/xml_parser.h"
 #include "utils/timer.h"
 #include "utils/file_path.h"
-#include "rendering/ray_tracing/integrators.h"
+#include "rendering/integrators/integrators.h"
 
 int main(int argc, char *argv[])
 {

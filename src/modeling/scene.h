@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../material/bsdfs/materials.h"
+#include "../material/bsdfs/bsdfs.h"
 #include "../utils/file_path.h"
 #include "model_loader/obj_parser.h"
 #include "shapes/shapes.h"
-#include "envmap.h"
+#include "../material/emitters/emitters.h"
 
 NAMESPACE_BEGIN(simple_renderer)
 

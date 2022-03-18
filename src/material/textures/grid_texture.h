@@ -65,9 +65,9 @@ public:
     }
 
 private:
+    Float line_width_;
     Spectrum color0_;
     Spectrum color1_;
-    Float line_width_;
     std::unique_ptr<Vector2> uv_offset_;
     std::unique_ptr<Vector2> uv_scale_;
 };

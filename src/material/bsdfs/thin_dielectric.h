@@ -18,26 +18,13 @@ public:
     ThinDielectric(const std::string &id,
                    Float int_ior,
                    Float ext_ior,
-                   Texture *specular_reflectance = nullptr,
-                   Texture *specular_transmittance = nullptr)
+                   std::unique_ptr<Texture> specular_reflectance = nullptr,
+                   std::unique_ptr<Texture> specular_transmittance = nullptr)
         : Material(id, MaterialType::kThinDielectric),
           eta_inv_(ext_ior / int_ior),
-          specular_reflectance_(specular_reflectance),
-          specular_transmittance_(specular_transmittance) {}
+          specular_reflectance_(std::move(specular_reflectance)),
+          specular_transmittance_(std::move(specular_transmittance)) {}
 
-    ~ThinDielectric()
-    {
-        if (specular_reflectance_)
-        {
-            delete specular_reflectance_;
-            specular_reflectance_ = nullptr;
-        }
-        if (specular_transmittance_)
-        {
-            delete specular_transmittance_;
-            specular_transmittance_ = nullptr;
-        }
-    }
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
     {
@@ -139,9 +126,9 @@ public:
                                                   (specular_transmittance_ && !specular_transmittance_->Constant()); }
 
 private:
-    Float eta_inv_;                   //光线射出材质的相对折射率
-    Texture *specular_reflectance_;   //镜面反射系数。（注意：对于物理真实感绘制，应默认为 1）
-    Texture *specular_transmittance_; //镜面透射系数。（注意：对于物理真实感绘制，应默认为 1）
+    Float eta_inv_;                                   //光线射出材质的相对折射率
+    std::unique_ptr<Texture> specular_reflectance_;   //镜面反射系数。（注意：对于物理真实感绘制，应默认为 1）
+    std::unique_ptr<Texture> specular_transmittance_; //镜面透射系数。（注意：对于物理真实感绘制，应默认为 1）
 };
 
 NAMESPACE_END(simple_renderer)

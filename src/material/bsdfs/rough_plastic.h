@@ -21,21 +21,21 @@ public:
      */
     RoughPlastic(const std::string &id,
                  MicrofacetDistribType distrib_type,
-                 Texture *alpha,
+                 std::unique_ptr<Texture> alpha,
                  Float int_ior,
                  Float ext_ior,
-                 Texture *diffuse_reflectance,
+                 std::unique_ptr<Texture> diffuse_reflectance,
                  bool nonlinear,
-                 Texture *specular_reflectance = nullptr)
+                 std::unique_ptr<Texture> specular_reflectance = nullptr)
         : Microfacet(id,
                      MaterialType::kRoughPlastic,
                      distrib_type,
-                     alpha,
-                     alpha),
+                     std::move(alpha),
+                     nullptr),
           eta_(int_ior / ext_ior),
           eta_inv_(ext_ior / int_ior),
-          specular_reflectance_(specular_reflectance),
-          diffuse_reflectance_(diffuse_reflectance),
+          specular_reflectance_(std::move(specular_reflectance)),
+          diffuse_reflectance_(std::move(diffuse_reflectance)),
           nonlinear_(nonlinear)
     {
         fdr_int_ = FresnelDiffuseReflectance(eta_inv_);
@@ -63,18 +63,6 @@ public:
         }
     }
 
-    ~RoughPlastic()
-    {
-        delete diffuse_reflectance_;
-        diffuse_reflectance_ = nullptr;
-
-        if (specular_reflectance_)
-        {
-            delete specular_reflectance_;
-            specular_reflectance_ = nullptr;
-        }
-    }
-
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
     {
@@ -94,7 +82,6 @@ public:
         {
             auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_u);
             auto [normal_micro, pdf] = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
-            DeleteDistribPointer(distrib);
             bs.wi = -Reflect(-wo, normal_micro);
             if (glm::dot(bs.wi, normal) >= 0)
                 return BsdfSampling();
@@ -169,7 +156,6 @@ public:
             }
             albedo += specular_reflectance * value;
         }
-        DeleteDistribPointer(distrib);
 
         return albedo;
     }
@@ -196,7 +182,6 @@ public:
         auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);
         auto h = glm::normalize(-wi + wo);
         auto D = distrib->Pdf(h, normal);
-        DeleteDistribPointer(distrib);
 
         if (D > kEpsilon)
         {
@@ -206,30 +191,30 @@ public:
         return result;
     }
 
-    bool TextureMapping() const override { return Microfacet::TextureMapping() ||
-                                                  !diffuse_reflectance_->Constant() ||
-                                                  (specular_reflectance_ && !specular_reflectance_->Constant()); }
+    bool TextureMapping() const override
+    {
+        return Microfacet::TextureMapping() ||
+               !diffuse_reflectance_->Constant() ||
+               (specular_reflectance_ && !specular_reflectance_->Constant());
+    }
 
     bool Transparent(const Vector2 &texcoord) const override
     {
-        if (Material::Transparent(texcoord))
-            return true;
-        else
-            return diffuse_reflectance_->Transparent(texcoord);
+        return Material::Transparent(texcoord) ||
+               diffuse_reflectance_->Transparent(texcoord);
     }
 
 private:
-    Float eta_;                     // 光线射入材质的相对折射率
-    Float eta_inv_;                 // 光线射出材质的相对折射率
-    Texture *specular_reflectance_; // 镜面反射系数。注意，对于物理真实感绘制默认为 1，应为空指针。
-    Texture *diffuse_reflectance_;  // 漫反射系数
-    bool nonlinear_;                // 是否考虑因内部散射而引起的非线性色移
-
+    bool nonlinear_; // 是否考虑因内部散射而引起的非线性色移
+    Float eta_;      // 光线射入材质的相对折射率
+    Float eta_inv_;  // 光线射出材质的相对折射率
     Float fdr_ext_;
     Float fdr_int_;
     Float specular_sampling_weight_;
     Float s_sum_;
     Float f_add_;
+    std::unique_ptr<Texture> specular_reflectance_; // 镜面反射系数。注意，对于物理真实感绘制默认为 1，应为空指针。
+    std::unique_ptr<Texture> diffuse_reflectance_;  // 漫反射系数
 
     Float EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const
     {

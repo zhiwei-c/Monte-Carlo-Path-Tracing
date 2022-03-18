@@ -23,22 +23,22 @@ public:
 	 */
 	RoughConductor(const std::string &id,
 				   MicrofacetDistribType distrib_type,
-				   Texture *alpha_u,
-				   Texture *alpha_v,
+				   std::unique_ptr<Texture> alpha_u,
+				   std::unique_ptr<Texture> alpha_v,
 				   bool mirror,
 				   const Spectrum &eta,
 				   const Spectrum &k,
 				   Float ext_ior,
-				   Texture *specular_reflectance = nullptr)
+				   std::unique_ptr<Texture> specular_reflectance = nullptr)
 		: Microfacet(id,
 					 MaterialType::kRoughConductor,
 					 distrib_type,
-					 alpha_u,
-					 alpha_v),
+					 std::move(alpha_u),
+					 std::move(alpha_v)),
 		  mirror_(mirror),
 		  eta_(eta / ext_ior),
 		  k_(k / ext_ior),
-		  specular_reflectance_(specular_reflectance)
+		  specular_reflectance_(std::move(specular_reflectance))
 	{
 		if (mirror)
 		{
@@ -55,15 +55,6 @@ public:
 		f_add_ = Sqr(F_avg) * albedo_avg_ / (Spectrum(1) - F_avg * (1 - albedo_avg_));
 	}
 
-	~RoughConductor()
-	{
-        if (specular_reflectance_)
-        {
-            delete specular_reflectance_;
-            specular_reflectance_ = nullptr;
-        }
-	}
-
 	///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
 	BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
 	{
@@ -71,7 +62,6 @@ public:
 
 		auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);
 		auto [normal_micro, pdf] = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
-		DeleteDistribPointer(distrib);
 
 		if (pdf < kEpsilon)
 			return BsdfSampling();
@@ -114,7 +104,6 @@ public:
 
 		auto D = distrib->Pdf(h, normal);
 		auto G = distrib->SmithG1(-wi, h, normal) * distrib->SmithG1(wo, h, normal);
-		DeleteDistribPointer(distrib);
 
 		auto albedo = F * static_cast<Float>(D * G / (4 * cos_i_n * cos_o_n));
 
@@ -146,8 +135,6 @@ public:
 
 		auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);
 		auto D = distrib->Pdf(h, normal);
-		DeleteDistribPointer(distrib);
-
 		if (D < kEpsilon)
 			return 0;
 
@@ -158,12 +145,11 @@ public:
 	bool TextureMapping() const override { return Microfacet::TextureMapping() || (specular_reflectance_ && !specular_reflectance_->Constant()); }
 
 private:
-	bool mirror_;					//是否是镜面
-	Spectrum eta_;					//材质相对折射率的实部
-	Spectrum k_;					//材质相对折射率的虚部,
-	Texture *specular_reflectance_; //镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
-
+	bool mirror_;  //是否是镜面
+	Spectrum eta_; //材质相对折射率的实部
+	Spectrum k_;   //材质相对折射率的虚部,
 	Spectrum f_add_;
+	std::unique_ptr<Texture> specular_reflectance_; //镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
 
 	Spectrum EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const
 	{

@@ -18,27 +18,13 @@ public:
     Dielectric(const std::string &id,
                Float int_ior,
                Float ext_ior,
-               Texture *specular_reflectance = nullptr,
-               Texture *specular_transmittance = nullptr)
+               std::unique_ptr<Texture> specular_reflectance = nullptr,
+               std::unique_ptr<Texture> specular_transmittance = nullptr)
         : Material(id, MaterialType::kDielectric),
           eta_(int_ior / ext_ior),
           eta_inv_(ext_ior / int_ior),
-          specular_reflectance_(specular_reflectance),
-          specular_transmittance_(specular_transmittance) {}
-
-    ~Dielectric()
-    {
-        if (specular_reflectance_)
-        {
-            delete specular_reflectance_;
-            specular_reflectance_ = nullptr;
-        }
-        if (specular_transmittance_)
-        {
-            delete specular_transmittance_;
-            specular_transmittance_ = nullptr;
-        }
-    }
+          specular_reflectance_(std::move(specular_reflectance)),
+          specular_transmittance_(std::move(specular_transmittance)) {}
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
@@ -142,10 +128,10 @@ public:
                                                   (specular_transmittance_ && !specular_transmittance_->Constant()); }
 
 private:
-    Float eta_;                       //光线射入材质的相对折射率
-    Float eta_inv_;                   //光线从材质内部射出的相对折射率
-    Texture *specular_reflectance_;   //调节镜面反射分量。（注意：对于物理真实感绘制，默认为 1，表示为空指针）
-    Texture *specular_transmittance_; //调节镜面透射分量。（注意：对于物理真实感绘制，默认为 1，表示为空指针）
+    Float eta_;                                       //光线射入材质的相对折射率
+    Float eta_inv_;                                   //光线从材质内部射出的相对折射率
+    std::unique_ptr<Texture> specular_reflectance_;   //调节镜面反射分量。（注意：对于物理真实感绘制，默认为 1，表示为空指针）
+    std::unique_ptr<Texture> specular_transmittance_; //调节镜面透射分量。（注意：对于物理真实感绘制，默认为 1，表示为空指针）
 };
 
 NAMESPACE_END(simple_renderer)

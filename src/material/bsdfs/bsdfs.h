@@ -1,7 +1,5 @@
 #pragma once
 
-#include <iostream>
-
 #include "diffuse.h"
 #include "glossy.h"
 
@@ -12,5 +10,3 @@
 #include "rough_conductor.h"
 #include "plastic.h"
 #include "rough_plastic.h"
-
-#include "area_light.h"

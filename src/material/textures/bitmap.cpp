@@ -11,6 +11,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 #include "tinyexr.h"
+
 #include "../../utils/file_path.h"
 #include "../../utils/math/maths.h"
 
@@ -324,4 +325,5 @@ int Bitmap::WriteOpenexr(const std::string &path)
 
     return ret;
 }
+
 NAMESPACE_END(simple_renderer)

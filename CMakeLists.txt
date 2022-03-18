@@ -15,7 +15,7 @@ project(${PROJECT_NAME})
 set(CMAKE_CXX_STANDARD 17)
  
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    add_definitions(/wd"6993")
+    add_definitions(/wd"6993" /wd"4996")
 endif()
 
 
@@ -30,7 +30,7 @@ endif()
 FILE(GLOB_RECURSE FILE_BSDF "${CMAKE_CURRENT_SOURCE_DIR}/src/material/*.*")
 FILE(GLOB_RECURSE FILE_MODEL "${CMAKE_CURRENT_SOURCE_DIR}/src/modeling/*.*")
 FILE(GLOB FILE_RENDER "${CMAKE_CURRENT_SOURCE_DIR}/src/rendering/*.*")
-FILE(GLOB FILE_RAY_TRACING "${CMAKE_CURRENT_SOURCE_DIR}/src/rendering/ray_tracing/*.*")
+FILE(GLOB FILE_INTEGRATORS "${CMAKE_CURRENT_SOURCE_DIR}/src/rendering/integrators/*.*")
 FILE(GLOB_RECURSE FILE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.*")
 
 set(
@@ -41,7 +41,7 @@ set(
     ${FILE_BSDF}
     ${FILE_MODEL}
     ${FILE_RENDER}
-    ${FILE_RAY_TRACING}
+    ${FILE_INTEGRATORS}
     ${FILE_UTILS}
 )
 
@@ -51,7 +51,7 @@ add_executable(${PROJECT_NAME} ${source_list})
 source_group("Files\\material" FILES ${FILE_BSDF})
 source_group("Files\\modeling" FILES ${FILE_MODEL})
 source_group("Files\\rendering" FILES ${FILE_RENDER})
-source_group("Files\\rendering\\integrator" FILES ${FILE_RAY_TRACING})
+source_group("Files\\rendering\\integrator" FILES ${FILE_INTEGRATORS})
 source_group("Files\\utils" FILES ${FILE_UTILS})
 source_group("Files" FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 

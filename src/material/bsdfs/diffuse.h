@@ -15,14 +15,8 @@ public:
      * \param ns 镜面反射指数系数
      * \param diffuse_map_name 用于漫反射纹理的图片路径
      */
-    Diffuse(const std::string &id, Texture *reflectance)
-        : Material(id, MaterialType::kDiffuse), reflectance_(reflectance) {}
-
-    ~Diffuse()
-    {
-        delete reflectance_;
-        reflectance_ = nullptr;
-    }
+    Diffuse(const std::string &id, std::unique_ptr<Texture> reflectance)
+        : Material(id, MaterialType::kDiffuse), reflectance_(std::move(reflectance)) {}
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
@@ -80,7 +74,7 @@ public:
     }
 
 private:
-    Texture *reflectance_; //漫反射系数
+    std::unique_ptr<Texture> reflectance_; //漫反射系数
 };
 
 NAMESPACE_END(simple_renderer)

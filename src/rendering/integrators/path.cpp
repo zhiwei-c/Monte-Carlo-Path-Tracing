@@ -6,16 +6,16 @@ Spectrum PathIntegrator::Shade(const Vector3 &eye_pos, const Vector3 &look_dir) 
 {
 	if (this->bvh_ != nullptr)
 	{
-		auto hit = this->bvh_->Intersect(Ray(eye_pos, look_dir));
-		if (hit.valid())
+		auto its = this->bvh_->Intersect(Ray(eye_pos, look_dir));
+		if (its.valid())
 		{
-			if (hit.HasEmission())
+			if (its.HasEmission())
 			{
-				return hit.radiance();
+				return its.radiance();
 			}
 			else
 			{
-				return ShadeRecursively(hit, -look_dir, 1);
+				return ShadeRecursively(its, -look_dir, 1);
 			}
 		}
 	}

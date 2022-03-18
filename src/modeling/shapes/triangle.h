@@ -45,9 +45,9 @@ public:
 	std::pair<Intersection, Float> SampleP() const override;
 
 private:
-	std::vector<Vector3> vertices_;	  //面片包含的点
 	Vector3 v0v1_;					  //三角形的一条边
 	Vector3 v0v2_;					  //三角形的一条边
+	std::vector<Vector3> vertices_;	  //面片包含的点
 	std::vector<Vector2> texcoords_;  //纹理坐标 (width,height)
 	std::vector<Vector3> normals_;	  //面片包含点对应的法向量
 	std::vector<Vector3> tangents_;	  //切线

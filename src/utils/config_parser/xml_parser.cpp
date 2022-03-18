@@ -10,7 +10,7 @@
 #include "glm/gtx/matrix_query.hpp"
 
 #include "../../modeling/model_loader/obj_parser.h"
-#include "../../rendering/ray_tracing/integrators.h"
+#include "../../rendering/integrators/integrators.h"
 #include "../file_path.h"
 
 NAMESPACE_BEGIN(simple_renderer)
@@ -156,12 +156,11 @@ void XmlParser::ParseBsdf(rapidxml::xml_node<> *node_bsdf, const std::string *id
 {
 	auto bsdf_type = GetAttri(node_bsdf, "type").value();
 
-	Texture *bump_map = nullptr;
+	std::unique_ptr<Texture> bump_map = nullptr;
 	if (bsdf_type == "bumpmap")
 	{
 		auto node_bump = node_bsdf->first_node("texture");
-		bump_map = ParseTexture(node_bump);
-		bump_map->setGamma(1);
+		bump_map.reset(ParseTexture(node_bump).release());
 
 		node_bsdf = node_bsdf->first_node("bsdf");
 		if (!node_bsdf)
@@ -279,7 +278,7 @@ void XmlParser::ParseBsdf(rapidxml::xml_node<> *node_bsdf, const std::string *id
 	}
 
 	bsdfs_.back()->setTwosided(twsided);
-	bsdfs_.back()->setBump(bump_map);
+	bsdfs_.back()->setBump(std::move(bump_map));
 
 	if (node_mask)
 	{
@@ -305,8 +304,7 @@ void XmlParser::ParseBsdf(rapidxml::xml_node<> *node_bsdf, const std::string *id
 		case "texture"_hash:
 		{
 			auto opacity_map = ParseTexture(node_opacity);
-			opacity_map->setGamma(1);
-			bsdfs_.back()->setOpacity(opacity_map);
+			bsdfs_.back()->setOpacity(std::move(opacity_map));
 			break;
 		}
 		default:
@@ -322,9 +320,9 @@ void XmlParser::ParseDiffuse(rapidxml::xml_node<> *node_diffuse, std::string id)
 {
 	auto reflectance = ParseTextureOrOther(node_diffuse, "reflectance");
 	if (!reflectance)
-		reflectance = new ConstantTexture(Spectrum(0.5));
+		reflectance.reset(new ConstantTexture(Spectrum(0.5)));
 
-	bsdfs_.push_back(new Diffuse(id, reflectance));
+	bsdfs_.push_back(new Diffuse(id, std::move(reflectance)));
 }
 
 void XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, std::string id, bool thin)
@@ -334,9 +332,9 @@ void XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, std::stri
 	auto specular_reflectance = ParseTextureOrOther(node_dielectric, "specularReflectance");
 	auto specular_transmittance = ParseTextureOrOther(node_dielectric, "specularTransmittance");
 	if (thin)
-		bsdfs_.push_back(new ThinDielectric(id, int_ior, ext_ior, specular_reflectance, specular_transmittance));
+		bsdfs_.push_back(new ThinDielectric(id, int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
 	else
-		bsdfs_.push_back(new Dielectric(id, int_ior, ext_ior, specular_reflectance, specular_transmittance));
+		bsdfs_.push_back(new Dielectric(id, int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
 }
 
 void XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric, std::string id)
@@ -345,11 +343,11 @@ void XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric
 
 	auto alpha = ParseTextureOrOther(node_rough_dielectric, "alpha");
 	if (!alpha)
-		alpha = new ConstantTexture(Spectrum(0.1));
+		alpha.reset(new ConstantTexture(Spectrum(0.1)));
 
 	auto alpha_u = ParseTextureOrOther(node_rough_dielectric, "alphaU");
-	if (!alpha_u)
-		alpha_u = alpha;
+	if (!alpha_u && alpha)
+		alpha_u.reset(alpha.release());
 
 	auto alpha_v = ParseTextureOrOther(node_rough_dielectric, "alphaV");
 
@@ -358,7 +356,7 @@ void XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric
 
 	auto specular_reflectance = ParseTextureOrOther(node_rough_dielectric, "specularReflectance");
 	auto specular_transmittance = ParseTextureOrOther(node_rough_dielectric, "specularTransmittance");
-	bsdfs_.push_back(new RoughDielectric(id, GetDistrbType(distri), alpha_u, alpha_v, int_ior, ext_ior, specular_reflectance, specular_transmittance));
+	bsdfs_.push_back(new RoughDielectric(id, GetDistrbType(distri), std::move(alpha_u), std::move(alpha_v), int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
 }
 
 void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string id)
@@ -400,7 +398,7 @@ void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string
 		k = GetSpectrum(node_k);
 	}
 
-	bsdfs_.push_back(new Conductor(id, mirror, eta, k, ext_eta, specular_reflectance));
+	bsdfs_.push_back(new Conductor(id, mirror, eta, k, ext_eta, std::move(specular_reflectance)));
 }
 
 void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, std::string id)
@@ -409,11 +407,11 @@ void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, 
 
 	auto alpha = ParseTextureOrOther(node_rough_conductor, "alpha");
 	if (!alpha)
-		alpha = new ConstantTexture(Spectrum(0.1));
+		alpha.reset(new ConstantTexture(Spectrum(0.1)));
 
 	auto alpha_u = ParseTextureOrOther(node_rough_conductor, "alphaU");
-	if (!alpha_u)
-		alpha_u = alpha;
+	if (!alpha_u && alpha)
+		alpha_u.reset(alpha.release());
 
 	auto alpha_v = ParseTextureOrOther(node_rough_conductor, "alphaV");
 
@@ -452,7 +450,7 @@ void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, 
 		auto node_k = GetChild(node_rough_conductor, "k", false);
 		k = GetSpectrum(node_k);
 	}
-	bsdfs_.push_back(new RoughConductor(id, GetDistrbType(distri), alpha_u, alpha_v, mirror, eta, k, ext_eta, specular_reflectance));
+	bsdfs_.push_back(new RoughConductor(id, GetDistrbType(distri), std::move(alpha_u), std::move(alpha_v), mirror, eta, k, ext_eta, std::move(specular_reflectance)));
 }
 
 void XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic, std::string id)
@@ -462,10 +460,10 @@ void XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic, std::string id)
 	auto specular_reflectance = ParseTextureOrOther(node_plastic, "specularReflectance");
 	auto diffuse_reflectance = ParseTextureOrOther(node_plastic, "diffuseReflectance");
 	if (!diffuse_reflectance)
-		diffuse_reflectance = new ConstantTexture(Spectrum(0.5));
+		diffuse_reflectance.reset(new ConstantTexture(Spectrum(0.5)));
 	bool nonlinear = GetBoolean(node_plastic, "nonlinear").value_or(false);
 
-	bsdfs_.push_back(new Plastic(id, int_ior, ext_ior, diffuse_reflectance, nonlinear, specular_reflectance));
+	bsdfs_.push_back(new Plastic(id, int_ior, ext_ior, std::move(diffuse_reflectance), nonlinear, std::move(specular_reflectance)));
 }
 
 void XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std::string id)
@@ -474,7 +472,7 @@ void XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std:
 
 	auto alpha = ParseTextureOrOther(node_rough_plastic, "alpha");
 	if (!alpha)
-		alpha = new ConstantTexture(Spectrum(0.1));
+		alpha.reset(new ConstantTexture(Spectrum(0.1)));
 
 	auto int_ior = GetIor(node_rough_plastic, "intIOR", "polypropylene");
 	auto ext_ior = GetIor(node_rough_plastic, "extIOR", "air");
@@ -482,11 +480,11 @@ void XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std:
 	auto specular_reflectance = ParseTextureOrOther(node_rough_plastic, "specularReflectance");
 	auto diffuse_reflectance = ParseTextureOrOther(node_rough_plastic, "diffuseReflectance");
 	if (!diffuse_reflectance)
-		diffuse_reflectance = new ConstantTexture(Spectrum(0.5));
+		diffuse_reflectance.reset(new ConstantTexture(0.5));
 
 	auto nonlinear = GetBoolean(node_rough_plastic, "nonlinear").value_or(false);
 
-	bsdfs_.push_back(new RoughPlastic(id, GetDistrbType(distri), alpha, int_ior, ext_ior, diffuse_reflectance, nonlinear, specular_reflectance));
+	bsdfs_.push_back(new RoughPlastic(id, GetDistrbType(distri), std::move(alpha), int_ior, ext_ior, std::move(diffuse_reflectance), nonlinear, std::move(specular_reflectance)));
 }
 
 void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape)
@@ -631,7 +629,7 @@ Envmap *XmlParser::ParseEnvmap(rapidxml::xml_node<> *node_envmap)
 	}
 }
 
-Texture *XmlParser::ParseTextureOrOther(rapidxml::xml_node<> *node_parent, std::string name)
+std::unique_ptr<Texture> XmlParser::ParseTextureOrOther(rapidxml::xml_node<> *node_parent, std::string name)
 {
 	auto node = GetChild(node_parent, name, true);
 	if (!node)
@@ -643,20 +641,19 @@ Texture *XmlParser::ParseTextureOrOther(rapidxml::xml_node<> *node_parent, std::
 	case "float"_hash:
 	{
 		auto value = std::stof(GetAttri(node, "value").value());
-		return new ConstantTexture(Spectrum(value));
+		return std::make_unique<ConstantTexture>(Spectrum(value));
 		break;
 	}
 	case "rgb"_hash:
 	case "spectrum"_hash:
 	{
 		auto value = GetSpectrum(node);
-		return new ConstantTexture(value);
+		return std::make_unique<ConstantTexture>(value);
 		break;
 	}
 	case "texture"_hash:
 	{
-		auto texture = ParseTexture(node);
-		return texture;
+		return ParseTexture(node);
 		break;
 	}
 	default:
@@ -667,7 +664,7 @@ Texture *XmlParser::ParseTextureOrOther(rapidxml::xml_node<> *node_parent, std::
 	return nullptr;
 }
 
-Texture *XmlParser::ParseTexture(rapidxml::xml_node<> *node_texture)
+std::unique_ptr<Texture> XmlParser::ParseTexture(rapidxml::xml_node<> *node_texture)
 {
 	auto texture_type = GetAttri(node_texture, "type").value();
 	switch (Hash(texture_type.c_str()))
@@ -677,7 +674,7 @@ Texture *XmlParser::ParseTexture(rapidxml::xml_node<> *node_texture)
 		auto node_filename = GetChild(node_texture, "filename", false);
 		auto img_path = xml_directory_ + ConvertBackSlash(GetAttri(node_filename, "value").value());
 		auto gamma = GetFloat(node_texture, "gamma").value_or(gamma_);
-		return new Bitmap(img_path, gamma);
+		return std::make_unique<Bitmap>(img_path, gamma);
 		break;
 	}
 	case "checkerboard"_hash:
@@ -693,7 +690,7 @@ Texture *XmlParser::ParseTexture(rapidxml::xml_node<> *node_texture)
 			 u_scale = GetFloat(node_texture, "uscale", false).value(),
 			 v_scale = GetFloat(node_texture, "vscale", false).value();
 
-		return new Checkerboard(color0, color1, {u_offset, v_offset}, {u_scale, v_scale});
+		return std::make_unique<Checkerboard>(color0, color1, Vector2(u_offset, v_offset),  Vector2(u_scale, v_scale));
 		break;
 	}
 	case "gridtexture"_hash:
@@ -710,7 +707,7 @@ Texture *XmlParser::ParseTexture(rapidxml::xml_node<> *node_texture)
 			 u_scale = GetFloat(node_texture, "uscale", false).value(),
 			 v_scale = GetFloat(node_texture, "vscale", false).value();
 
-		return new GridTexture(color0, color1, line_width, {u_offset, v_offset}, {u_scale, v_scale});
+		return std::make_unique<GridTexture>(color0, color1, line_width, Vector2(u_offset, v_offset),  Vector2(u_scale, v_scale));
 		break;
 	}
 

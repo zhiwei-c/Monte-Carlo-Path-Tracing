@@ -20,15 +20,15 @@ public:
     Plastic(const std::string &id,
             Float int_ior,
             Float ext_ior,
-            Texture *diffuse_reflectance,
+            std::unique_ptr<Texture> diffuse_reflectance,
             bool nonlinear,
-            Texture *specular_reflectance = nullptr)
+            std::unique_ptr<Texture> specular_reflectance = nullptr)
         : Material(id, MaterialType::kPlastic),
-          diffuse_reflectance_(diffuse_reflectance),
+          diffuse_reflectance_(std::move(diffuse_reflectance)),
           nonlinear_(nonlinear),
           eta_(int_ior / ext_ior),
           eta_inv_(ext_ior / int_ior),
-          specular_reflectance_(specular_reflectance)
+          specular_reflectance_(std::move(specular_reflectance))
     {
         fdr_int_ = FresnelDiffuseReflectance(eta_inv_);
         fdr_ext_ = FresnelDiffuseReflectance(eta_);
@@ -47,17 +47,6 @@ public:
         }
 
         specular_sampling_weight_ = s_sum / (d_sum + s_sum);
-    }
-
-    ~Plastic()
-    {
-        delete diffuse_reflectance_;
-        diffuse_reflectance_ = nullptr;
-        if (specular_reflectance_)
-        {
-            delete specular_reflectance_;
-            specular_reflectance_ = nullptr;
-        }
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
@@ -160,15 +149,14 @@ public:
     }
 
 private:
-    Float eta_;                     // 光线射入材质的相对折射率
-    Float eta_inv_;                 // 光线射出材质的相对折射率
-    Texture *specular_reflectance_; // 镜面反射系数。注意，对于物理真实感绘制，应默认为 1。
-    Texture *diffuse_reflectance_;  // 漫反射系数
-    bool nonlinear_;                // 是否考虑因内部散射而引起的非线性色移
-
+    bool nonlinear_; // 是否考虑因内部散射而引起的非线性色移
+    Float eta_;      // 光线射入材质的相对折射率
+    Float eta_inv_;  // 光线射出材质的相对折射率
     Float fdr_ext_;
     Float fdr_int_;
     Float specular_sampling_weight_;
+    std::unique_ptr<Texture> specular_reflectance_; // 镜面反射系数。注意，对于物理真实感绘制，应默认为 1。
+    std::unique_ptr<Texture> diffuse_reflectance_;  // 漫反射系数
 
     Spectrum get_diffuse_reflectance(const Vector2 *texcoord) const
     {

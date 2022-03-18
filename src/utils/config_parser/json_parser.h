@@ -7,7 +7,7 @@
 #include "nlohmann/json.hpp"
 #include "../global.h"
 #include "../../rendering/camera.h"
-#include "../../modeling/envmap.h"
+#include "../../material/emitters/envmap.h"
 #include "../../modeling/scene.h"
 #include "../../rendering/integrator.h"
 

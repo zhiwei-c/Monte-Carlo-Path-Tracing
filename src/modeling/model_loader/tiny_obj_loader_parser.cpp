@@ -6,7 +6,8 @@
 #include <tuple>
 
 #include "../../utils/file_path.h"
-#include "../../material/texture/textures.h"
+#include "../../material/textures/textures.h"
+#include "../../material/emitters/emitters.h"
 
 NAMESPACE_BEGIN(simple_renderer)
 
@@ -126,27 +127,26 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
 
         auto kd = Spectrum(materials[m].diffuse[0], materials[m].diffuse[1], materials[m].diffuse[2]);
 
-        Texture *diffuse_map = nullptr;
+        std::unique_ptr<Texture> diffuse_map = nullptr;
         if (auto diffuse_texname = materials[m].diffuse_texname; !diffuse_texname.empty())
-            diffuse_map = new Bitmap(mtl_path + diffuse_texname, 2.2);
+            diffuse_map.reset(new Bitmap(mtl_path + diffuse_texname, 2.2));
 
-        Texture *specular_map = nullptr;
+        std::unique_ptr<Texture> specular_map = nullptr;
         if (auto specular_texname = materials[m].specular_texname; !specular_texname.empty())
-            specular_map = new Bitmap(mtl_path + specular_texname, 2.2);
+            specular_map.reset(new Bitmap(mtl_path + specular_texname, 2.2));
 
-        Texture *bump_map = nullptr;
+        std::unique_ptr<Texture> bump_map = nullptr;
         if (auto bump_texname = materials[m].bump_texname; !bump_texname.empty())
-        {
-            bump_map = new Bitmap(mtl_path + bump_texname, 1);
-            bump_map->setGamma(1);
-        }
+            bump_map.reset(new Bitmap(mtl_path + bump_texname, 1));
 
-        auto opacity = materials[m].dissolve;
-        Texture *opacity_map = nullptr;
+        std::unique_ptr<Texture> opacity_map = nullptr;
         if (auto alpha_texname = materials[m].alpha_texname; !alpha_texname.empty())
+            opacity_map.reset(new Bitmap(mtl_path + alpha_texname, 1));
+        else
         {
-            opacity_map = new Bitmap(mtl_path + alpha_texname, 1);
-            opacity_map->setGamma(1);
+            auto opacity = materials[m].dissolve;
+            if (opacity < 1)
+                opacity_map.reset(new ConstantTexture(opacity));
         }
 
         auto ks = Spectrum(materials[m].specular[0], materials[m].specular[1], materials[m].specular[2]);
@@ -188,12 +188,12 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
                 auto distrib_type = GetDistrbType(other_params, "distribution").value_or(MicrofacetDistribType::kBeckmann);
                 auto alpha = GetFloat(other_params, "alpha").value_or(0.1f);
                 auto alpha_u = GetFloat(other_params, "alphaU").value_or(alpha);
-                Texture *alpha_u_tex = new ConstantTexture(Spectrum(alpha_u));
+                auto alpha_u_tex = std::make_unique<ConstantTexture>(Spectrum(alpha_u));
                 auto alpha_v = GetFloat(other_params, "alphaV").value_or(alpha);
-                Texture *alpha_v_tex = new ConstantTexture(Spectrum(alpha_v));
+                auto alpha_v_tex = std::make_unique<ConstantTexture>(Spectrum(alpha_v));
                 auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
                 auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("bk7"));
-                result.push_back(new RoughDielectric(id, distrib_type, alpha_u_tex, alpha_v_tex, int_ior, ext_ior));
+                result.push_back(new RoughDielectric(id, distrib_type, std::move(alpha_u_tex), std::move(alpha_v_tex), int_ior, ext_ior));
                 flag_parsed = true;
                 break;
             }
@@ -216,11 +216,11 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
                 auto distrib_type = GetDistrbType(other_params, "distribution").value_or(MicrofacetDistribType::kBeckmann);
                 auto alpha = GetFloat(other_params, "alpha").value_or(0.1f);
                 auto alpha_u = GetFloat(other_params, "alphaU").value_or(alpha);
-                Texture *alpha_u_tex = new ConstantTexture(Spectrum(alpha_u));
+                auto alpha_u_tex = std::make_unique<ConstantTexture>(Spectrum(alpha_u));
                 auto alpha_v = GetFloat(other_params, "alphaV").value_or(alpha);
-                Texture *alpha_v_tex = new ConstantTexture(Spectrum(alpha_v));
+                auto alpha_v_tex = std::make_unique<ConstantTexture>(Spectrum(alpha_v));
                 auto [mirror, eta, k] = GetEtaK(other_params, id);
-                result.push_back(new RoughConductor(id, distrib_type, alpha_u_tex, alpha_v_tex, mirror, eta, k, IOR.at("air")));
+                result.push_back(new RoughConductor(id, distrib_type, std::move(alpha_u_tex), std::move(alpha_v_tex), mirror, eta, k, IOR.at("air")));
                 flag_parsed = true;
                 break;
             }
@@ -230,16 +230,15 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             case "smooth_plastic"_hash:
             case "smooth-plastic"_hash:
             {
-                auto diffuse_tex = diffuse_map;
-                if (!diffuse_tex)
+                if (!diffuse_map)
                 {
                     auto diffuse_reflectance = GetVec3(other_params, "diffuseReflectance").value_or(Vector3(0.5f));
-                    diffuse_tex = new ConstantTexture(Spectrum(diffuse_reflectance));
+                    diffuse_map.reset(new ConstantTexture(Spectrum(diffuse_reflectance)));
                 }
                 auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
                 auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("polypropylene"));
                 auto nolinear = GetBoolean(other_params, "nonlinear").value_or(false);
-                result.push_back(new Plastic(id, int_ior, ext_ior, diffuse_tex, nolinear));
+                result.push_back(new Plastic(id, int_ior, ext_ior, std::move(diffuse_map), nolinear));
                 flag_parsed = true;
                 break;
             }
@@ -251,20 +250,20 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
                 auto distrib_type = GetDistrbType(other_params, "distribution").value_or(MicrofacetDistribType::kBeckmann);
 
                 auto alpha = GetFloat(other_params, "alpha").value_or(0.1f);
-                Texture *alpha_tex = new ConstantTexture(Spectrum(alpha));
+                auto alpha_tex = std::make_unique<ConstantTexture>(Spectrum(alpha));
 
                 auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
                 auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("polypropylene"));
 
-                auto diffuse_tex = diffuse_map;
-                if (!diffuse_tex)
+                if (!diffuse_map)
                 {
                     auto diffuse_reflectance = GetVec3(other_params, "diffuseReflectance").value_or(Vector3(0.5f));
-                    diffuse_tex = new ConstantTexture(Spectrum(diffuse_reflectance));
+                    diffuse_map.reset(new ConstantTexture(Spectrum(diffuse_reflectance)));
                 }
 
                 auto nolinear = GetBoolean(other_params, "nonlinear").value_or(false);
-                result.push_back(new RoughPlastic(id, distrib_type, alpha_tex, int_ior, ext_ior, diffuse_tex, nolinear));
+
+                result.push_back(new RoughPlastic(id, distrib_type, std::move(alpha_tex), int_ior, ext_ior, std::move(diffuse_map), nolinear));
                 flag_parsed = true;
                 break;
             }
@@ -272,30 +271,20 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
         }
         if (!flag_parsed)
         {
-            auto diffuse_tex = diffuse_map;
-            if (!diffuse_tex)
-            {
-                diffuse_tex = new ConstantTexture(Spectrum(kd));
-            }
+            if (!diffuse_map)
+                diffuse_map.reset(new ConstantTexture(Spectrum(kd)));
 
             if (ks.r + ks.g + ks.b > 0)
             {
-                auto specular_tex = specular_map;
-                if (!specular_tex)
-                    specular_tex = new ConstantTexture(Spectrum(ks));
-
-                result.push_back(new Glossy(id, diffuse_tex, specular_tex, ns));
+                if (!specular_map)
+                    specular_map.reset(new ConstantTexture(Spectrum(ks)));
+                result.push_back(new Glossy(id, std::move(diffuse_map), std::move(specular_map), ns));
             }
             else
-            {
-                result.push_back(new Diffuse(id, diffuse_tex));
-            }
+                result.push_back(new Diffuse(id, std::move(diffuse_map)));
         }
-        result.back()->setBump(bump_map);
-
-        if (opacity < 1)
-            result.back()->setOpacity(Spectrum(opacity));
-        result.back()->setOpacity(opacity_map);
+        result.back()->setBump(std::move(bump_map));
+        result.back()->setOpacity(std::move(opacity_map));
     }
     std::cout << "[info] parse material finished\t\t\t\r";
     return result;
@@ -307,11 +296,7 @@ std::optional<Vector3> GetVec3(const std::map<std::string, std::string> &params,
     if (it == params.end())
         return std::nullopt;
     Vector3 ret(0);
-#ifdef _WIN32
-    sscanf_s(it->second.c_str(), (kFstr + " " + kFstr + " " + kFstr).c_str(), &ret[0], &ret[1], &ret[2]);
-#else
     sscanf(it->second.c_str(), (kFstr + " " + kFstr + " " + kFstr).c_str(), &ret[0], &ret[1], &ret[2]);
-#endif
     return ret;
 }
 

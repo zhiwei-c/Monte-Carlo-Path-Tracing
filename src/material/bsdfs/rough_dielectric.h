@@ -20,21 +20,21 @@ public:
 	 */
 	RoughDielectric(const std::string &id,
 					MicrofacetDistribType distrib_type,
-					Texture *alpha_u,
-					Texture *alpha_v,
+					std::unique_ptr<Texture> alpha_u,
+					std::unique_ptr<Texture> alpha_v,
 					Float int_ior,
 					Float ext_ior,
-					Texture *specular_reflectance = nullptr,
-					Texture *specular_transmittance = nullptr)
+					std::unique_ptr<Texture> specular_reflectance = nullptr,
+					std::unique_ptr<Texture> specular_transmittance = nullptr)
 		: Microfacet(id,
 					 MaterialType::kRoughDielectric,
 					 distrib_type,
-					 alpha_u,
-					 alpha_v),
+					 std::move(alpha_u),
+					 std::move(alpha_v)),
 		  eta_(int_ior / ext_ior),
 		  eta_inv_(ext_ior / int_ior),
-		  specular_reflectance_(specular_reflectance),
-		  specular_transmittance_(specular_transmittance)
+		  specular_reflectance_(std::move(specular_reflectance)),
+		  specular_transmittance_(std::move(specular_transmittance))
 	{
 		f_add_ = 0,
 		f_add_inv_ = 0,
@@ -57,19 +57,6 @@ public:
 					   ((1 - F_avg_inv) + (1 - F_avg) * Sqr(eta_inv_));
 	}
 
-	~RoughDielectric()
-	{
-        if (specular_reflectance_)
-        {
-            delete specular_reflectance_;
-            specular_reflectance_ = nullptr;
-        }
-        if (specular_transmittance_)
-        {
-            delete specular_transmittance_;
-            specular_transmittance_ = nullptr;
-        }
-	}
 	///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
 	BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
 	{
@@ -84,7 +71,6 @@ public:
 		distrib->ScaleAlpha(1.2 - 0.2 * std::sqrt(std::fabs(glm::dot(-wo, normal))));
 
 		auto [normal_micro, D] = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
-		DeleteDistribPointer(distrib);
 
 		if (D < kEpsilon)
 			return BsdfSampling();
@@ -151,7 +137,6 @@ public:
 		auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);
 		auto D = distrib->Pdf(h, normal);
 		auto G = distrib->SmithG1(-wi, h, normal) * distrib->SmithG1(wo, h, normal);
-		DeleteDistribPointer(distrib);
 
 		if (relfect)
 		{
@@ -223,7 +208,6 @@ public:
 
 		auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);
 		auto D = distrib->Pdf(h, normal);
-		DeleteDistribPointer(distrib);
 
 		if (D < kEpsilon)
 			return 0;
@@ -246,14 +230,14 @@ public:
 												  (specular_transmittance_ && !specular_transmittance_->Constant()); }
 
 private:
-	Float eta_;						  //光线射入材质的相对折射率
-	Float eta_inv_;					  //光线射出材质的相对折射率
-	Texture *specular_reflectance_;	  // 镜面反射系数。注意，对于物理真实感绘制，应默认为 1。
-	Texture *specular_transmittance_; // 镜面透射系数。注意，对于物理真实感绘制，应默认为 1。
+	Float eta_;		//光线射入材质的相对折射率
+	Float eta_inv_; //光线射出材质的相对折射率
 	Float f_add_;
 	Float f_add_inv_;
 	Float ratio_t_;
 	Float ratio_t_inv_;
+	std::unique_ptr<Texture> specular_reflectance_;	  // 镜面反射系数。注意，对于物理真实感绘制，应默认为 1。
+	std::unique_ptr<Texture> specular_transmittance_; // 镜面透射系数。注意，对于物理真实感绘制，应默认为 1。
 
 	Float EvalMultipleScatter(Float cos_i_n, Float cos_o_n, bool inside) const
 	{

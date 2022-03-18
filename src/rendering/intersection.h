@@ -5,6 +5,14 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
+//面元：位置坐标+法线方向
+struct Surfel
+{
+    Vector2 texcoord; //纹理坐标
+    Vector3 pos;      //空间坐标
+    Vector3 normal;   //法线方向
+};
+
 //光线与面片交点类
 class Intersection
 {
@@ -117,34 +125,15 @@ public:
 
     Float shape_area() const { return shape_area_; }
 
-    bool smooth_material() const
-    {
-        switch (material_->type())
-        {
-        case MaterialType::kDielectric:
-            return true;
-            break;
-        case MaterialType::kConductor:
-            return true;
-            break;
-        case MaterialType::kThinDielectric:
-            return true;
-            break;
-        default:
-            return false;
-            break;
-        }
-    }
-
 private:
     bool valid_;         //光线与物体的相交是否发生
-    bool inside_;        //交点处法线是否朝内
+    bool inside_;    //交点处法线是否朝内
+    Float distance_; //从光线起点到该交点的距离
+    Float shape_area_;
+    Vector2 texcoord_;   //交点纹理坐标
     Vector3 pos_;        //交点空间坐标
     Vector3 normal_;     //交点法线
-    Vector2 texcoord_;   //交点纹理坐标
-    Float distance_;     //从光线起点到该交点的距离
     Material *material_; //交点面片对应的材质
-    Float shape_area_;
 };
 
 NAMESPACE_END(simple_renderer)

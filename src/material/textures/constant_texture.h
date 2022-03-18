@@ -16,6 +16,10 @@ public:
         : Texture(TextureType::kConstantTexture),
           color_(color) {}
 
+    ConstantTexture(const Float &luminance)
+        : Texture(TextureType::kConstantTexture),
+          color_(Spectrum(luminance)) {}
+
     Spectrum GetPixel(const Vector2 &coord) const override
     {
         return color_;

@@ -24,8 +24,8 @@ public:
 	Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside) const override { return 0; };
 
 private:
-	Spectrum radiance_;		//辐射亮度
 	Float sampling_weight_; //额外权重
+	Spectrum radiance_;		//辐射亮度
 };
 
 NAMESPACE_END(simple_renderer)

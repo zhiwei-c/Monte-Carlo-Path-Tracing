@@ -11,9 +11,9 @@
 
 #include "../global.h"
 #include "../../rendering/camera.h"
-#include "../../modeling/envmap.h"
+#include "../../material/emitters/envmap.h"
 #include "../../modeling/scene.h"
-#include "../../material/texture/textures.h"
+#include "../../material/textures/textures.h"
 #include "../../rendering/integrator.h"
 
 NAMESPACE_BEGIN(simple_renderer)
@@ -71,9 +71,9 @@ private:
 
 	void ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std::string id);
 
-	Texture *ParseTexture(rapidxml::xml_node<> *node_texture);
+	std::unique_ptr<Texture> ParseTexture(rapidxml::xml_node<> *node_texture);
 
-	Texture *ParseTextureOrOther(rapidxml::xml_node<> *node_parent, std::string name);
+	std::unique_ptr<Texture> ParseTextureOrOther(rapidxml::xml_node<> *node_parent, std::string name);
 };
 
 NAMESPACE_END(simple_renderer)

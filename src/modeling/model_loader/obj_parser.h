@@ -7,7 +7,7 @@
 #include <memory>
 
 #include "../../utils/obj_loader/obj_loader.h"
-#include "../../material/bsdfs/materials.h"
+#include "../../material/bsdfs/bsdfs.h"
 #include "../shapes/shapes.h"
 
 NAMESPACE_BEGIN(simple_renderer)

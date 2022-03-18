@@ -7,11 +7,6 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
-inline Float GetLuminance(const Vector3 &rgb)
-{
-    return std::max(std::max(rgb.r, rgb.g), rgb.b);
-}
-
 class Bitmap : public Texture
 {
 
@@ -48,14 +43,6 @@ public:
     // \return 图像在相应位置的数值
     Spectrum GetPixel(const Vector2 &coord) const override;
 
-    // \brief 保存数据为 png 格式图像
-    //
-    // \param file_name - 图像文件名
-    void Write(const std::string &path);
-
-    //\return 图像是否有alpha通道（透明程度）
-    bool AlphaChannel() const override { return channels_ == 4; }
-
     //\param pos 给定位置图像坐标
     //
     //\return 图像在给定位置处是否完全透明
@@ -63,17 +50,19 @@ public:
 
     Vector2 GetGradient(const Vector2 &coord) const override;
 
-    void setGamma(Float gamma) override { gamma_ = gamma, gamma_inv_ = 1 / gamma; }
+    // \brief 保存数据为 png 格式图像
+    //
+    // \param file_name - 图像文件名
+    void Write(const std::string &path);
 
 private:
+    int width_;       //图像的宽
+    int height_;      //图像的高
+    int channels_;    //图像的通道数
+    Float gamma_;     //对颜色值进行非线性映射的系数
+    Float gamma_inv_; //对颜色值进行非线性映射的系数的导数
     std::string file_name_;
-
     std::vector<Float> data_; //图像的数据
-    int width_;               //图像的宽
-    int height_;              //图像的高
-    int channels_;            //图像的通道数
-    Float gamma_;             //对颜色值进行非线性映射的系数
-    Float gamma_inv_;         //对颜色值进行非线性映射的系数的导数
 
     int WriteOpenexr(const std::string &path);
 };

@@ -15,6 +15,8 @@ enum class MicrofacetDistribType
 class MicrofacetDistribution
 {
 public:
+    virtual ~MicrofacetDistribution() {}
+
     virtual std::pair<Vector3, Float> Sample(const Vector3 &normal_macro, const Vector2 &sample) const = 0;
 
     virtual Float Pdf(const Vector3 &normal_micro, const Vector3 &normal_macro) const = 0;
@@ -30,9 +32,9 @@ public:
     MicrofacetDistribType type() const { return type_; }
 
 protected:
+    bool isotropic_;
     MicrofacetDistribType type_;
     Float alpha_u_, alpha_v_;
-    bool isotropic_;
 
     MicrofacetDistribution(MicrofacetDistribType type, Float alpha_u, Float alpha_v)
         : type_(type), isotropic_(alpha_u == alpha_v), alpha_u_(alpha_u), alpha_v_(alpha_v) {}

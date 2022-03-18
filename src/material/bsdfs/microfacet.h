@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "../material.h"
 #include "../../utils/math/microfacet_distribution/microfacet_distributions.h"
 
@@ -28,26 +30,15 @@ public:
     Microfacet(const std::string &id,
                MaterialType type,
                MicrofacetDistribType distrib_type,
-               Texture *alpha_u,
-               Texture *alpha_v)
+               std::unique_ptr<Texture> alpha_u,
+               std::unique_ptr<Texture> alpha_v)
         : Material(id, type),
           distrib_type_(distrib_type),
-          alpha_u_(alpha_u),
-          alpha_v_(alpha_v)
+          alpha_u_(std::move(alpha_u)),
+          alpha_v_(std::move(alpha_v))
     {
         if (!TextureMapping())
             ComputeAlbedo();
-    }
-
-    virtual ~Microfacet()
-    {
-        delete alpha_u_;
-        alpha_u_ = nullptr;
-        if (alpha_v_)
-        {
-            delete alpha_v_;
-            alpha_v_ = nullptr;
-        }
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
@@ -63,9 +54,9 @@ public:
 
 protected:
     MicrofacetDistribType distrib_type_; //用于模拟表面粗糙度的微表面分布的类型
-    Texture *alpha_u_;                   //沿切线（tangent）方向的粗糙度
-    Texture *alpha_v_;                   //沿副切线（bitangent）方向的粗糙度
     Float albedo_avg_;                   //平均反照率
+    std::unique_ptr<Texture> alpha_u_;   //沿切线（tangent）方向的粗糙度
+    std::unique_ptr<Texture> alpha_v_;   //沿副切线（bitangent）方向的粗糙度
 
     std::pair<Float, Float> GetAlpha(const Vector2 *texcoord) const
     {
@@ -73,18 +64,12 @@ protected:
         if (TextureMapping())
         {
             alpha_u = GetLuminance(alpha_u_->GetPixel(*texcoord));
-            if (alpha_v_)
-                alpha_v = GetLuminance(alpha_v_->GetPixel(*texcoord));
-            else
-                alpha_v = alpha_u;
+            alpha_v = alpha_v_ ? GetLuminance(alpha_v_->GetPixel(*texcoord)) : alpha_u;
         }
         else
         {
             alpha_u = alpha_u_->GetPixel(Vector2(0))[0];
-            if (alpha_v_)
-                alpha_v = alpha_v_->GetPixel(Vector2(0))[0];
-            else
-                alpha_v = alpha_u;
+            alpha_v = alpha_v_ ? alpha_v_->GetPixel(Vector2(0))[0] : alpha_u;
         }
         return {alpha_u, alpha_v};
     }
@@ -95,13 +80,13 @@ protected:
         auto offset = cos_theta * kResolution;
         auto offset_int = static_cast<int>(offset);
         if (offset_int >= kResolution - 1)
-            return albedo_[kResolution - 1];
+            return albedo_.back();
         else
             return Lerp(offset - offset_int, albedo_[offset_int], albedo_[offset_int + 1]);
     }
 
 private:
-    Float albedo_[kResolution]; //光线出射方向与法线方向夹角的余弦从0到1的一系列反照率
+    std::array<Float, kResolution> albedo_; //光线出射方向与法线方向夹角的余弦从0到1的一系列反照率
 
     ///\brief 预计算光线出射方向与法线方向夹角的余弦从0到1的一系列反照率和平均反照率
     void ComputeAlbedo()
@@ -114,7 +99,7 @@ private:
         auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);
 
         //预计算光线出射方向与法线方向夹角的余弦从0到1的一系列反照率
-        std::fill(albedo_, albedo_ + kResolution, 0);
+        albedo_.fill(0);
         for (int j = 0; j < kResolution; j++)
         {
             Float cos_n_o = step * (static_cast<Float>(j) + 0.5);

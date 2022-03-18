@@ -6,6 +6,11 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
+inline Float GetLuminance(const Vector3 &rgb)
+{
+    return std::max(std::max(rgb.r, rgb.g), rgb.b);
+}
+
 //纹理类型
 enum class TextureType
 {
@@ -35,20 +40,11 @@ public:
      */
     virtual Vector2 GetGradient(const Vector2 &coord) const = 0;
 
-    ///\brief 图像是否存在alpha通道
-    virtual bool AlphaChannel() const { return false; }
-
     /**
      * \brief 材质在给定的纹理坐标处是否透明
      * \param texcoord 纹理坐标
      */
     virtual bool Transparent(const Vector2 &coord) const { return false; }
-
-    ///\brief 设置伽马值
-    virtual void setGamma(Float gamma) {}
-
-    ///\brief 纹理类型
-    TextureType type() const { return type_; }
 
     bool Constant() const { return type_ == TextureType::kConstantTexture; }
 
