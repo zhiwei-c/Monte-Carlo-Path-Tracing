@@ -22,11 +22,9 @@ public:
 		return root_->Intersect(ray);
 	}
 
-	std::pair<Intersection, Float> Sample() const
+	Intersection Sample() const
 	{
-		auto p = UniformFloat();
-		auto [point, pdf] = root_->SampleP(p);
-		return {point, pdf / this->root_->area()};
+		return root_->SampleP(UniformFloat());
 	}
 
 	AABB aabb() const { return root_->aabb(); }

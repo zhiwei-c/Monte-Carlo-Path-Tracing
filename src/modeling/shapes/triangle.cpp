@@ -56,11 +56,12 @@ void Triangle::Setup(const std::vector<Vector3> &vertices, const std::vector<Vec
     }
 
     area_ = glm::length(glm::cross(v0v1_, v0v2_)) * 0.5;
+    pdf_area_ = 1 / area_;
 
     aabb_ = AABB();
-    for (int i = 0; i < vertices.size(); i++)
+    for (const auto &v: vertices)
     {
-        aabb_ += vertices[i];
+        aabb_ += v;
     }
 }
 
@@ -142,11 +143,10 @@ Intersection Triangle::Intersect(const Ray &ray) const
         normal = -normal;
         inside = !inside;
     }
-
-    return Intersection(pos, normal, texcoord, inside, t, this->material_, ShapeArea());
+    return Intersection(pos, normal, texcoord, inside, t, this->material_, this->pdf_area_);
 }
 
-std::pair<Intersection, Float> Triangle::SampleP() const
+Intersection Triangle::SampleP() const
 {
     auto u = UniformFloat();
     auto v = UniformFloat();
@@ -158,7 +158,7 @@ std::pair<Intersection, Float> Triangle::SampleP() const
     auto pos = alpha * this->vertices_[0] + beta * this->vertices_[1] + gamma * this->vertices_[2];
     auto normal = alpha * this->normals_[0] + beta * this->normals_[1] + gamma * this->normals_[2];
 
-    return {Intersection(pos, normal, Vector2(-1), false, INFINITY, this->material_, ShapeArea()), 1 / this->area_};
+    return Intersection(pos, normal, Vector2(-1), false, INFINITY, this->material_, this->pdf_area_);
 }
 
 NAMESPACE_END(simple_renderer)

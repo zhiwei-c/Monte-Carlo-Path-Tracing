@@ -63,14 +63,13 @@ public:
         return PdfHemisCos(wo_local);
     }
 
+    ///\brief 是否映射纹理
     bool TextureMapping() const override { return !reflectance_->Constant(); }
 
+    ///\brief 给定点是否透明
     bool Transparent(const Vector2 &texcoord) const override
     {
-        if (Material::Transparent(texcoord))
-            return true;
-        else
-            return reflectance_->Transparent(texcoord);
+        return Material::Transparent(texcoord) || reflectance_->Transparent(texcoord);
     }
 
 private:

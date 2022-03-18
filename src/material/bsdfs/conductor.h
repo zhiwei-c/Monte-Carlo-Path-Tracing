@@ -83,6 +83,7 @@ public:
         return SameDirection(wo, Reflect(wi, normal)) ? 1 : 0;
     }
 
+    ///\brief 是否映射纹理
     bool TextureMapping() const override { return specular_reflectance_ && !specular_reflectance_->Constant(); }
 
 private:

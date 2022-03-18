@@ -122,6 +122,7 @@ public:
             return 0;
     }
 
+    ///\brief 是否映射纹理
     bool TextureMapping() const override { return (specular_reflectance_ && !specular_reflectance_->Constant()) ||
                                                   (specular_transmittance_ && !specular_transmittance_->Constant()); }
 

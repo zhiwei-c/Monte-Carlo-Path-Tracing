@@ -142,15 +142,17 @@ public:
 		return D * jacobian;
 	}
 
+    ///\brief 是否映射纹理
 	bool TextureMapping() const override { return Microfacet::TextureMapping() || (specular_reflectance_ && !specular_reflectance_->Constant()); }
 
 private:
-	bool mirror_;  //是否是镜面
-	Spectrum eta_; //材质相对折射率的实部
-	Spectrum k_;   //材质相对折射率的虚部,
-	Spectrum f_add_;
+	bool mirror_;									//是否是镜面
+	Spectrum eta_;									//材质相对折射率的实部
+	Spectrum k_;									//材质相对折射率的虚部,
+	Spectrum f_add_;								//补偿多次散射后出射光能的系数
 	std::unique_ptr<Texture> specular_reflectance_; //镜面反射系数。注意，对于物理真实感绘制，不应设置此参数。
 
+	///\brief 补偿多次散射后又射出的光能
 	Spectrum EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const
 	{
 		auto albedo_i = GetAlbedo(std::fabs(cos_i_n));

@@ -42,7 +42,7 @@ public:
 
 	Intersection Intersect(const Ray &ray) const override;
 
-	std::pair<Intersection, Float> SampleP() const override;
+	Intersection SampleP() const override;
 
 private:
 	Vector3 v0v1_;					  //三角形的一条边

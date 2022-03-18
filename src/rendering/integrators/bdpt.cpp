@@ -17,7 +17,7 @@ Spectrum BdptIntegrator::Shade(const Vector3 &eye_pos, const Vector3 &look_dir) 
     }
 
     if (envmap_ != nullptr)
-        return envmap_->GetLe(look_dir);
+        return envmap_->radiance(look_dir);
 
     return Spectrum(0);
 }
@@ -199,7 +199,7 @@ Spectrum BdptIntegrator::EmitterEnv2OneV(const PathVertex &v, const Intersection
     {
         //按 BSDF 采样环境光
         if (envmap_ != nullptr)
-            L_env = envmap_->GetLe(-b_rec.wi) * b_rec.weight * (cos_theta / b_rec.pdf);
+            L_env = envmap_->radiance(-b_rec.wi) * b_rec.weight * (cos_theta / b_rec.pdf);
     }
     else if (its_pre.HasEmission())
     {

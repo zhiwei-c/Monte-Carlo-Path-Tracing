@@ -14,9 +14,13 @@ public:
      * \param to_world 从局部坐标系到世界坐标系的变换矩阵
      * \param flip_normals 法线方向是否翻转
      */
-    Disk(Material *material, std::unique_ptr<Mat4> to_world, bool flip_normals)
-        : Shape(ShapeType::kDisk, material, flip_normals), material_(material), to_world_(std::move(to_world)),
-          to_world_norm_(nullptr), to_local_(nullptr)
+    Disk(Material *material,
+         std::unique_ptr<Mat4> to_world,
+         bool flip_normals)
+        : Shape(ShapeType::kDisk, material, flip_normals),
+          to_world_(std::move(to_world)),
+          to_world_norm_(nullptr),
+          to_local_(nullptr)
     {
         auto center = Vector3(0, 0, 0);
         auto p1 = Vector3(0.5, 0, 0);
@@ -36,7 +40,7 @@ public:
         auto radius_world = glm::length(center - p1);
 
         area_ = kPi * radius_world * radius_world;
-        area_inv_ = 1 / area_;
+        pdf_area_ = 1 / area_;
         aabb_ = AABB();
         aabb_ += pos_max;
         aabb_ += pos_min;
@@ -132,10 +136,10 @@ public:
             normal = TransfromDir(*to_world_norm_, normal);
         }
         auto distance = glm::length(pos - ray.origin());
-        return Intersection(pos, normal, texcoord, inside, distance, this->material_, area_);
+        return Intersection(pos, normal, texcoord, inside, distance, this->material_, this->pdf_area_);
     }
 
-    std::pair<Intersection, Float> SampleP() const override
+    Intersection SampleP() const override
     {
         auto pos_xy = DiskUnifrom();
         auto pos = Vector3(pos_xy.x, pos_xy.y, 0);
@@ -146,16 +150,15 @@ public:
             pos = TransfromPt(*to_world_, pos);
             normal = TransfromDir(*to_world_norm_, normal);
         }
-        return {Intersection(pos, normal, Vector2(-1), false, INFINITY, this->material_, area_), area_inv_};
+        return Intersection(pos, normal, Vector2(-1), false, INFINITY, this->material_, this->pdf_area_);
     }
 
 private:
-    Material *material_;             //材质
-    std::unique_ptr<Mat4> to_world_; //从局部坐标系到世界坐标系的变换矩阵
-
     Float area_inv_;
+    std::unique_ptr<Mat4> to_world_; //从局部坐标系到世界坐标系的变换矩阵
     std::unique_ptr<Mat4> to_world_norm_;
     std::unique_ptr<Mat4> to_local_;
+    Material *material_; //材质
 };
 
 NAMESPACE_END(simple_renderer)

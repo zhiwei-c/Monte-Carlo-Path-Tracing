@@ -5,14 +5,6 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
-//面元：位置坐标+法线方向
-struct Surfel
-{
-    Vector2 texcoord; //纹理坐标
-    Vector3 pos;      //空间坐标
-    Vector3 normal;   //法线方向
-};
-
 //光线与面片交点类
 class Intersection
 {
@@ -26,7 +18,7 @@ public:
           distance_(INFINITY),
           texcoord_(Vector2(0)),
           material_(nullptr),
-          shape_area_(INFINITY) {}
+          pdf_area_(INFINITY) {}
 
     /**
      * \brief 光线与物体模型面片交点，光线与物体相交
@@ -43,7 +35,7 @@ public:
                  bool inside,
                  Float distance,
                  Material *material,
-                 Float shape_area)
+                 Float pdf_area)
         : valid_(true),
           pos_(pos),
           normal_(normal),
@@ -51,7 +43,7 @@ public:
           distance_(distance),
           texcoord_(texcoord),
           material_(material),
-          shape_area_(shape_area) {}
+          pdf_area_(pdf_area) {}
 
     /**
      * \brief 交点处给定光线出射方向，采样入射方向
@@ -123,13 +115,14 @@ public:
     ///\return 交点处的物体表面的辐射亮度
     Spectrum radiance() const { return material_->radiance(); }
 
-    Float shape_area() const { return shape_area_; }
+    ///\brief 面元概率
+    Float pdf_area() const { return pdf_area_; }
 
 private:
     bool valid_;         //光线与物体的相交是否发生
-    bool inside_;    //交点处法线是否朝内
-    Float distance_; //从光线起点到该交点的距离
-    Float shape_area_;
+    bool inside_;        //交点处法线是否朝内
+    Float distance_;     //从光线起点到该交点的距离
+    Float pdf_area_;     //面元概率
     Vector2 texcoord_;   //交点纹理坐标
     Vector3 pos_;        //交点空间坐标
     Vector3 normal_;     //交点法线

@@ -28,11 +28,12 @@ public:
     {
         envmap_ = scene->envmap();
         emitters_.clear();
-        for (auto &shape : scene->shapes())
+        for (auto shape : scene->shapes())
         {
             if (shape->HasEmission())
                 emitters_.push_back(shape);
         }
+
         if (!scene->shapes().empty())
             bvh_ = std::make_unique<BvhAccel>(scene->shapes());
     }
@@ -46,12 +47,12 @@ public:
     virtual Spectrum Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const = 0;
 
 protected:
-    std::unique_ptr<BvhAccel> bvh_; //层次包围盒
-    std::vector<Shape *> emitters_; //包含的发光物体
-    Envmap *envmap_;                //用于绘制的天空盒
     int max_depth_;                 //递归地追踪光线的最大深度
     int rr_depth_;                  //最小的光线追踪深度，超过该深度后进行俄罗斯轮盘赌抽样控制光线追踪深度
     Float pdf_rr_;                  //递归地追踪光线俄罗斯轮盘赌的概率
+    Envmap *envmap_;                //用于绘制的天空盒
+    std::unique_ptr<BvhAccel> bvh_; //层次包围盒
+    std::vector<Shape *> emitters_; //包含的发光物体
 
     /**
      * \brief 按面积直接采样发光物体上一点
@@ -63,7 +64,7 @@ protected:
         if (this->emitters_.empty())
             return false;
         auto index = static_cast<int>(UniformFloat2() * this->emitters_.size());
-        std::tie(its, std::ignore) = this->emitters_[index]->SampleP();
+        its = this->emitters_[index]->SampleP();
         return true;
     }
 
@@ -79,18 +80,15 @@ protected:
             return false;
 
         auto its_pre = Intersection();
-        Float pdf_area = 0;
         if (its_emitter_ptr)
-        {
             its_pre = *its_emitter_ptr;
-            pdf_area = 1 / (its_pre.shape_area() * this->emitters_.size());
-        }
         else
         {
             auto index = static_cast<int>(UniformFloat2() * this->emitters_.size());
-            std::tie(its_pre, pdf_area) = this->emitters_[index]->SampleP();
-            pdf_area /= this->emitters_.size();
+            its_pre = this->emitters_[index]->SampleP();
         }
+
+        Float pdf_area = its_pre.pdf_area() / this->emitters_.size();
 
         Float distance_sqr = 0;
         if (!Visible(its_pre, its, &distance_sqr))
@@ -130,7 +128,7 @@ protected:
         auto cos_theta_prime = glm::dot(wi, its_pre.normal());
         if (cos_theta_prime < 0)
             return 0;
-        auto pdf_area = 1 / (its_pre.shape_area() * emitters_.size());
+        auto pdf_area = its_pre.pdf_area() / emitters_.size();
         auto distance_sqr_ = distance_sqr == nullptr ? std::pow(its_pre.distance(), 2) : *distance_sqr;
         return pdf_area * distance_sqr_ / cos_theta_prime;
     }

@@ -50,15 +50,11 @@ public:
 		return ret_left.distance() < ret_right.distance() ? ret_left : ret_right;
 	}
 
-	std::pair<Intersection, Float> SampleP(Float p) const
+	Intersection SampleP(Float p) const
 	{
 		if (shape_ != nullptr)
-		{
-			auto [point, pdf] = shape_->SampleP();
-			return {point, pdf * area_};
-		}
-
-		if (p * area_ < left_->area())
+			return shape_->SampleP();
+		else if (p * area_ < left_->area())
 			return left_->SampleP(p);
 		else
 			return right_->SampleP(p);

@@ -16,8 +16,17 @@ public:
      * \param to_world 从局部坐标系到世界坐标系的变换矩阵
      * \param flip_normals 法线方向是否翻转
      */
-    Sphere(Material *material, Vector3 center, Float radius, std::unique_ptr<Mat4> to_world, bool flip_normals)
-        : Shape(ShapeType::kSphere, material, flip_normals), center_(center), radius_(radius), material_(material), to_world_(std::move(to_world)), to_world_norm_(nullptr), to_local_(nullptr)
+    Sphere(Material *material,
+           const Vector3 &center,
+           Float radius,
+           std::unique_ptr<Mat4> to_world,
+           bool flip_normals)
+        : Shape(ShapeType::kSphere, material, flip_normals),
+          center_(center),
+          radius_(radius),
+          to_world_(std::move(to_world)),
+          to_world_norm_(nullptr),
+          to_local_(nullptr)
     {
         auto center_world = center_;
         auto p1 = center_ = Vector3(center.x + radius, center.y, center.z);
@@ -36,7 +45,7 @@ public:
         }
         auto radius_world = glm::length(center_world - p1);
         area_ = 4 * kPi * radius_world * radius_world;
-        area_inv_ = 1 / area_;
+        pdf_area_ = 1 / area_;
         aabb_ = AABB();
         aabb_ += pos_max;
         aabb_ += pos_min;
@@ -147,10 +156,10 @@ public:
         }
 
         auto distance = glm::length(pos - ray.origin());
-        return Intersection(pos, normal, texcoord, inside, distance, this->material_, area_);
+        return Intersection(pos, normal, texcoord, inside, distance, this->material_, this->pdf_area_);
     }
 
-    std::pair<Intersection, Float> SampleP() const override
+    Intersection SampleP() const override
     {
         auto normal = SphereUniform();
         auto pos = center_ + radius_ * normal;
@@ -161,17 +170,15 @@ public:
             normal = TransfromDir(*to_world_norm_, normal);
         }
 
-        return {Intersection(pos, normal, Vector2(-1), false, INFINITY, this->material_, area_), area_inv_};
+        return Intersection(pos, normal, Vector2(-1), false, INFINITY, this->material_, this->pdf_area_);
     }
 
 private:
-    Float radius_; //半径
-    Float area_inv_;
-    Vector3 center_;                 //球心
-    Material *material_;             //材质
-    std::unique_ptr<Mat4> to_world_; //从局部坐标系到世界坐标系的变换矩阵
-    std::unique_ptr<Mat4> to_world_norm_;
-    std::unique_ptr<Mat4> to_local_;
+    Float radius_;                        //半径
+    Vector3 center_;                      //球心
+    std::unique_ptr<Mat4> to_world_;      //从局部坐标系到世界坐标系位置的变换矩阵
+    std::unique_ptr<Mat4> to_world_norm_; //从局部坐标系到世界坐标系方向的变换矩阵
+    std::unique_ptr<Mat4> to_local_;      //从世界坐标系到局部坐标系位置的变换矩阵
 };
 
 NAMESPACE_END(simple_renderer)

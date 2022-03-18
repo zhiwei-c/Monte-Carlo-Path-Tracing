@@ -138,14 +138,13 @@ public:
         return result;
     }
 
+    ///\brief 是否映射纹理
     bool TextureMapping() const override { return (specular_reflectance_ && !specular_reflectance_->Constant()) || !diffuse_reflectance_->Constant(); }
 
+    ///\brief 给定点是否透明
     bool Transparent(const Vector2 &texcoord) const override
     {
-        if (Material::Transparent(texcoord))
-            return true;
-        else
-            return diffuse_reflectance_->Transparent(texcoord);
+        return Material::Transparent(texcoord) || diffuse_reflectance_->Transparent(texcoord);
     }
 
 private:
@@ -154,10 +153,11 @@ private:
     Float eta_inv_;  // 光线射出材质的相对折射率
     Float fdr_ext_;
     Float fdr_int_;
-    Float specular_sampling_weight_;
-    std::unique_ptr<Texture> specular_reflectance_; // 镜面反射系数。注意，对于物理真实感绘制，应默认为 1。
+    Float specular_sampling_weight_;                // 抽样镜面反射权重
     std::unique_ptr<Texture> diffuse_reflectance_;  // 漫反射系数
+    std::unique_ptr<Texture> specular_reflectance_; // 镜面反射系数。注意，对于物理真实感绘制，应默认为 1。
 
+    ///\brief 获取给定点的漫反射系数
     Spectrum get_diffuse_reflectance(const Vector2 *texcoord) const
     {
         if (diffuse_reflectance_->Constant())
@@ -165,6 +165,8 @@ private:
         else
             return diffuse_reflectance_->GetPixel(*texcoord);
     }
+
+    ///\brief 获取给定点的镜面反射系数
     Spectrum get_specular_reflectance(const Vector2 *texcoord) const
     {
         if (!diffuse_reflectance_)
@@ -175,6 +177,7 @@ private:
             return diffuse_reflectance_->GetPixel(*texcoord);
     }
 
+    ///\brief 获取给定点抽样镜面反射的权重
     Float get_specular_sampling_weight(const Vector2 *texcoord) const
     {
         if (diffuse_reflectance_->Constant() && (!specular_reflectance_ || specular_reflectance_->Constant()))

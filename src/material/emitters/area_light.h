@@ -11,6 +11,7 @@ public:
 	AreaLight(const std::string &name, const Spectrum &radiance, const Float sampling_weight = 1)
 		: Material(name, MaterialType::kAreaLight), radiance_(radiance), sampling_weight_(sampling_weight){};
 
+    ///\return 辐射亮度
 	Spectrum radiance() const override { return radiance_; }
 
 	Float sampling_weight() const { return sampling_weight_; }

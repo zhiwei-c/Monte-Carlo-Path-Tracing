@@ -225,20 +225,22 @@ public:
 		}
 	}
 
+	///\brief 是否映射纹理
 	bool TextureMapping() const override { return Microfacet::TextureMapping() ||
 												  (specular_reflectance_ && !specular_reflectance_->Constant()) ||
 												  (specular_transmittance_ && !specular_transmittance_->Constant()); }
 
 private:
-	Float eta_;		//光线射入材质的相对折射率
-	Float eta_inv_; //光线射出材质的相对折射率
-	Float f_add_;
-	Float f_add_inv_;
-	Float ratio_t_;
-	Float ratio_t_inv_;
+	Float eta_;										  //光线射入材质的相对折射率
+	Float eta_inv_;									  //光线射出材质的相对折射率
+	Float f_add_;									  //入射光线在物体内部，补偿多次散射后出射光能的系数
+	Float f_add_inv_;								  //入射光线在物体外部，补偿多次散射后出射光能的系数
+	Float ratio_t_;									  //入射光线在物体内部，补偿多次散射后出射光能，折射的比例
+	Float ratio_t_inv_;								  //入射光线在物体外部，补偿多次散射后出射光能，折射的比例
 	std::unique_ptr<Texture> specular_reflectance_;	  // 镜面反射系数。注意，对于物理真实感绘制，应默认为 1。
 	std::unique_ptr<Texture> specular_transmittance_; // 镜面透射系数。注意，对于物理真实感绘制，应默认为 1。
 
+	///\brief 补偿多次散射后又射出的光能
 	Float EvalMultipleScatter(Float cos_i_n, Float cos_o_n, bool inside) const
 	{
 		auto f_add = inside ? f_add_inv_ : f_add_;

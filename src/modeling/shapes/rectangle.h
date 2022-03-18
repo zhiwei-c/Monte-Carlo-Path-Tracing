@@ -25,7 +25,9 @@ public:
      * \param to_world 从局部坐标系到世界坐标系的变换矩阵
      * \param flip_normals 法线方向是否翻转
      */
-    Rectangle(Material *material, std::unique_ptr<Mat4> to_world, bool flip_normals)
+    Rectangle(Material *material,
+              std::unique_ptr<Mat4> to_world,
+              bool flip_normals)
         : Shape(ShapeType::kRectangle, material, flip_normals)
     {
         Mat4 to_world_p, to_world_n;
@@ -72,17 +74,14 @@ public:
                 vec[1] = RectangleTexcoords[indices[v]][1];
                 texcoords.push_back(vec);
             }
-
             meshes_.push_back(new Triangle(vertices, normals, texcoords, material, flip_normals));
         }
         bvh_ = std::make_unique<BvhAccel>(meshes_);
-        area_ = bvh_->area();
         aabb_ = bvh_->aabb();
-        
+        area_ = bvh_->area();
+        pdf_area_ = 1 / area_;
         for (auto &mesh : meshes_)
-        {
-            mesh->SetParent(this);
-        }
+            mesh->setPdfArea(this->pdf_area_);
     }
 
     ~Rectangle()
@@ -95,15 +94,14 @@ public:
                 mesh = nullptr;
             }
         }
-        meshes_.clear();
     }
-
+    
     Intersection Intersect(const Ray &ray) const override
     {
         return this->bvh_->Intersect(ray);
     }
 
-    std::pair<Intersection, Float> SampleP() const override
+    Intersection SampleP() const override
     {
         return this->bvh_->Sample();
     }

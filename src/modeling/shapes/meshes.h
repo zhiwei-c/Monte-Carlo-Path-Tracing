@@ -12,10 +12,12 @@ public:
 	Meshes(std::vector<Shape *> meshes, Material *material, bool flip_normals)
 		: Shape(ShapeType::kMeshes, material, flip_normals), meshes_(meshes), bvh_(std::make_unique<BvhAccel>(meshes))
 	{
-		area_ = bvh_->area();
 		aabb_ = bvh_->aabb();
-		for(auto& mesh: meshes){
-			mesh->SetParent(this);
+		area_ = bvh_->area();
+		pdf_area_ = 1 / area_;
+		for (auto &mesh : meshes)
+		{
+			mesh->setPdfArea(this->pdf_area_);
 		}
 	}
 
@@ -29,7 +31,6 @@ public:
 				mesh = nullptr;
 			}
 		}
-		meshes_.clear();
 	}
 
 	Intersection Intersect(const Ray &ray) const override
@@ -37,7 +38,7 @@ public:
 		return this->bvh_->Intersect(ray);
 	}
 
-	std::pair<Intersection, Float> SampleP() const override
+	Intersection SampleP() const override
 	{
 		return this->bvh_->Sample();
 	}

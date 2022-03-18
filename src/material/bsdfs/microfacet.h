@@ -58,6 +58,7 @@ protected:
     std::unique_ptr<Texture> alpha_u_;   //沿切线（tangent）方向的粗糙度
     std::unique_ptr<Texture> alpha_v_;   //沿副切线（bitangent）方向的粗糙度
 
+    ///\brief 给定表面纹理坐标，获取该点粗糙程度
     std::pair<Float, Float> GetAlpha(const Vector2 *texcoord) const
     {
         Float alpha_u = 0, alpha_v = 0;

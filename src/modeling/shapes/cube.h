@@ -78,12 +78,12 @@ public:
             meshes_.push_back(new Triangle(vertices, normals, texcoords, material, flip_normals));
         }
         bvh_ = std::make_unique<BvhAccel>(meshes_);
-        area_ = bvh_->area();
         aabb_ = bvh_->aabb();
-
+        area_ = bvh_->area();
+        pdf_area_ = 1 / area_;
         for (auto &mesh : meshes_)
         {
-            mesh->SetParent(this);
+            mesh->setPdfArea(this->pdf_area_);
         }
     }
 
@@ -97,7 +97,6 @@ public:
                 mesh = nullptr;
             }
         }
-        meshes_.clear();
     }
 
     Intersection Intersect(const Ray &ray) const override
@@ -105,7 +104,7 @@ public:
         return this->bvh_->Intersect(ray);
     }
 
-    std::pair<Intersection, Float> SampleP() const override
+    Intersection SampleP() const override
     {
         return this->bvh_->Sample();
     }

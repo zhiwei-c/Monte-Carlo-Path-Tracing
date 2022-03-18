@@ -71,9 +71,10 @@ public:
 	Envmap *envmap() const { return envmap_; }
 
 private:
+	
+	Envmap *envmap_;					//环境光映射
 	std::vector<Shape *> shapes_;		//场景包含的物体
 	std::vector<Material *> materials_; //场景包含的材质
-	Envmap *envmap_;					//环境光映射
 };
 
 NAMESPACE_END(simple_renderer)

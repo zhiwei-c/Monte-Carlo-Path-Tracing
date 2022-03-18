@@ -36,10 +36,10 @@ public:
 
     /**
      * \brief 给定方向的环境光辐射亮度
-     * \param look_dir 观察方向，为环境光入射方向的反向
+     * \param look_dir 观察方向，从观察点出发指向环境
      * \return 获取到的环境光辐射亮度
      */
-    Spectrum GetLe(Spectrum look_dir)
+    Spectrum radiance(Vector3 look_dir)
     {
         if (radiance_->Constant())
             return radiance_->GetPixel(Vector2(0));
@@ -61,6 +61,7 @@ public:
         return radiance_->GetPixel(coord);
     }
 
+    
 private:
     Float sampling_weight_;             //额外权重
     std::unique_ptr<Texture> radiance_; // 环境光辐射度纹理
