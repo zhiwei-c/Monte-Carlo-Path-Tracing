@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "../../material/emitters/envmap.h"
+#include "../material/emitters/envmap.h"
 #include "../utils/accelerator/bvh_accel.h"
 #include "../modeling/scene.h"
 
