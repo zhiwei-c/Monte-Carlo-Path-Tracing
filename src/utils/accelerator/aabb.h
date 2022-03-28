@@ -68,7 +68,7 @@ public:
 		return (this->min_ + this->max_) * static_cast<Float>(0.5);
 	}
 
-	AABB operator+(const AABB &b)
+	AABB operator+(const AABB &b) const
 	{
 		auto min = glm::min(this->min(), b.min());
 		auto max = glm::max(this->max(), b.max());

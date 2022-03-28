@@ -12,6 +12,8 @@
 
 #include <string>
 
+// #define NO_RECURSION
+
 #include <glm/glm.hpp>
 #include <glm/ext/scalar_constants.hpp>
 

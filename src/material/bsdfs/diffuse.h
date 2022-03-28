@@ -11,34 +11,27 @@ public:
      * \brief 漫反射材质
      * \param id 材质id
      * \param reflectance 漫反射系数
-     * \param ks 镜面反射系数
-     * \param ns 镜面反射指数系数
-     * \param diffuse_map_name 用于漫反射纹理的图片路径
      */
-    Diffuse(const std::string &id, std::unique_ptr<Texture> reflectance)
-        : Material(id, MaterialType::kDiffuse), reflectance_(std::move(reflectance)) {}
+    Diffuse(std::unique_ptr<Texture> reflectance)
+        : Material(MaterialType::kDiffuse), reflectance_(std::move(reflectance)) {}
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
+    void Sample(BsdfSampling &bs) const override
     {
-        BsdfSampling bs;
-
         auto [wi_local, pdf] = HemisCos();
         if (pdf < kEpsilonL)
-            return BsdfSampling();
+            return;
 
-        bs.wi = -ToWorld(wi_local, normal);
+        bs.wi = -ToWorld(wi_local, bs.normal);
         bs.pdf = pdf;
 
-        if (get_weight)
+        if (bs.get_weight)
         {
-            if (texcoord != nullptr)
-                bs.weight = reflectance_->GetPixel(*texcoord) * kPiInv;
+            if (bs.texcoord != nullptr)
+                bs.weight = reflectance_->GetPixel(*bs.texcoord) * kPiInv;
             else
                 bs.weight = reflectance_->GetPixel(Vector2(0)) * kPiInv;
         }
-
-        return bs;
     }
 
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重

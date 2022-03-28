@@ -50,8 +50,116 @@ public:
         aabb_ += pos_max;
         aabb_ += pos_min;
     }
+    
+    // Intersection Intersect(const Ray &ray) const override
+    // {
+    //     auto ray_o = ray.origin(),
+    //          ray_d = ray.dir();
+    //     if (to_local_)
+    //     {
+    //         ray_o = TransfromPt(*to_local_, ray_o);
+    //         ray_d = TransfromDir(*to_local_, ray_d);
+    //     }
+    //     ray_o -= center_;
+    //     auto a = glm::dot(ray_d, ray_d);
+    //     auto b = 2 * glm::dot(ray_d, ray_o);
+    //     auto c = glm::dot(ray_o, ray_o) - radius_ * radius_;
 
-    Intersection Intersect(const Ray &ray) const override
+    //     Float t_near, t_far;
+    //     if (!SolveQuadratic<Float>(a, b, c, t_near, t_far))
+    //         return Intersection();
+
+    //     if (t_far < kEpsilon)
+    //         return Intersection();
+
+    //     Float t_result;
+    //     if (!material_->twosided())
+    //     {
+    //         if (flip_normals_)
+    //         {
+    //             if (t_near > kEpsilon)
+    //                 return Intersection();
+    //             else
+    //                 t_result = t_far;
+    //         }
+    //         else
+    //         {
+    //             if (t_near < kEpsilon)
+    //                 return Intersection();
+    //             else
+    //                 t_result = t_near;
+    //         }
+    //     }
+    //     else
+    //     {
+    //         if (t_near < kEpsilon)
+    //             t_result = t_far;
+    //         else
+    //             t_result = t_near;
+    //     }
+
+    //     auto pos = ray_o + t_result * ray_d;
+    //     auto normal = glm::normalize(pos - center_);
+
+    //     auto texcoord = Vector2(-1);
+    //     if (this->material_->NormalPerturbing() ||
+    //         this->material_->OpacityMapping() ||
+    //         this->material_->TextureMapping())
+    //     {
+    //         Float theta, phi;
+    //         CartesianToSpherical(normal, theta, phi);
+
+    //         texcoord.x = phi * 0.5 * kPiInv;
+    //         texcoord.y = theta * kPiInv;
+
+    //         if (this->material_->Transparent(texcoord))
+    //             return Intersection();
+
+    //         if (this->material_->NormalPerturbing())
+    //         {
+    //             auto theta_1 = theta + kEpsilon < kPi ? theta + kEpsilon : theta - kEpsilon;
+    //             auto pos1 = SphericalToCartesian(theta_1, phi);
+    //             auto texcoord1 = Vector2(texcoord.x, theta_1 * kPiInv);
+
+    //             auto phi2 = phi + kEpsilon < 2 * kPi ? phi + kEpsilon : phi - kEpsilon;
+    //             auto pos2 = SphericalToCartesian(theta, phi2);
+    //             auto texcoord2 = Vector2(phi2 * 0.5 * kPiInv, texcoord.y);
+
+    //             auto v0v1 = pos1 - pos,
+    //                  v0v2 = pos2 - pos;
+    //             auto delta_uv_1 = texcoord1 - texcoord,
+    //                  delta_uv_2 = texcoord2 - texcoord;
+
+    //             auto r = 1 / (delta_uv_2.x * delta_uv_1.y - delta_uv_1.x * delta_uv_2.y);
+    //             auto tangent = glm::normalize(Vector3(delta_uv_1.y * v0v2 - delta_uv_2.y * v0v1) * r),
+    //                  bitangent = glm::normalize(Vector3(delta_uv_2.x * v0v1 - delta_uv_1.x * v0v2) * r);
+
+    //             normal = this->material_->PerturbNormal(normal, tangent, bitangent, texcoord);
+    //         }
+    //     }
+    //     auto inside = false;
+    //     if (c < 0)
+    //     {
+    //         normal = -normal;
+    //         inside = !inside;
+    //     }
+    //     if (flip_normals_)
+    //     {
+    //         normal = -normal;
+    //         inside = !inside;
+    //     }
+
+    //     if (to_world_)
+    //     {
+    //         pos = TransfromPt(*to_world_, pos);
+    //         normal = TransfromDir(*to_world_norm_, normal);
+    //     }
+
+    //     auto distance = glm::length(pos - ray.origin());
+    //     return Intersection(pos, normal, texcoord, inside, distance, this->material_, this->pdf_area_);
+    // }
+
+    void Intersect(const Ray &ray, Intersection &its) const override
     {
         auto ray_o = ray.origin(),
              ray_d = ray.dir();
@@ -67,10 +175,10 @@ public:
 
         Float t_near, t_far;
         if (!SolveQuadratic<Float>(a, b, c, t_near, t_far))
-            return Intersection();
+            return;
 
         if (t_far < kEpsilon)
-            return Intersection();
+            return;
 
         Float t_result;
         if (!material_->twosided())
@@ -78,14 +186,14 @@ public:
             if (flip_normals_)
             {
                 if (t_near > kEpsilon)
-                    return Intersection();
+                    return;
                 else
                     t_result = t_far;
             }
             else
             {
                 if (t_near < kEpsilon)
-                    return Intersection();
+                    return;
                 else
                     t_result = t_near;
             }
@@ -113,7 +221,7 @@ public:
             texcoord.y = theta * kPiInv;
 
             if (this->material_->Transparent(texcoord))
-                return Intersection();
+                return;
 
             if (this->material_->NormalPerturbing())
             {
@@ -137,6 +245,15 @@ public:
                 normal = this->material_->PerturbNormal(normal, tangent, bitangent, texcoord);
             }
         }
+        if (to_world_)
+        {
+            pos = TransfromPt(*to_world_, pos);
+            normal = TransfromDir(*to_world_norm_, normal);
+        }
+        auto distance = glm::length(pos - ray.origin());
+        if (distance > its.distance())
+            return;
+
         auto inside = false;
         if (c < 0)
         {
@@ -149,14 +266,7 @@ public:
             inside = !inside;
         }
 
-        if (to_world_)
-        {
-            pos = TransfromPt(*to_world_, pos);
-            normal = TransfromDir(*to_world_norm_, normal);
-        }
-
-        auto distance = glm::length(pos - ray.origin());
-        return Intersection(pos, normal, texcoord, inside, distance, this->material_, this->pdf_area_);
+        its = Intersection(pos, normal, texcoord, inside, distance, this->material_, this->pdf_area_);
     }
 
     Intersection SampleP() const override

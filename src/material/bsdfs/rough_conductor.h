@@ -11,7 +11,6 @@ class RoughConductor : public Microfacet
 public:
 	/**
 	 * \brief 粗糙的导体材质
-	 * \param id 材质id
 	 * \param distrib_type 用于模拟表面粗糙度的微表面分布的类型
 	 * \param alpha_u 沿切线（tangent）方向的粗糙度
 	 * \param alpha_v 沿副切线（bitangent）方向的粗糙度
@@ -21,8 +20,7 @@ public:
 	 * \param ext_ior 外折射率
 	 * \param specular_reflectance 镜面反射系数。注意，对于物理真实感绘制，应默认为 1
 	 */
-	RoughConductor(const std::string &id,
-				   MicrofacetDistribType distrib_type,
+	RoughConductor(MicrofacetDistribType distrib_type,
 				   std::unique_ptr<Texture> alpha_u,
 				   std::unique_ptr<Texture> alpha_v,
 				   bool mirror,
@@ -30,8 +28,7 @@ public:
 				   const Spectrum &k,
 				   Float ext_ior,
 				   std::unique_ptr<Texture> specular_reflectance = nullptr)
-		: Microfacet(id,
-					 MaterialType::kRoughConductor,
+		: Microfacet(MaterialType::kRoughConductor,
 					 distrib_type,
 					 std::move(alpha_u),
 					 std::move(alpha_v)),
@@ -56,30 +53,29 @@ public:
 	}
 
 	///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-	BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
+	void Sample(BsdfSampling &bs) const override
 	{
-		auto [alpha_u, alpha_v] = GetAlpha(texcoord);
+		auto [alpha_u, alpha_v] = GetAlpha(bs.texcoord);
 
 		auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);
-		auto [normal_micro, pdf] = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
+		auto [normal_micro, pdf] = distrib->Sample(bs.normal, {UniformFloat(), UniformFloat()});
 
 		if (pdf < kEpsilon)
-			return BsdfSampling();
+			return;
 
-		BsdfSampling bs;
+		bs.wi = -Reflect(-bs.wo, normal_micro);
+		if (glm::dot(bs.wi, bs.normal) >= 0)
+			return;
 
-		bs.wi = -Reflect(-wo, normal_micro);
-		if (glm::dot(bs.wi, normal) >= 0)
-			return BsdfSampling();
-
-		bs.pdf = Pdf(bs.wi, wo, normal, texcoord, inside);
+		bs.pdf = Pdf(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
 		if (bs.pdf < kEpsilonL)
-			return BsdfSampling();
+		{
+			bs.pdf = 0;
+			return;
+		}
 
-		if (get_weight)
-			bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
-
-		return bs;
+		if (bs.get_weight)
+			bs.weight = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
 	}
 
 	///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
@@ -142,7 +138,7 @@ public:
 		return D * jacobian;
 	}
 
-    ///\brief 是否映射纹理
+	///\brief 是否映射纹理
 	bool TextureMapping() const override { return Microfacet::TextureMapping() || (specular_reflectance_ && !specular_reflectance_->Constant()); }
 
 private:

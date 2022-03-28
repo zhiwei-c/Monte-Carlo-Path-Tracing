@@ -27,7 +27,9 @@ public:
      * \param ray 待判断的光线
      * \return 交点（如果判断发现没有交点，则认为交点与光线起点间距离为无穷远）
      */
-    virtual Intersection Intersect(const Ray &ray) const = 0;
+    // virtual std::unique_ptr<Intersection> Intersect(const Ray &ray) const = 0;
+
+    virtual void Intersect(const Ray &ray, Intersection &its) const = 0;
 
     /**
      * \brief 在物体表面按表面积采样一点，

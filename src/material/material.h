@@ -30,12 +30,16 @@ enum class MaterialType
 //按 BSDF 采样记录
 struct BsdfSampling
 {
-    Vector3 wi;      //光线入射方向
-    Spectrum weight; // BSDF 系数
-    Float pdf;       //光线从该方向入射的概率
+    bool inside;             //表面法线方向是否朝向表面内侧
+    bool get_weight;         //是否计算 BSDF 系数
+    Float pdf;               //光线从该方向入射的概率
+    const Vector2 *texcoord; //表面纹理坐标，可选
+    Vector3 wi;              //光线入射方向
+    Vector3 wo;              //光线出射方向
+    Vector3 normal;          //表面法线方向
+    Spectrum weight;         // BSDF 系数
 
-    //按 BSDF 采样记录
-    BsdfSampling() : wi(Vector3(0)), weight(Spectrum(0)), pdf(0) {}
+    BsdfSampling() : inside(false), get_weight(true), pdf(0), texcoord(nullptr), wi(Vector3(0)), wo(Vector3(0)), normal(Vector3(0)), weight(Spectrum(0)) {}
 };
 
 class Material
@@ -51,7 +55,7 @@ public:
      * \param inside 表面法线方向是否朝向表面内侧
      * \return 由 Vector3 类型和 BsdfSamplingType 类型构成的 pair，分别代表抽样所得光线入射方向，和入射光线与出射光线之间的关系
      */
-    virtual BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const = 0;
+    virtual void Sample(BsdfSampling &bs) const {};
 
     /**
      * \brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
@@ -149,9 +153,8 @@ public:
     }
 
 protected:
-    Material(const std::string &id, MaterialType type)
-        : id_(id),
-          type_(type),
+    Material(MaterialType type)
+        : type_(type),
           twosided_(true),
           opacity_(nullptr),
           bump_map_(nullptr){};

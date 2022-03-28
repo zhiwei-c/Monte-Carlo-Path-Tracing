@@ -6,8 +6,8 @@ Spectrum BdptIntegrator::Shade(const Vector3 &eye_pos, const Vector3 &look_dir) 
 {
     if (this->bvh_ != nullptr)
     {
-        auto its = this->bvh_->Intersect(Ray(eye_pos, look_dir));
-        if (its.valid())
+        Intersection its;
+        if (this->bvh_->Intersect(Ray(eye_pos, look_dir), its))
         {
             if (its.HasEmission())
                 return its.radiance();
@@ -92,13 +92,14 @@ std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
 
     //生成第二个及之后光源路径点
     int depth = 1;
+    auto its_next = Intersection();
     while (max_depth_ > 0 && emitter_path.size() < max_depth_ ||
            max_depth_ <= 0 && (depth <= rr_depth_ || UniformFloat() < pdf_rr_))
     {
         auto &e = emitter_path.back();
-
-        auto its_next = this->bvh_->Intersect(Ray(e.its.pos(), e.wo));
-        if (!its_next.valid() || its_next.HasEmission())
+        its_next = Intersection();
+        if (!this->bvh_->Intersect(Ray(e.its.pos(), e.wo), its_next) ||
+            its_next.HasEmission())
             break;
         emitter_path.push_back({its_next, e.wo, Vector3(0)});
         depth += 1;
@@ -106,10 +107,9 @@ std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
         e_next.cos_theta_abs = std::fabs(glm::dot(e_next.wi, e_next.its.normal()));
 
         auto bs_next = e_next.its.Sample(-e_next.wi, false);
-        auto wo_next = -bs_next.wi;
-        auto pdf_next_pseudo = bs_next.pdf;
-        if (pdf_next_pseudo < kEpsilonPdf)
+        if (!bs_next)
             break;
+        auto wo_next = -bs_next->wi;
 
         auto pdf_next = its_next.Pdf(e_next.wi, wo_next);
         if (pdf_next < kEpsilonPdf2)
@@ -152,23 +152,24 @@ std::vector<PathVertex> BdptIntegrator::CreateCameraPath(const Intersection &its
     std::vector<PathVertex> camera_path;
     camera_path.push_back({its_first, Vector3(0), wo_first});
     int depth = 1;
+    auto its_pre = Intersection();
     while (max_depth_ > 0 && camera_path.size() < max_depth_ ||
            max_depth_ <= 0 && (depth <= rr_depth_ || UniformFloat() < pdf_rr_))
     {
         auto &c = camera_path.back();
         auto b_rec = c.its.Sample(c.wo);
-        if (b_rec.pdf < kEpsilonPdf2)
+        if (!b_rec)
+            break;
+        its_pre = Intersection();
+        if (!this->bvh_->Intersect(Ray(c.its.pos(), -b_rec->wi), its_pre) ||
+            its_pre.HasEmission())
             break;
 
-        auto its_pre = this->bvh_->Intersect(Ray(c.its.pos(), -b_rec.wi));
-        if (!its_pre.valid() || its_pre.HasEmission())
-            break;
-
-        c.wi = b_rec.wi;
-        c.cos_theta_abs = std::fabs(glm::dot(b_rec.wi, c.its.normal()));
-        c.pdf = b_rec.pdf;
-        c.bsdf = b_rec.weight;
-        camera_path.push_back({its_pre, Vector3(0), b_rec.wi});
+        c.wi = b_rec->wi;
+        c.cos_theta_abs = std::fabs(glm::dot(b_rec->wi, c.its.normal()));
+        c.pdf = b_rec->pdf;
+        c.bsdf = b_rec->weight;
+        camera_path.push_back({its_pre, Vector3(0), b_rec->wi});
         depth += 1;
     }
     return camera_path;
@@ -186,29 +187,31 @@ Spectrum BdptIntegrator::EmitterEnv2OneV(const PathVertex &v, const Intersection
     //直接采样光源，并按多重重要性采样合并
     if (its_emitter_ptr)
     {
-        if (!EmitterDirectArea(v.its, wo, L_emitter, its_emitter_ptr))
+        if (!EmitterDirectArea(v.its, wo, L_emitter, nullptr, its_emitter_ptr))
             EmitterDirectArea(v.its, wo, L_emitter);
     }
     else
         EmitterDirectArea(v.its, wo, L_emitter);
 
     auto b_rec = v.its.Sample(wo);
-    auto cos_theta = std::fabs(glm::dot(b_rec.wi, v.its.normal()));
-    auto its_pre = this->bvh_->Intersect(Ray(v.its.pos(), -b_rec.wi));
-    if (!its_pre.valid())
+    if (!b_rec)
+        return L_emitter;
+
+    auto cos_theta = std::fabs(glm::dot(b_rec->wi, v.its.normal()));
+    Intersection its_pre;
+    if (!this->bvh_->Intersect(Ray(v.its.pos(), -b_rec->wi), its_pre))
     {
         //按 BSDF 采样环境光
         if (envmap_ != nullptr)
-            L_env = envmap_->radiance(-b_rec.wi) * b_rec.weight * (cos_theta / b_rec.pdf);
+            L_env = envmap_->radiance(-b_rec->wi) * b_rec->weight * (cos_theta / b_rec->pdf);
     }
     else if (its_pre.HasEmission())
     {
         //按 BSDF 采样光源，并按多重重要性采样合并
-        auto pdf_direct = PdfEmitterDirect(its_pre, b_rec.wi);
-        auto weight_bsdf = MisWeight(b_rec.pdf, pdf_direct);
-        L_emitter += weight_bsdf * its_pre.radiance() * b_rec.weight * (cos_theta / b_rec.pdf);
+        auto pdf_direct = PdfEmitterDirect(its_pre, b_rec->wi);
+        auto weight_bsdf = MisWeight(b_rec->pdf, pdf_direct);
+        L_emitter += weight_bsdf * its_pre.radiance() * b_rec->weight * (cos_theta / b_rec->pdf);
     }
-
     auto res = L_emitter + L_env;
     return res;
 }
@@ -235,8 +238,9 @@ std::pair<Spectrum, Float> BdptIntegrator::PrepareOtherEmitter2OneC(const std::v
     v.pdf = v.its.Pdf(v.wi, v.wo);
     if (v.pdf < kEpsilonPdf2)
         return {Spectrum(0), 0};
-
+    //上一个点接收的直接光照
     Spectrum L_pre = e_index == 1 ? EmitterEnv2OneV(e) : EmitterEnv2OneV(e, &e_first.its);
+    //上一个点接收的间接光照
     if (e_index > 1)
     {
         e.pdf = e.its.Pdf(e.wi, e.wo);
@@ -254,6 +258,7 @@ std::pair<Spectrum, Float> BdptIntegrator::PrepareOtherEmitter2OneC(const std::v
 
     v.bsdf = v.its.Eval(v.wi, v.wo);
     v.cos_theta_abs = std::abs(glm::dot(v.wi, v.its.normal()));
+    //当前点接收的间接光照
     auto L_indirect = L_pre * v.bsdf * (v.cos_theta_abs / v.pdf);
     if (e_index > rr_depth_)
     {

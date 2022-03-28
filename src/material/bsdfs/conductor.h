@@ -9,20 +9,18 @@ class Conductor : public Material
 public:
     /**
      * \brief 光滑的导体材质
-     * \param id 材质id
      * \param mirror 是否是镜面（全反射）
      * \param eta 材质折射率的实部
      * \param k 材质折射率的虚部（消光系数）
      * \param ext_ior 外折射率
      * \param specular_reflectance 调节镜面反射分量。注意，对于物理真实感绘制，默认为 1，表示为空指针。
      */
-    Conductor(const std::string &id,
-              bool mirror,
+    Conductor(bool mirror,
               const Spectrum &eta,
               const Spectrum &k,
               Float ext_ior,
               std::unique_ptr<Texture> specular_reflectance = nullptr)
-        : Material(id, MaterialType::kConductor),
+        : Material(MaterialType::kConductor),
           mirror_(mirror),
           eta_(eta / ext_ior),
           k_(k / ext_ior),
@@ -36,26 +34,22 @@ public:
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
+    void Sample(BsdfSampling &bs) const override
     {
-        BsdfSampling bs;
-
-        bs.wi = -Reflect(-wo, normal);
+        bs.wi = -Reflect(-bs.wo, bs.normal);
         bs.pdf = 1;
 
-        if (get_weight)
+        if (bs.get_weight)
         {
-            bs.weight = mirror_ ? Spectrum(1) : FresnelConductor(bs.wi, normal, eta_, k_);
+            bs.weight = mirror_ ? Spectrum(1) : FresnelConductor(bs.wi, bs.normal, eta_, k_);
             if (specular_reflectance_)
             {
-                if (texcoord != nullptr)
-                    bs.weight *= specular_reflectance_->GetPixel(*texcoord);
+                if (bs.texcoord != nullptr)
+                    bs.weight *= specular_reflectance_->GetPixel(*bs.texcoord);
                 else
                     bs.weight *= specular_reflectance_->GetPixel(Vector2(0));
             }
         }
-
-        return bs;
     }
 
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重

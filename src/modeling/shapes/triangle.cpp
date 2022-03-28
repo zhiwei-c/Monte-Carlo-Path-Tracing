@@ -59,13 +59,94 @@ void Triangle::Setup(const std::vector<Vector3> &vertices, const std::vector<Vec
     pdf_area_ = 1 / area_;
 
     aabb_ = AABB();
-    for (const auto &v: vertices)
+    for (const auto &v : vertices)
     {
         aabb_ += v;
     }
 }
 
-Intersection Triangle::Intersect(const Ray &ray) const
+// Intersection Triangle::Intersect(const Ray &ray) const
+// {
+
+//     auto P = glm::cross(ray.dir(), this->v0v2_);
+//     auto det = glm::dot(this->v0v1_, P);
+
+//     if (material_->twosided()) //丢弃与三角面片平行的光线
+//     {
+//         if (std::fabs(det) < kEpsilon)
+//             return Intersection();
+//     }
+//     else
+//     {
+//         if (flip_normals_)
+//         {
+//             if (det > -kEpsilon)
+//                 return Intersection();
+//         }
+//         else
+//         {
+//             if (det < kEpsilon)
+//                 return Intersection();
+//         }
+//     }
+
+//     auto det_inv = 1 / det;
+//     auto T = ray.origin() - this->vertices_[0];
+
+//     auto u = glm::dot(T, P) * det_inv;
+//     if (u < kEpsilon || u > 1 - kEpsilon)
+//         return Intersection();
+
+//     auto Q = glm::cross(T, this->v0v1_);
+//     auto v = glm::dot(ray.dir(), Q) * det_inv;
+//     if (v < kEpsilon || (u + v) > 1 - kEpsilon)
+//         return Intersection();
+
+//     auto t = glm::dot(this->v0v2_, Q) * det_inv;
+//     if (t < kEpsilon)
+//         return Intersection();
+
+//     auto alpha = static_cast<Float>(1 - u - v),
+//          beta = static_cast<Float>(u),
+//          gamma = static_cast<Float>(v);
+
+//     auto normal = alpha * this->normals_[0] + beta * this->normals_[1] + gamma * this->normals_[2];
+//     auto texcoord = Vector2(-1);
+//     if (this->material_->NormalPerturbing() ||
+//         this->material_->OpacityMapping() ||
+//         this->material_->TextureMapping())
+//     {
+//         texcoord = alpha * this->texcoords_[0] + beta * this->texcoords_[1] + gamma * this->texcoords_[2];
+//         if (this->material_->Transparent(texcoord))
+//             return Intersection();
+//         if (this->material_->NormalPerturbing())
+//         {
+//             auto tangent = glm::normalize(alpha * this->tangents_[0] +
+//                                           beta * this->tangents_[1] +
+//                                           gamma * this->tangents_[2]);
+//             auto bitangent = glm::normalize(alpha * this->bitangents_[0] +
+//                                             beta * this->bitangents_[1] +
+//                                             gamma * this->bitangents_[2]);
+//             normal = this->material_->PerturbNormal(normal, tangent, bitangent, texcoord);
+//         }
+//     }
+
+//     auto pos = alpha * this->vertices_[0] + beta * this->vertices_[1] + gamma * this->vertices_[2];
+//     auto inside = false;
+//     if (det < 0)
+//     {
+//         normal = -normal;
+//         inside = !inside;
+//     }
+//     if (flip_normals_)
+//     {
+//         normal = -normal;
+//         inside = !inside;
+//     }
+//     return Intersection(pos, normal, texcoord, inside, t, this->material_, this->pdf_area_);
+// }
+
+void Triangle::Intersect(const Ray &ray, Intersection &its) const
 {
 
     auto P = glm::cross(ray.dir(), this->v0v2_);
@@ -74,38 +155,40 @@ Intersection Triangle::Intersect(const Ray &ray) const
     if (material_->twosided()) //丢弃与三角面片平行的光线
     {
         if (std::fabs(det) < kEpsilon)
-            return Intersection();
+            return;
     }
     else
     {
         if (flip_normals_)
         {
             if (det > -kEpsilon)
-                return Intersection();
+                return;
         }
         else
         {
             if (det < kEpsilon)
-                return Intersection();
+                return;
         }
     }
 
     auto det_inv = 1 / det;
     auto T = ray.origin() - this->vertices_[0];
 
+    auto Q = glm::cross(T, this->v0v1_);
+
+
     auto u = glm::dot(T, P) * det_inv;
     if (u < kEpsilon || u > 1 - kEpsilon)
-        return Intersection();
+        return;
 
-    auto Q = glm::cross(T, this->v0v1_);
     auto v = glm::dot(ray.dir(), Q) * det_inv;
     if (v < kEpsilon || (u + v) > 1 - kEpsilon)
-        return Intersection();
+        return;
 
-    auto t = glm::dot(this->v0v2_, Q) * det_inv;
-    if (t < kEpsilon)
-        return Intersection();
-
+    auto distance = glm::dot(this->v0v2_, Q) * det_inv;
+    if (distance < kEpsilon || distance > its.distance())
+        return;
+        
     auto alpha = static_cast<Float>(1 - u - v),
          beta = static_cast<Float>(u),
          gamma = static_cast<Float>(v);
@@ -118,7 +201,7 @@ Intersection Triangle::Intersect(const Ray &ray) const
     {
         texcoord = alpha * this->texcoords_[0] + beta * this->texcoords_[1] + gamma * this->texcoords_[2];
         if (this->material_->Transparent(texcoord))
-            return Intersection();
+            return;
         if (this->material_->NormalPerturbing())
         {
             auto tangent = glm::normalize(alpha * this->tangents_[0] +
@@ -143,7 +226,7 @@ Intersection Triangle::Intersect(const Ray &ray) const
         normal = -normal;
         inside = !inside;
     }
-    return Intersection(pos, normal, texcoord, inside, t, this->material_, this->pdf_area_);
+    its = Intersection(pos, normal, texcoord, inside, distance, this->material_, this->pdf_area_);
 }
 
 Intersection Triangle::SampleP() const

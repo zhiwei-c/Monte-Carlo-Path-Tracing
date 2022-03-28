@@ -9,66 +9,67 @@ class Dielectric : public Material
 public:
     /**
      * \brief 光滑的电介质材质
-     * \param id 材质id
      * \param int_ior 内折射率
      * \param ext_ior 外折射率
      * \param specular_reflectance 调节镜面反射分量。注意，对于物理真实感绘制，默认为 1，表示为空指针。
      * \param specular_transmittance 调节镜面透射分量。注意，对于物理真实感绘制，默认为 1，表示为空指针。
      */
-    Dielectric(const std::string &id,
-               Float int_ior,
+    Dielectric(Float int_ior,
                Float ext_ior,
                std::unique_ptr<Texture> specular_reflectance = nullptr,
                std::unique_ptr<Texture> specular_transmittance = nullptr)
-        : Material(id, MaterialType::kDielectric),
+        : Material(MaterialType::kDielectric),
           eta_(int_ior / ext_ior),
           eta_inv_(ext_ior / int_ior),
           specular_reflectance_(std::move(specular_reflectance)),
           specular_transmittance_(std::move(specular_transmittance)) {}
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
+    void Sample(BsdfSampling &bs) const override
     {
-        auto eta = inside ? eta_inv_ : eta_;     //相对折射率，即光线透射侧介质折射率与入透射侧介质折射率之比
-        auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+        auto eta = bs.inside ? eta_inv_ : eta_;     //相对折射率，即光线透射侧介质折射率与入透射侧介质折射率之比
+        auto eta_inv = bs.inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
-        BsdfSampling bs;
-        auto kr = Fresnel(-wo, normal, eta_inv);
+        auto kr = Fresnel(-bs.wo, bs.normal, eta_inv);
         auto sample_x = UniformFloat();
         if (sample_x < kr)
         {
-            bs.wi = -Reflect(-wo, normal);
+            bs.pdf = kr;
+            bs.wi = -Reflect(-bs.wo, bs.normal);
+            if (bs.get_weight)
+            {
             bs.weight = Spectrum(kr);
             if (specular_reflectance_)
             {
-                if (texcoord != nullptr)
-                    bs.weight *= specular_reflectance_->GetPixel(*texcoord);
+                    if (bs.texcoord != nullptr)
+                        bs.weight *= specular_reflectance_->GetPixel(*bs.texcoord);
                 else
                     bs.weight *= specular_reflectance_->GetPixel(Vector2(0));
             }
-            bs.pdf = kr;
+            }
         }
         else
         {
-            bs.wi = -Refract(-wo, normal, eta_inv);
-            auto kr_t = Fresnel(bs.wi, -normal, eta);
+            bs.wi = -Refract(-bs.wo, bs.normal, eta_inv);
+            auto kr_t = Fresnel(bs.wi, -bs.normal, eta);
+            bs.pdf = 1 - kr_t;
+            if (bs.get_weight)
+            {
             bs.weight = Spectrum(1 - kr_t);
             if (specular_transmittance_)
             {
-                if (texcoord != nullptr)
-                    bs.weight *= specular_transmittance_->GetPixel(*texcoord);
+                    if (bs.texcoord != nullptr)
+                        bs.weight *= specular_transmittance_->GetPixel(*bs.texcoord);
                 else
                     bs.weight *= specular_transmittance_->GetPixel(Vector2(0));
             }
             //光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
             bs.weight *= Sqr(eta);
-            bs.pdf = 1 - kr_t;
+            }
         }
 
         if (bs.pdf < kEpsilonL)
-            return BsdfSampling();
-
-        return bs;
+            bs.pdf = 0;
     }
 
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重

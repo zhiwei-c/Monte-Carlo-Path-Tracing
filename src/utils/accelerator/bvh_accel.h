@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <stack>
 
 #include "bvh_node.h"
 
@@ -17,23 +18,66 @@ public:
 		root_ = BuildBvhRecursively(shapes);
 	}
 
-	Intersection Intersect(const Ray &ray) const
+	~BvhAccel()
 	{
-		return root_->Intersect(ray);
+		if (root_)
+		{
+			delete root_;
+			root_ = nullptr;
+		}
+	}
+
+	bool Intersect(const Ray &ray, Intersection &its) const
+	{
+#ifdef NO_RECURSION
+		std::stack<BvhNode *> st;
+		st.push(root_);
+		BvhNode *now = nullptr;
+		while (!st.empty())
+		{
+			now = st.top();
+			st.pop();
+			while (now->aabb().Intersect(ray))
+			{
+				if (now->shape())
+				{
+					now->shape()->Intersect(ray, its);
+					break;
+				}
+				else
+				{
+					st.push(now->right());
+					now = now->left();
+				}
+			}
+		}
+#else
+		root_->Intersect(ray, its);
+#endif
+		return its.valid();
 	}
 
 	Intersection Sample() const
 	{
-		return root_->SampleP(UniformFloat());
+		auto now = root_;
+		auto p = UniformFloat();
+		while (!now->shape())
+		{
+			if (p * now->area() < now->left()->area())
+				now = now->left();
+			else
+				now = now->right();
+		}
+		return now->shape()->SampleP();
 	}
 
-	AABB aabb() const { return root_->aabb(); }
-	Float area() const { return root_->area(); }
+	const AABB &aabb() const { return root_->aabb(); }
+	const Float &area() const { return root_->area(); }
 
 private:
-	std::unique_ptr<BvhNode> root_;
+	BvhNode *root_;
 
-	std::unique_ptr<BvhNode> BuildBvhRecursively(std::vector<Shape *> shapes)
+	BvhNode *BuildBvhRecursively(std::vector<Shape *> shapes)
 	{
 		if (shapes.size() == 0)
 		{
@@ -42,7 +86,7 @@ private:
 
 		if (shapes.size() == 1)
 		{
-			return std::make_unique<BvhNode>(nullptr, nullptr, shapes[0]);
+			return new BvhNode(nullptr, nullptr, shapes[0]);
 		}
 
 		AABB bound_now;
@@ -77,7 +121,7 @@ private:
 		auto objs_right = std::vector<Shape *>(middling, ending);
 		auto left = BuildBvhRecursively(objs_left);
 		auto right = BuildBvhRecursively(objs_right);
-		return std::make_unique<BvhNode>(std::move(left), std::move(right), nullptr);
+		return new BvhNode(left, right, nullptr);
 	}
 };
 

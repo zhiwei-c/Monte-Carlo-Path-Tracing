@@ -74,7 +74,7 @@ protected:
      * \param wo 采样时当前所在的光线与物体表面交点处，光线的出射方向
      * \param value 直接来自光源的辐射亮度（光亮度） （输入/输出参数）
      */
-    bool EmitterDirectArea(const Intersection &its, const Vector3 &wo, Spectrum &value, const Intersection *its_emitter_ptr = nullptr) const
+    bool EmitterDirectArea(const Intersection &its, const Vector3 &wo, Spectrum &value, const Spectrum *attenuation = nullptr, const Intersection *its_emitter_ptr = nullptr) const
     {
         if (this->emitters_.empty())
             return false;
@@ -112,7 +112,11 @@ protected:
         auto weight_direct = MisWeight(pdf_direct, pdf_bsdf);
         auto cos_theta = std::abs(glm::dot(wi, its.normal()));
 
-        value += weight_direct * its_pre.radiance() * bsdf * cos_theta / pdf_direct;
+        if (attenuation)
+            value += *attenuation * weight_direct * its_pre.radiance() * bsdf * cos_theta / pdf_direct;
+        else
+            value += weight_direct * its_pre.radiance() * bsdf * cos_theta / pdf_direct;
+
         return true;
     }
 
@@ -144,7 +148,8 @@ protected:
     {
         auto d_vec = its2.pos() - its1.pos();
         auto ray = Ray(its1.pos(), d_vec);
-        auto its = this->bvh_->Intersect(ray);
+        Intersection its;
+        this->bvh_->Intersect(ray, its);
         if (its.distance() + kEpsilonDistance < glm::length(d_vec))
             return false;
         else

@@ -4,76 +4,56 @@ NAMESPACE_BEGIN(simple_renderer)
 
 Spectrum PathIntegrator::Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const
 {
-	if (this->bvh_ != nullptr)
+	auto its = Intersection();
+
+	//原初光线源于环境
+	if (!this->bvh_ || !this->bvh_->Intersect(Ray(eye_pos, look_dir), its))
+		return envmap_ ? envmap_->radiance(look_dir) : Spectrum(0);
+
+	//原初光线源于发光物体
+	if (its.HasEmission())
+		return its.radiance();
+
+	size_t depth = 1;			   //光线溯源深度
+	auto L = Spectrum(0),		   //着色结果
+		attenuation = Spectrum(1); //光能因被物体吸收而衰减的系数
+	auto wo = -look_dir;
+	auto its_pre = Intersection();
+	//迭代地溯源光线
+	while (depth < max_depth_ && (depth <= rr_depth_ || UniformFloat() < pdf_rr_))
 	{
-		auto its = this->bvh_->Intersect(Ray(eye_pos, look_dir));
-		if (its.valid())
+		//按发光物体表面积采样来自面光源的直接光照
+		EmitterDirectArea(its, wo, L, &attenuation);
+		auto b_rec = its.Sample(wo);
+		if (!b_rec)
+			break;
+		auto cos_theta = glm::abs(glm::dot(b_rec->wi, its.normal()));
+		its_pre = Intersection();
+		//按 BSDF 采样来自环境的直接光照
+		if (!this->bvh_->Intersect(Ray(its.pos(), -b_rec->wi), its_pre))
 		{
-			if (its.HasEmission())
-			{
-				return its.radiance();
-			}
-			else
-			{
-				return ShadeRecursively(its, -look_dir, 1);
-			}
+			if (envmap_ != nullptr)
+				L += attenuation * envmap_->radiance(-b_rec->wi) * b_rec->weight * cos_theta / b_rec->pdf;
+			break;
 		}
+		//按 BSDF 采样来自面光源的直接光照
+		if (its_pre.HasEmission())
+		{
+			auto pdf_direct = PdfEmitterDirect(its_pre, b_rec->wi);
+			auto weight_bsdf = MisWeight(b_rec->pdf, pdf_direct);
+			L += attenuation * weight_bsdf * its_pre.radiance() * b_rec->weight * cos_theta / b_rec->pdf;
+			break;
+		}
+		//按 BSDF 采样间接光照更新衰减系数
+		attenuation *= b_rec->weight * cos_theta / b_rec->pdf;
+		if (depth >= pdf_rr_)
+			attenuation /= pdf_rr_;
+
+		its = its_pre,
+		wo = b_rec->wi,
+		depth++;
 	}
-
-	if (envmap_ != nullptr)
-		return envmap_->radiance(look_dir);
-
-	return Spectrum(0);
-}
-
-Spectrum PathIntegrator::ShadeRecursively(const Intersection &its, const Vector3 &wo, int depth) const
-{
-	if (max_depth_ > 0 && depth >= max_depth_)
-		return Spectrum(0);
-
-	Spectrum L_env(0), //来自环境的直接光照
-		L_emitter(0),  //来自面光源的直接光照
-		L_indirect(0); //间接光照
-
-	//按发光物体表面积采样来自面光源的直接光照
-	EmitterDirectArea(its, wo, L_emitter);
-
-	//按BSDF采样光照
-	BsdfSampling b_rec = its.Sample(wo);
-	if (b_rec.pdf > kEpsilonPdf)
-	{
-		auto cos_theta = std::fabs(glm::dot(b_rec.wi, its.normal()));
-
-		auto its_pre = this->bvh_->Intersect(Ray(its.pos(), -b_rec.wi));
-		if (its_pre.valid())
-		{
-			if (!its_pre.HasEmission()) //按BSDF采样间接光照
-			{
-				if (depth <= rr_depth_)
-				{
-					auto L_pre = ShadeRecursively(its_pre, b_rec.wi, depth + 1);
-					L_indirect = L_pre * b_rec.weight * (cos_theta / b_rec.pdf);
-				}
-				else if (UniformFloat() < pdf_rr_)
-				{
-					auto L_pre = ShadeRecursively(its_pre, b_rec.wi, depth + 1);
-					L_indirect = L_pre * b_rec.weight * cos_theta / (b_rec.pdf * pdf_rr_);
-				}
-			}
-			else //按 BSDF 采样来自面光源的直接光照
-			{
-				auto pdf_direct = PdfEmitterDirect(its_pre, b_rec.wi);
-				auto weight_bsdf = MisWeight(b_rec.pdf, pdf_direct);
-				L_emitter += weight_bsdf * its_pre.radiance() * b_rec.weight * cos_theta / b_rec.pdf;
-			}
-		}
-		else if (envmap_ != nullptr) //按 BSDF 采样来自环境的直接光照
-		{
-			L_env = envmap_->radiance(-b_rec.wi) * b_rec.weight * cos_theta / b_rec.pdf;
-		}
-	}
-
-	return L_emitter + L_env + L_indirect;
+	return L;
 }
 
 NAMESPACE_END(simple_renderer)

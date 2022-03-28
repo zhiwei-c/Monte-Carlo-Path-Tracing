@@ -96,9 +96,14 @@ public:
         }
     }
     
-    Intersection Intersect(const Ray &ray) const override
+    // std::unique_ptr<Intersection> Intersect(const Ray &ray) const override
+    // {
+    //     return this->bvh_->Intersect(ray);
+    // }
+    
+    void Intersect(const Ray &ray, Intersection& its) const override
     {
-        return this->bvh_->Intersect(ray);
+        this->bvh_->Intersect(ray, its);
     }
 
     Intersection SampleP() const override

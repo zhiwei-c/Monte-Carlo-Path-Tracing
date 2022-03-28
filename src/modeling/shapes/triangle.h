@@ -40,7 +40,9 @@ public:
 			 Material *material,
 			 bool flip_normals);
 
-	Intersection Intersect(const Ray &ray) const override;
+	// Intersection Intersect(const Ray &ray) const override;
+	
+	void Intersect(const Ray &ray, Intersection& its) const override;
 
 	Intersection SampleP() const override;
 

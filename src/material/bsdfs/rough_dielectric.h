@@ -9,7 +9,6 @@ class RoughDielectric : public Microfacet
 public:
 	/**
 	 * \brief 粗糙的电介质材质
-	 * \param id 材质id
 	 * \param distrib_type 用于模拟表面粗糙度的微表面分布的类型
 	 * \param alpha_u 沿切线（tangent）方向的粗糙度
 	 * \param alpha_v 沿副切线（bitangent）方向的粗糙度
@@ -18,16 +17,14 @@ public:
 	 * \param specular_reflectance 镜面反射系数。注意，对于物理真实感绘制，应默认为 1。
 	 * \param specular_transmittance 镜面透射系数。注意，对于物理真实感绘制，应默认为 1。
 	 */
-	RoughDielectric(const std::string &id,
-					MicrofacetDistribType distrib_type,
+	RoughDielectric(MicrofacetDistribType distrib_type,
 					std::unique_ptr<Texture> alpha_u,
 					std::unique_ptr<Texture> alpha_v,
 					Float int_ior,
 					Float ext_ior,
 					std::unique_ptr<Texture> specular_reflectance = nullptr,
 					std::unique_ptr<Texture> specular_transmittance = nullptr)
-		: Microfacet(id,
-					 MaterialType::kRoughDielectric,
+		: Microfacet(MaterialType::kRoughDielectric,
 					 distrib_type,
 					 std::move(alpha_u),
 					 std::move(alpha_v)),
@@ -58,54 +55,54 @@ public:
 	}
 
 	///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-	BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
+	void Sample(BsdfSampling &bs) const override
 	{
-		auto eta = inside ? eta_inv_ : eta_;	 //相对折射率，即光线透射侧介质折射率与入射侧介质折射率之比
-		auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+		auto eta = bs.inside ? eta_inv_ : eta_;		//相对折射率，即光线透射侧介质折射率与入射侧介质折射率之比
+		auto eta_inv = bs.inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
-		auto [alpha_u, alpha_v] = GetAlpha(texcoord);
+		auto [alpha_u, alpha_v] = GetAlpha(bs.texcoord);
 
 		auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);
 
 		// Walter 等人在《Microfacet Models for Refraction through Rough Surfaces》中提到的技巧，略微缩放粗糙度，以减少重要性采样权重。
-		distrib->ScaleAlpha(1.2 - 0.2 * std::sqrt(std::fabs(glm::dot(-wo, normal))));
+		distrib->ScaleAlpha(1.2 - 0.2 * std::sqrt(std::fabs(glm::dot(-bs.wo, bs.normal))));
 
-		auto [normal_micro, D] = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
+		auto [normal_micro, D] = distrib->Sample(bs.normal, {UniformFloat(), UniformFloat()});
 
 		if (D < kEpsilon)
-			return BsdfSampling();
+			return;
 
-		BsdfSampling bs;
-		auto normal_n = normal;
-		auto inside_n = inside;
-		auto F = Fresnel(-wo, normal_micro, eta_inv);
+		auto F = Fresnel(-bs.wo, normal_micro, eta_inv);
 		auto sample_x = UniformFloat();
 		if (sample_x < F)
 		{
-			bs.wi = -Reflect(-wo, normal_micro);
-			if (glm::dot(bs.wi, normal) >= 0)
-				return BsdfSampling();
+			bs.wi = -Reflect(-bs.wo, normal_micro);
+			if (glm::dot(bs.wi, bs.normal) >= 0)
+				return;
 		}
 		else
 		{
-			bs.wi = -Refract(-wo, normal_micro, eta_inv);
-			if (glm::dot(bs.wi, normal) <= 0)
-				return BsdfSampling();
-			normal_n = -normal_n;
-			inside_n = !inside_n;
+			bs.wi = -Refract(-bs.wo, normal_micro, eta_inv);
+			if (glm::dot(bs.wi, bs.normal) <= 0)
+				return;
+			bs.normal = -bs.normal;
+			bs.inside = !bs.inside;
 		}
 
-		bs.pdf = Pdf(bs.wi, wo, normal_n, texcoord, inside_n);
+		bs.pdf = Pdf(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
 		if (bs.pdf < kEpsilonPdf)
-			return BsdfSampling();
-
+		{
+			bs.pdf = 0;
+			return;
+		}
 		if (!Microfacet::TextureMapping() && alpha_u > 0.01 && alpha_v > 0.01 && bs.pdf < kEpsilonL)
-			return BsdfSampling();
+		{
+			bs.pdf = 0;
+			return;
+		}
 
-		if (get_weight)
-			bs.weight = Eval(bs.wi, wo, normal_n, texcoord, inside_n);
-
-		return bs;
+		if (bs.get_weight)
+			bs.weight = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
 	}
 
 	///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重

@@ -46,7 +46,100 @@ public:
         aabb_ += pos_min;
     }
 
-    Intersection Intersect(const Ray &ray) const override
+    // Intersection Intersect(const Ray &ray) const override
+    // {
+    //     auto ray_o = ray.origin(),
+    //          ray_d = ray.dir();
+    //     if (to_local_)
+    //     {
+    //         ray_o = TransfromPt(*to_local_, ray_o);
+    //         ray_d = TransfromDir(*to_local_, ray_d);
+    //     }
+
+    //     auto normal = Vector3(0, 0, 1);
+
+    //     if (!material_->twosided())
+    //     {
+    //         if (flip_normals_)
+    //         {
+    //             if (NotSameHemis(normal, ray_d))
+    //                 return Intersection();
+    //         }
+    //         else
+    //         {
+    //             if (SameHemis(normal, ray_d))
+    //                 return Intersection();
+    //         }
+    //     }
+
+    //     auto t_z = -ray_o.z / ray_d.z;
+    //     if (t_z < kEpsilon)
+    //         return Intersection();
+
+    //     auto pos = ray_o + t_z * ray_d;
+
+    //     if (glm::dot(pos, pos) > 1 - kEpsilon)
+    //         return Intersection();
+
+    //     auto texcoord = Vector2(-1);
+    //     if (this->material_->NormalPerturbing() ||
+    //         this->material_->OpacityMapping() ||
+    //         this->material_->TextureMapping())
+    //     {
+    //         Float theta, phi, r;
+    //         CartesianToSpherical(pos, theta, phi, r);
+    //         Vector2 texcoord;
+    //         texcoord.x = std::min((Float)1, r);
+    //         texcoord.y = phi * 0.5 * kPiInv;
+
+    //         if (this->material_->Transparent(texcoord))
+    //             return Intersection();
+
+    //         if (this->material_->NormalPerturbing())
+    //         {
+    //             auto r_1 = r + kEpsilon < 1 ? r + kEpsilon : r - kEpsilon;
+    //             auto pos1 = SphericalToCartesian(theta, phi, r_1);
+    //             auto texcoord1 = Vector2(r_1, texcoord.y);
+
+    //             auto phi2 = phi + kEpsilon < 2 * kPi ? phi + kEpsilon : phi - kEpsilon;
+    //             auto pos2 = SphericalToCartesian(theta, phi2, r);
+    //             auto texcoord2 = Vector2(texcoord.x, phi2 * 0.5 * kPiInv);
+
+    //             auto v0v1 = pos1 - pos,
+    //                  v0v2 = pos2 - pos;
+    //             auto delta_uv_1 = texcoord1 - texcoord,
+    //                  delta_uv_2 = texcoord2 - texcoord;
+
+    //             auto r = 1 / (delta_uv_2.x * delta_uv_1.y - delta_uv_1.x * delta_uv_2.y);
+    //             auto tangent = glm::normalize(Vector3(delta_uv_1.y * v0v2 - delta_uv_2.y * v0v1) * r),
+    //                  bitangent = glm::normalize(Vector3(delta_uv_2.x * v0v1 - delta_uv_1.x * v0v2) * r);
+
+    //             normal = this->material_->PerturbNormal(normal, tangent, bitangent, texcoord);
+    //         }
+    //     }
+    //     auto inside = false;
+    //     if (ray_o.z < 0)
+    //     {
+    //         normal = -normal;
+    //         inside = !inside;
+    //     }
+
+    //     if (flip_normals_)
+    //     {
+    //         normal = -normal;
+    //         inside = !inside;
+    //     }
+
+    //     if (to_world_)
+    //     {
+    //         pos = TransfromPt(*to_world_, pos);
+    //         normal = TransfromDir(*to_world_norm_, normal);
+    //     }
+    //     auto distance = glm::length(pos - ray.origin());
+    //     return Intersection(pos, normal, texcoord, inside, distance, this->material_, this->pdf_area_);
+    // }
+
+    void Intersect(const Ray &ray, Intersection &its) const override
     {
         auto ray_o = ray.origin(),
              ray_d = ray.dir();
@@ -63,23 +156,23 @@ public:
             if (flip_normals_)
             {
                 if (NotSameHemis(normal, ray_d))
-                    return Intersection();
+                    return;
             }
             else
             {
                 if (SameHemis(normal, ray_d))
-                    return Intersection();
+                    return;
             }
         }
 
         auto t_z = -ray_o.z / ray_d.z;
         if (t_z < kEpsilon)
-            return Intersection();
+            return;
 
         auto pos = ray_o + t_z * ray_d;
 
         if (glm::dot(pos, pos) > 1 - kEpsilon)
-            return Intersection();
+            return;
 
         auto texcoord = Vector2(-1);
         if (this->material_->NormalPerturbing() ||
@@ -93,7 +186,7 @@ public:
             texcoord.y = phi * 0.5 * kPiInv;
 
             if (this->material_->Transparent(texcoord))
-                return Intersection();
+                return;
 
             if (this->material_->NormalPerturbing())
             {
@@ -117,6 +210,15 @@ public:
                 normal = this->material_->PerturbNormal(normal, tangent, bitangent, texcoord);
             }
         }
+        if (to_world_)
+        {
+            pos = TransfromPt(*to_world_, pos);
+            normal = TransfromDir(*to_world_norm_, normal);
+        }
+        auto distance = glm::length(pos - ray.origin());
+        if (distance > its.distance())
+            return;
+
         auto inside = false;
         if (ray_o.z < 0)
         {
@@ -130,13 +232,7 @@ public:
             inside = !inside;
         }
 
-        if (to_world_)
-        {
-            pos = TransfromPt(*to_world_, pos);
-            normal = TransfromDir(*to_world_norm_, normal);
-        }
-        auto distance = glm::length(pos - ray.origin());
-        return Intersection(pos, normal, texcoord, inside, distance, this->material_, this->pdf_area_);
+        its = Intersection(pos, normal, texcoord, inside, distance, this->material_, this->pdf_area_);
     }
 
     Intersection SampleP() const override

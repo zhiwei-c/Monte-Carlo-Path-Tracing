@@ -121,7 +121,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             ke = Le.value();
         if (ke.r + ke.g + ke.b > 0)
         {
-            result.push_back(new AreaLight(id, ke));
+            result.push_back(new AreaLight(ke));
             continue;
         }
 
@@ -165,7 +165,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             {
                 auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
                 auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("bk7"));
-                result.push_back(new Dielectric(id, int_ior, ext_ior));
+                result.push_back(new Dielectric(int_ior, ext_ior));
                 flag_parsed = true;
                 break;
             }
@@ -176,7 +176,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             {
                 auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
                 auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("bk7"));
-                result.push_back(new ThinDielectric(id, int_ior, ext_ior));
+                result.push_back(new ThinDielectric(int_ior, ext_ior));
                 flag_parsed = true;
                 break;
             }
@@ -193,7 +193,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
                 auto alpha_v_tex = std::make_unique<ConstantTexture>(Spectrum(alpha_v));
                 auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
                 auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("bk7"));
-                result.push_back(new RoughDielectric(id, distrib_type, std::move(alpha_u_tex), std::move(alpha_v_tex), int_ior, ext_ior));
+                result.push_back(new RoughDielectric(distrib_type, std::move(alpha_u_tex), std::move(alpha_v_tex), int_ior, ext_ior));
                 flag_parsed = true;
                 break;
             }
@@ -204,7 +204,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             case "smooth-conductor"_hash:
             {
                 auto [mirror, eta, k] = GetEtaK(other_params, id);
-                result.push_back(new Conductor(id, mirror, eta, k, IOR.at("air")));
+                result.push_back(new Conductor(mirror, eta, k, IOR.at("air")));
                 flag_parsed = true;
                 break;
             }
@@ -220,7 +220,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
                 auto alpha_v = GetFloat(other_params, "alphaV").value_or(alpha);
                 auto alpha_v_tex = std::make_unique<ConstantTexture>(Spectrum(alpha_v));
                 auto [mirror, eta, k] = GetEtaK(other_params, id);
-                result.push_back(new RoughConductor(id, distrib_type, std::move(alpha_u_tex), std::move(alpha_v_tex), mirror, eta, k, IOR.at("air")));
+                result.push_back(new RoughConductor(distrib_type, std::move(alpha_u_tex), std::move(alpha_v_tex), mirror, eta, k, IOR.at("air")));
                 flag_parsed = true;
                 break;
             }
@@ -238,7 +238,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
                 auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
                 auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("polypropylene"));
                 auto nolinear = GetBoolean(other_params, "nonlinear").value_or(false);
-                result.push_back(new Plastic(id, int_ior, ext_ior, std::move(diffuse_map), nolinear));
+                result.push_back(new Plastic(int_ior, ext_ior, std::move(diffuse_map), nolinear));
                 flag_parsed = true;
                 break;
             }
@@ -263,7 +263,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
 
                 auto nolinear = GetBoolean(other_params, "nonlinear").value_or(false);
 
-                result.push_back(new RoughPlastic(id, distrib_type, std::move(alpha_tex), int_ior, ext_ior, std::move(diffuse_map), nolinear));
+                result.push_back(new RoughPlastic(distrib_type, std::move(alpha_tex), int_ior, ext_ior, std::move(diffuse_map), nolinear));
                 flag_parsed = true;
                 break;
             }
@@ -278,10 +278,10 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             {
                 if (!specular_map)
                     specular_map.reset(new ConstantTexture(Spectrum(ks)));
-                result.push_back(new Glossy(id, std::move(diffuse_map), std::move(specular_map), ns));
+                result.push_back(new Glossy(std::move(diffuse_map), std::move(specular_map), ns));
             }
             else
-                result.push_back(new Diffuse(id, std::move(diffuse_map)));
+                result.push_back(new Diffuse(std::move(diffuse_map)));
         }
         result.back()->setBump(std::move(bump_map));
         result.back()->setOpacity(std::move(opacity_map));

@@ -322,7 +322,7 @@ void XmlParser::ParseDiffuse(rapidxml::xml_node<> *node_diffuse, std::string id)
 	if (!reflectance)
 		reflectance.reset(new ConstantTexture(Spectrum(0.5)));
 
-	bsdfs_.push_back(new Diffuse(id, std::move(reflectance)));
+	bsdfs_.push_back(new Diffuse(std::move(reflectance)));
 }
 
 void XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, std::string id, bool thin)
@@ -332,9 +332,9 @@ void XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, std::stri
 	auto specular_reflectance = ParseTextureOrOther(node_dielectric, "specularReflectance");
 	auto specular_transmittance = ParseTextureOrOther(node_dielectric, "specularTransmittance");
 	if (thin)
-		bsdfs_.push_back(new ThinDielectric(id, int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
+		bsdfs_.push_back(new ThinDielectric(int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
 	else
-		bsdfs_.push_back(new Dielectric(id, int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
+		bsdfs_.push_back(new Dielectric(int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
 }
 
 void XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric, std::string id)
@@ -356,7 +356,7 @@ void XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric
 
 	auto specular_reflectance = ParseTextureOrOther(node_rough_dielectric, "specularReflectance");
 	auto specular_transmittance = ParseTextureOrOther(node_rough_dielectric, "specularTransmittance");
-	bsdfs_.push_back(new RoughDielectric(id, GetDistrbType(distri), std::move(alpha_u), std::move(alpha_v), int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
+	bsdfs_.push_back(new RoughDielectric(GetDistrbType(distri), std::move(alpha_u), std::move(alpha_v), int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
 }
 
 void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string id)
@@ -398,7 +398,7 @@ void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string
 		k = GetSpectrum(node_k);
 	}
 
-	bsdfs_.push_back(new Conductor(id, mirror, eta, k, ext_eta, std::move(specular_reflectance)));
+	bsdfs_.push_back(new Conductor(mirror, eta, k, ext_eta, std::move(specular_reflectance)));
 }
 
 void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, std::string id)
@@ -450,7 +450,7 @@ void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, 
 		auto node_k = GetChild(node_rough_conductor, "k", false);
 		k = GetSpectrum(node_k);
 	}
-	bsdfs_.push_back(new RoughConductor(id, GetDistrbType(distri), std::move(alpha_u), std::move(alpha_v), mirror, eta, k, ext_eta, std::move(specular_reflectance)));
+	bsdfs_.push_back(new RoughConductor(GetDistrbType(distri), std::move(alpha_u), std::move(alpha_v), mirror, eta, k, ext_eta, std::move(specular_reflectance)));
 }
 
 void XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic, std::string id)
@@ -463,7 +463,7 @@ void XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic, std::string id)
 		diffuse_reflectance.reset(new ConstantTexture(Spectrum(0.5)));
 	bool nonlinear = GetBoolean(node_plastic, "nonlinear").value_or(false);
 
-	bsdfs_.push_back(new Plastic(id, int_ior, ext_ior, std::move(diffuse_reflectance), nonlinear, std::move(specular_reflectance)));
+	bsdfs_.push_back(new Plastic(int_ior, ext_ior, std::move(diffuse_reflectance), nonlinear, std::move(specular_reflectance)));
 }
 
 void XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std::string id)
@@ -484,7 +484,7 @@ void XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std:
 
 	auto nonlinear = GetBoolean(node_rough_plastic, "nonlinear").value_or(false);
 
-	bsdfs_.push_back(new RoughPlastic(id, GetDistrbType(distri), std::move(alpha), int_ior, ext_ior, std::move(diffuse_reflectance), nonlinear, std::move(specular_reflectance)));
+	bsdfs_.push_back(new RoughPlastic(GetDistrbType(distri), std::move(alpha), int_ior, ext_ior, std::move(diffuse_reflectance), nonlinear, std::move(specular_reflectance)));
 }
 
 void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape)
@@ -507,7 +507,7 @@ void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape)
 		}
 		auto node_radiance = GetChild(node_emitter, "radiance");
 		auto radiance = GetSpectrum(node_radiance);
-		bsdfs_.push_back(new AreaLight(ref, radiance));
+		bsdfs_.push_back(new AreaLight(radiance));
 		bsdf_map_[ref] = bsdfs_.back();
 	}
 	else if (auto node_ref = node_shape->first_node("ref"); node_ref)

@@ -12,14 +12,14 @@ class BvhNode
 public:
 	BvhNode() : left_(nullptr), right_(nullptr), shape_(nullptr), area_(0) {}
 
-	BvhNode(std::unique_ptr<BvhNode> left,
-			std::unique_ptr<BvhNode> right,
-			const Shape *const shape)
-		: left_(std::move(left)),
-		  right_(std::move(right)),
+	BvhNode(BvhNode *left,
+			BvhNode *right,
+			Shape *shape)
+		: left_(left),
+		  right_(right),
 		  shape_(shape)
 	{
-		if (left_ != nullptr)
+		if (left_)
 		{
 			area_ = right_ ? left_->area() + right_->area() : left_->area();
 			aabb_ = right_ ? left_->aabb() + right_->aabb() : left_->aabb();
@@ -31,44 +31,49 @@ public:
 		}
 	}
 
-	Intersection Intersect(const Ray &ray) const
+	~BvhNode()
+	{
+		if (left_)
+		{
+			delete left_;
+			left_ = nullptr;
+		}
+		if (right_)
+		{
+			delete right_;
+			right_ = nullptr;
+		}
+	}
+
+	void Intersect(const Ray &ray, Intersection &its) const
 	{
 		if (!aabb_.Intersect(ray))
-		{
-			return Intersection();
-		}
+			return;
 
-		if (left_ == nullptr)
-		{
-			if (shape_ != nullptr)
-				return shape_->Intersect(ray);
-			else
-				return Intersection();
-		}
-		auto ret_left = left_->Intersect(ray);
-		auto ret_right = right_->Intersect(ray);
-		return ret_left.distance() < ret_right.distance() ? ret_left : ret_right;
-	}
-
-	Intersection SampleP(Float p) const
-	{
-		if (shape_ != nullptr)
-			return shape_->SampleP();
-		else if (p * area_ < left_->area())
-			return left_->SampleP(p);
+		if (shape_)
+			shape_->Intersect(ray, its);
 		else
-			return right_->SampleP(p);
+		{
+			left_->Intersect(ray, its);
+			right_->Intersect(ray, its);
+		}
 	}
 
-	Float area() const { return area_; }
+	BvhNode *&left() { return left_; }
 
-	AABB aabb() const { return aabb_; }
+	BvhNode *&right() { return right_; }
+
+	Shape *&shape() { return shape_; }
+
+	const Float &area() const { return area_; }
+
+	const AABB &aabb() const { return aabb_; }
 
 private:
-	Float area_;							//节点包含物体的总表面积
-	AABB aabb_;								//节点包围盒
-	const Shape *shape_;					//节点包含的物体。仅在叶节点非空。
-	std::unique_ptr<BvhNode> left_, right_; //子节点
+	Float area_;			 //节点包含物体的总表面积
+	AABB aabb_;				 //节点包围盒
+	Shape *shape_;			 //节点包含的物体。仅在叶节点非空。
+	BvhNode *left_, *right_; //子节点
 };
 
 NAMESPACE_END(simple_renderer)

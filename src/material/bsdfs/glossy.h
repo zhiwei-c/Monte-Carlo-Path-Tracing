@@ -11,17 +11,14 @@ class Glossy : public Material
 public:
     /**
      * \brief 冯模型定义的有光泽的材质
-     * \param id 材质id
      * \param diffuse_reflectance 漫反射系数
      * \param specular_reflectance 镜面反射系数
      * \param exponent 镜面反射指数系数
-     * \param diffuse_map 漫反射纹理
      */
-    Glossy(const std::string &id,
-           std::unique_ptr<Texture> diffuse_reflectance,
+    Glossy(std::unique_ptr<Texture> diffuse_reflectance,
            std::unique_ptr<Texture> specular_reflectance,
            Float exponent)
-        : Material(id, MaterialType::kGlossy),
+        : Material(MaterialType::kGlossy),
           diffuse_reflectance_(std::move(diffuse_reflectance)),
           specular_reflectance_(std::move(specular_reflectance)),
           exponent_(exponent)
@@ -43,32 +40,32 @@ public:
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
+    void Sample(BsdfSampling &bs) const override
     {
-        BsdfSampling bs;
-        auto pdf_diffuse = get_diffuse_sampling_weight(texcoord);
+        auto pdf_diffuse = get_diffuse_sampling_weight(bs.texcoord);
         auto sample_x = UniformFloat();
         if (sample_x < pdf_diffuse)
         {
             auto [wi_local, pdf] = HemisCos();
-            bs.wi = -ToWorld(wi_local, normal);
+            bs.wi = -ToWorld(wi_local, bs.normal);
         }
         else
         {
             auto wi_local = HemisCosN(exponent_);
-            auto wr_pseudo = Reflect(-wo, normal);
+            auto wr_pseudo = Reflect(-bs.wo, bs.normal);
             auto wi = -ToWorld(wi_local, wr_pseudo);
-            if (SameHemis(wi, normal))
-                return BsdfSampling();
+            if (SameHemis(wi, bs.normal))
+                return;
         }
-        bs.pdf = Pdf(bs.wi, wo, normal, texcoord, inside);
+        bs.pdf = Pdf(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
         if (bs.pdf < kEpsilonL)
-            return BsdfSampling();
+        {
+            bs.pdf = 0;
+            return;
+        }
 
-        if (get_weight)
-            bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
-
-        return bs;
+        if (bs.get_weight)
+            bs.weight = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
     }
 
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重

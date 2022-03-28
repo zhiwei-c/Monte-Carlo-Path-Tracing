@@ -50,15 +50,22 @@ public:
      * \param wo 给定的光线出射方向
      * \return 采样得到的光线入射方向
      */
-    BsdfSampling Sample(const Vector3 &wo, bool get_weight = true) const
+    std::unique_ptr<BsdfSampling> Sample(const Vector3 &wo, bool get_weight = true) const
     {
         auto one_side = glm::dot(wo, normal_) > 0; //光线与交点法线是否同侧
-        auto normal = one_side ? normal_ : -normal_;
-        auto inside = one_side ? inside_ : !inside_;
+        auto bs = std::make_unique<BsdfSampling>();
+        bs->inside = one_side ? inside_ : !inside_;
+        bs->get_weight = get_weight;
+        bs->texcoord = material_->TextureMapping() ? &texcoord_ : nullptr;
+        bs->wo = wo;
+        bs->normal = one_side ? normal_ : -normal_;
 
-        return material_->TextureMapping()
-                   ? material_->Sample(wo, normal, &texcoord_, inside, get_weight)
-                   : material_->Sample(wo, normal, nullptr, inside, get_weight);
+        material_->Sample(*bs);
+
+        if (bs->pdf < kEpsilonPdf)
+            return nullptr;
+        else
+            return bs;
     }
 
     /**

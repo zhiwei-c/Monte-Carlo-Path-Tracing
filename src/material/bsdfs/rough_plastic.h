@@ -10,7 +10,6 @@ class RoughPlastic : public Microfacet
 public:
     /**
      * \brief 粗糙的塑料材质
-     * \param id 材质id
      * \param distrib_type 用于模拟表面粗糙度的微表面分布的类型
      * \param alpha 粗糙度
      * \param int_ior 内折射率
@@ -19,16 +18,14 @@ public:
      * \param nonlinear 是否考虑因内部散射而引起的非线性色移
      * \param specular_reflectance 镜面反射系数。注意，对于物理真实感绘制，应默认为 1。
      */
-    RoughPlastic(const std::string &id,
-                 MicrofacetDistribType distrib_type,
+    RoughPlastic(MicrofacetDistribType distrib_type,
                  std::unique_ptr<Texture> alpha,
                  Float int_ior,
                  Float ext_ior,
                  std::unique_ptr<Texture> diffuse_reflectance,
                  bool nonlinear,
                  std::unique_ptr<Texture> specular_reflectance = nullptr)
-        : Microfacet(id,
-                     MaterialType::kRoughPlastic,
+        : Microfacet(MaterialType::kRoughPlastic,
                      distrib_type,
                      std::move(alpha),
                      nullptr),
@@ -64,42 +61,43 @@ public:
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
+    void Sample(BsdfSampling &bs) const override
     {
-        auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+        auto eta_inv = bs.inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
-        auto [alpha_u, alpha_v] = GetAlpha(texcoord);
-        auto specular_sampling_weight = get_specular_sampling_weight(texcoord);
+        auto [alpha_u, alpha_v] = GetAlpha(bs.texcoord);
+        auto specular_sampling_weight = get_specular_sampling_weight(bs.texcoord);
 
-        auto kr = Fresnel(-wo, normal, eta_inv);
+        auto kr = Fresnel(-bs.wo, bs.normal, eta_inv);
         auto pdf_specular = kr * specular_sampling_weight,
              pdf_diffuse = (1 - kr) * (1 - specular_sampling_weight);
         pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
 
-        BsdfSampling bs;
         auto sample_x = UniformFloat();
         if (sample_x < pdf_specular)
         {
             auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_u);
-            auto [normal_micro, pdf] = distrib->Sample(normal, {UniformFloat(), UniformFloat()});
-            bs.wi = -Reflect(-wo, normal_micro);
-            if (glm::dot(bs.wi, normal) >= 0)
-                return BsdfSampling();
+            auto [normal_micro, pdf] = distrib->Sample(bs.normal, {UniformFloat(), UniformFloat()});
+            bs.wi = -Reflect(-bs.wo, normal_micro);
+            if (glm::dot(bs.wi, bs.normal) >= 0)
+                return;
         }
         else
         {
             auto [wi_local, pdf] = HemisCos();
-            bs.wi = -ToWorld(wi_local, normal);
+            bs.wi = -ToWorld(wi_local, bs.normal);
         }
 
-        bs.pdf = Pdf(bs.wi, wo, normal, texcoord, inside);
-        if (bs.pdf < kEpsilonL)
-            return BsdfSampling();
+        bs.pdf = Pdf(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+		if (bs.pdf < kEpsilonL)
+		{
+			bs.pdf = 0;
+			return;
+		}
 
-        if (get_weight)
-            bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
-
-        return bs;
+		if (bs.get_weight)
+			bs.weight = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+	
     }
 
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
@@ -212,8 +210,8 @@ private:
     Float eta_inv_;  // 光线射出材质的相对折射率
     Float fdr_ext_;
     Float fdr_int_;
-    Float specular_sampling_weight_; // 抽样镜面反射权重
-    Float f_add_; //补偿多次散射后出射光能的系数
+    Float specular_sampling_weight_;                // 抽样镜面反射权重
+    Float f_add_;                                   //补偿多次散射后出射光能的系数
     std::unique_ptr<Texture> specular_reflectance_; // 镜面反射系数。注意，对于物理真实感绘制默认为 1，应为空指针。
     std::unique_ptr<Texture> diffuse_reflectance_;  // 漫反射系数
 

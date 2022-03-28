@@ -10,20 +10,18 @@ class Plastic : public Material
 public:
     /**
      * \brief 光滑的塑料材质
-     * \param id 材质id
      * \param int_ior 内折射率
      * \param ext_ior 外折射率
      * \param diffuse_reflectance 漫反射系数
      * \param nonlinear 是否考虑因内部散射而引起的非线性色移
      * \param specular_reflectance 镜面反射系数。注意，对于物理真实感绘制，应默认为 1。
      */
-    Plastic(const std::string &id,
-            Float int_ior,
+    Plastic(Float int_ior,
             Float ext_ior,
             std::unique_ptr<Texture> diffuse_reflectance,
             bool nonlinear,
             std::unique_ptr<Texture> specular_reflectance = nullptr)
-        : Material(id, MaterialType::kPlastic),
+        : Material(MaterialType::kPlastic),
           diffuse_reflectance_(std::move(diffuse_reflectance)),
           nonlinear_(nonlinear),
           eta_(int_ior / ext_ior),
@@ -50,36 +48,36 @@ public:
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    BsdfSampling Sample(const Vector3 &wo, const Vector3 &normal, const Vector2 *texcoord, bool inside, bool get_weight) const override
+    void Sample(BsdfSampling &bs) const override
     {
-        auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+        auto eta_inv = bs.inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
-        auto specular_sampling_weight = get_specular_sampling_weight(texcoord);
+        auto specular_sampling_weight = get_specular_sampling_weight(bs.texcoord);
 
-        auto kr = Fresnel(-wo, normal, eta_inv);
+        auto kr = Fresnel(-bs.wo, bs.normal, eta_inv);
         auto pdf_specular = kr * specular_sampling_weight,
              pdf_diffuse = (1 - kr) * (1 - specular_sampling_weight);
         pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
 
-        BsdfSampling bs;
         auto sample_x = UniformFloat();
         if (sample_x < pdf_specular)
         {
-            bs.wi = -Reflect(-wo, normal);
+            bs.wi = -Reflect(-bs.wo, bs.normal);
         }
         else
         {
             auto [wi_local, pdf] = HemisCos();
-            bs.wi = -ToWorld(wi_local, normal);
+            bs.wi = -ToWorld(wi_local, bs.normal);
         }
-        bs.pdf = Pdf(bs.wi, wo, normal, texcoord, inside);
+        bs.pdf = Pdf(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
         if (bs.pdf < kEpsilonL)
-            return BsdfSampling();
+        {
+            bs.pdf = 0;
+            return;
+        };
 
-        if (get_weight)
-            bs.weight = Eval(bs.wi, wo, normal, texcoord, inside);
-
-        return bs;
+        if (bs.get_weight)
+            bs.weight = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
     }
 
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
