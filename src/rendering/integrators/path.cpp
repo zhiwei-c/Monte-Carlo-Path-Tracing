@@ -46,7 +46,7 @@ Spectrum PathIntegrator::Shade(const Vector3 &eye_pos, const Vector3 &look_dir) 
 		}
 		//按 BSDF 采样间接光照更新衰减系数
 		attenuation *= b_rec->weight * cos_theta / b_rec->pdf;
-		if (depth >= pdf_rr_)
+		if (depth > rr_depth_)
 			attenuation /= pdf_rr_;
 
 		its = its_pre,
