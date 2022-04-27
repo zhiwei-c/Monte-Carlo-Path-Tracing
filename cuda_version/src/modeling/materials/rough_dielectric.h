@@ -1,0 +1,206 @@
+#pragma once
+
+#include "material_base.h"
+
+__global__ void InitRoughDielectric(uint m_idx,
+
+                                    MaterialInfo *material_info_list,
+                                    Texture *texture_list,
+                                    Material *material_list)
+{
+    if (threadIdx.x == 0 && blockIdx.x == 0)
+    {
+        auto bump_map = static_cast<Texture *>(nullptr);
+        if (material_info_list[m_idx].bump_map_idx != kUintMax)
+            bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
+
+        auto opacity_map = static_cast<Texture *>(nullptr);
+        if (material_info_list[m_idx].opacity_idx != kUintMax)
+            opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
+
+        auto specular_reflectance = static_cast<Texture *>(nullptr);
+        if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
+            specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
+
+        auto specular_transmittance = static_cast<Texture *>(nullptr);
+        if (material_info_list[m_idx].specular_transmittance_idx != kUintMax)
+            specular_transmittance = texture_list + material_info_list[m_idx].specular_transmittance_idx;
+
+        auto alpha_u = static_cast<Texture *>(nullptr);
+        if (material_info_list[m_idx].alpha_u_idx != kUintMax)
+            alpha_u = texture_list + material_info_list[m_idx].alpha_u_idx;
+
+        auto alpha_v = static_cast<Texture *>(nullptr);
+        if (material_info_list[m_idx].alpha_v_idx != kUintMax)
+            alpha_v = texture_list + material_info_list[m_idx].alpha_v_idx;
+
+        material_list[m_idx].InitRoughDielectric(material_info_list[m_idx].twosided,
+                                                 bump_map,
+                                                 opacity_map,
+                                                 material_info_list[m_idx].eta,
+                                                 specular_reflectance,
+                                                 specular_transmittance,
+                                                 material_info_list[m_idx].distri,
+                                                 alpha_u,
+                                                 alpha_v);
+    }
+}
+
+__device__ void Material::InitRoughDielectric(bool twosided,
+                                              Texture *bump_map,
+                                              Texture *opacity_map,
+                                              vec3 eta,
+                                              Texture *specular_reflectance,
+                                              Texture *specular_transmittance,
+                                              MicrofacetDistribType distri,
+                                              Texture *alpha_u,
+                                              Texture *alpha_v)
+{
+
+    type_ = kRoughDielectric;
+    twosided_ = twosided;
+    bump_map_ = bump_map;
+    opacity_map_ = opacity_map;
+    eta_d_ = eta.x;
+    eta_inv_d_ = 1.0 / eta.x;
+    specular_reflectance_ = specular_reflectance;
+    specular_transmittance_ = specular_transmittance;
+    distri_ = distri;
+    alpha_u_ = alpha_u;
+    alpha_v_ = alpha_v;
+}
+
+__device__ void Material::SampleRoughDielectric(BsdfSampling &bs, const vec3 &sample) const
+{
+    auto eta_inv = bs.inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+
+    auto alpha_u = alpha_u_ ? alpha_u_->Color(bs.texcoord).x : 0.1;
+    auto alpha_v = alpha_v_ ? alpha_v_->Color(bs.texcoord).x : 0.1;
+
+    // Walter 等人在《Microfacet Models for Refraction through Rough Surfaces》中提到的技巧，略微缩放粗糙度，以减少重要性采样权重。
+    auto scale = 1.2 - 0.2 * sqrt(abs(myvec::dot(-bs.wo, bs.normal)));
+    alpha_u *= scale;
+    alpha_v *= scale;
+
+    auto facet_normal = vec3(0);
+    auto pdf = static_cast<Float>(0);
+    SampleNormDistrib(distri_, alpha_u, alpha_v, bs.normal, sample, facet_normal, pdf);
+
+    if (pdf < kEpsilonPdf)
+        return;
+
+    auto F = Fresnel(-bs.wo, facet_normal, eta_inv);
+    if (sample.z < F)
+    {
+        bs.wi = -Reflect(-bs.wo, facet_normal);
+        if (myvec::dot(bs.wi, bs.normal) >= 0)
+            return;
+    }
+    else
+    {
+        bs.wi = -Refract(-bs.wo, facet_normal, eta_inv);
+        if (myvec::dot(bs.wi, bs.normal) <= 0)
+            return;
+        bs.normal = -bs.normal;
+        bs.inside = !bs.inside;
+    }
+
+    bs.pdf = PdfRoughDielectric(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    if (bs.pdf < kEpsilonPdf)
+        return;
+
+    bs.attenuation = EvalRoughDielectric(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    bs.valid = true;
+}
+__device__ vec3 Material::EvalRoughDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+{
+    auto eta_inv = inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+
+    auto alpha_u = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;
+    auto alpha_v = alpha_v_ ? alpha_v_->Color(texcoord).x : 0.1;
+
+    auto cos_o_n = myvec::dot(wo, normal);
+    auto cos_i_n = myvec::dot(-wi, normal);
+
+    auto h = vec3(0);
+    auto F = static_cast<Float>(0);
+    auto relfect = cos_o_n > 0;
+    if (relfect)
+    {
+        h = myvec::normalize(-wi + wo);
+        F = Fresnel(wi, h, eta_inv);
+    }
+    else
+    {
+        h = myvec::normalize(-eta_inv * wi + wo);
+        if (NotSameHemis(h, normal))
+            h = -h;
+        F = Fresnel(wi, h, eta_inv);
+    }
+
+    auto D = PdfNormDistrib(distri_, alpha_u, alpha_v, normal, h);
+
+    auto G = SmithG1(distri_, alpha_u, alpha_v, -wi, normal, h) *
+             SmithG1(distri_, alpha_u, alpha_v, wo, normal, h);
+
+    if (relfect)
+    {
+        auto attenuation = vec3(F * D * G / (4.0 * abs(cos_i_n * cos_o_n)));
+        if (specular_reflectance_)
+            attenuation *= specular_reflectance_->Color(texcoord);
+        return attenuation;
+    }
+    else
+    {
+        auto cos_i_h = myvec::dot(-wi, h),
+             cos_o_h = myvec::dot(wo, h);
+        auto attenuation = vec3(abs(cos_i_h * cos_o_h * (1.0 - F) * G * D /
+                                    (cos_i_n * cos_o_n * pow(eta_inv * cos_i_h + cos_o_h, 2))));
+        if (specular_transmittance_)
+            attenuation *= specular_transmittance_->Color(texcoord);
+        //光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
+        attenuation *= eta_inv * eta_inv;
+        return attenuation;
+    }
+}
+__device__ Float Material::PdfRoughDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+{
+    auto eta_inv = inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+
+    auto alpha_u = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;
+    auto alpha_v = alpha_v_ ? alpha_v_->Color(texcoord).x : 0.1;
+
+    auto cos_i_n = myvec::dot(-wi, normal),
+         cos_o_n = myvec::dot(wo, normal);
+
+    auto h = vec3(0);
+    auto relfect = cos_o_n > 0;
+    if (relfect)
+    {
+        h = myvec::normalize(-wi + wo);
+    }
+    else
+    {
+        h = myvec::normalize(-eta_inv * wi + wo);
+        if (NotSameHemis(h, normal))
+            h = -h;
+    }
+
+    auto F = Fresnel(wi, h, eta_inv);
+
+    auto D = PdfNormDistrib(distri_, alpha_u, alpha_v, normal, h);
+    if (D < kEpsilon)
+        return 0;
+
+    if (relfect)
+    {
+        auto jacobian = abs(1.0 / (4.0 * myvec::dot(wo, h)));
+        return F * D * jacobian;
+    }
+    else
+    {
+        auto jacobian = abs(myvec::dot(wo, h) /
+                            pow(eta_inv * myvec::dot(-wi, h) + myvec::dot(wo, h), 2));
+        return (1.0 - F) * D * jacobian;
+    }
+}

@@ -11,11 +11,11 @@
 			<matrix value="-0.89874 -0.0182716 -0.4381 1.211 0 0.999131 -0.0416703 1.80475 0.438481 -0.0374507 -0.89796 3.85239 0 0 0 1"/>
 		</transform>
 		<sampler type="sobol" >
-			<integer name="sampleCount" value="4" />
+			<integer name="sampleCount" value="64" />
 		</sampler>
 		<film type="ldrfilm" >
-			<integer name="width" value="15360" />
-			<integer name="height" value="8640" />
+			<integer name="width" value="1280" />
+			<integer name="height" value="720" />
 			<string name="fileFormat" value="png" />
 			<string name="pixelFormat" value="rgb" />
 			<float name="gamma" value="-1" />

@@ -1,0 +1,138 @@
+#pragma once
+
+#include "material_base.h"
+
+__global__ void InitRoughConductor(uint m_idx,
+                                   MaterialInfo *material_info_list,
+                                   Texture *texture_list,
+                                   Material *material_list)
+{
+    if (threadIdx.x == 0 && blockIdx.x == 0)
+    {
+        auto bump_map = static_cast<Texture *>(nullptr);
+        if (material_info_list[m_idx].bump_map_idx != kUintMax)
+            bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
+
+        auto opacity_map = static_cast<Texture *>(nullptr);
+        if (material_info_list[m_idx].opacity_idx != kUintMax)
+            opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
+
+        auto specular_reflectance = static_cast<Texture *>(nullptr);
+        if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
+            specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
+
+        auto alpha_u = static_cast<Texture *>(nullptr);
+        if (material_info_list[m_idx].alpha_u_idx != kUintMax)
+            alpha_u = texture_list + material_info_list[m_idx].alpha_u_idx;
+
+        auto alpha_v = static_cast<Texture *>(nullptr);
+        if (material_info_list[m_idx].alpha_v_idx != kUintMax)
+            alpha_v = texture_list + material_info_list[m_idx].alpha_v_idx;
+
+        material_list[m_idx].InitRoughConductor(material_info_list[m_idx].twosided,
+                                                bump_map,
+                                                opacity_map,
+                                                material_info_list[m_idx].mirror,
+                                                material_info_list[m_idx].eta,
+                                                material_info_list[m_idx].k,
+                                                specular_reflectance,
+                                                material_info_list[m_idx].distri,
+                                                alpha_u,
+                                                alpha_v);
+    }
+}
+
+__device__ void Material::InitRoughConductor(bool twosided,
+                                             Texture *bump_map,
+                                             Texture *opacity_map,
+                                             bool mirror,
+                                             vec3 eta,
+                                             vec3 k,
+                                             Texture *specular_reflectance,
+                                             MicrofacetDistribType distri,
+                                             Texture *alpha_u,
+                                             Texture *alpha_v)
+{
+    type_ = kRoughConductor;
+    twosided_ = twosided;
+    bump_map_ = bump_map;
+    opacity_map_ = opacity_map;
+    mirror_ = mirror;
+    eta_ = eta;
+    k_ = k;
+    specular_reflectance_ = specular_reflectance;
+    distri_ = distri;
+    alpha_u_ = alpha_u;
+    alpha_v_ = alpha_v;
+}
+__device__ void Material::SampleRoughConductor(BsdfSampling &bs, const vec3 &sample) const
+{
+    auto alpha_u = alpha_u_ ? alpha_u_->Color(bs.texcoord).x : 0.1;
+    auto alpha_v = alpha_v_ ? alpha_v_->Color(bs.texcoord).x : 0.1;
+
+    auto facet_normal = vec3(0);
+    Float pdf = 0;
+    SampleNormDistrib(distri_, alpha_u, alpha_v, bs.normal, sample, facet_normal, pdf);
+
+    if (pdf < kEpsilonPdf)
+        return;
+
+    bs.wi = -Reflect(-bs.wo, facet_normal);
+    if (myvec::dot(bs.wi, bs.normal) >= 0)
+        return;
+
+    bs.pdf = PdfRoughConductor(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    if (bs.pdf < kEpsilonPdf)
+        return;
+
+    bs.attenuation = EvalRoughConductor(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    bs.valid = true;
+}
+
+__device__ vec3 Material::EvalRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+{
+    if (NotSameHemis(wo, normal))
+        return vec3(0);
+
+    auto alpha_u = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;
+    auto alpha_v = alpha_v_ ? alpha_v_->Color(texcoord).x : 0.1;
+
+    auto cos_i_n = abs(myvec::dot(wi, normal)),
+         cos_o_n = abs(myvec::dot(wo, normal));
+
+    auto h = myvec::normalize(-wi + wo);
+
+    auto F = vec3(1);
+    if (!mirror_)
+        F = FresnelConductor(wi, h, eta_, k_);
+
+    auto D = PdfNormDistrib(distri_, alpha_u, alpha_v, normal, h);
+
+    auto G = SmithG1(distri_, alpha_u, alpha_v, -wi, normal, h) *
+             SmithG1(distri_, alpha_u, alpha_v, wo, normal, h);
+
+    auto albedo = F * static_cast<Float>(D * G / (4.0 * cos_i_n * cos_o_n));
+    if (specular_reflectance_)
+        albedo *= specular_reflectance_->Color(texcoord);
+    return albedo;
+}
+
+__device__ Float Material::PdfRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+{
+    if (NotSameHemis(wo, normal))
+        return 0;
+
+    if (myvec::dot(wi, normal) * myvec::dot(wo, normal) >= 0)
+        return 0;
+
+    auto alpha_u = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;
+    auto alpha_v = alpha_v_ ? alpha_v_->Color(texcoord).x : 0.1;
+
+    auto h = myvec::normalize(-wi + wo);
+
+    auto D = PdfNormDistrib(distri_, alpha_u, alpha_v, normal, h);
+    if (D < kEpsilonL)
+        return 0;
+    else
+        return D * abs(1.0 / (4.0 * myvec::dot(wo, h)));
+}
