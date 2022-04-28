@@ -13,7 +13,7 @@ public:
           absorb_(false),
           pos_(vec3(0)),
           normal_(vec3(0)),
-          inside_(false),
+          inside_(0),
           distance_(INFINITY),
           texcoord_(vec2(0)),
           material_(nullptr),
@@ -24,7 +24,7 @@ public:
           absorb_(true),
           pos_(vec3(0)),
           normal_(vec3(0)),
-          inside_(false),
+          inside_(0),
           distance_(distance),
           texcoord_(vec2(0)),
           material_(nullptr),
@@ -80,7 +80,11 @@ public:
     __device__ void Sample(BsdfSampling &bs, const vec3 &sample) const
     {
         auto one_side = myvec::dot(bs.wo, normal_) > 0; //光线与交点法线是否同侧
-        bs.inside = one_side ? inside_ : !inside_;
+
+        bs.inside = inside_;
+        if (!one_side)
+            bs.inside = (bs.inside == kTrue) ? kFalse: kTrue;
+
         bs.normal = one_side ? normal_ : -normal_;
         bs.texcoord = texcoord_;
 
@@ -100,10 +104,14 @@ public:
     __device__ vec3 Eval(const vec3 &wi, const vec3 &wo) const
     {
         auto one_side = myvec::dot(wi, normal_) < 0; //入射光线与法线是否同侧
-        auto inside = one_side ? inside_ : !inside_;
+
+        auto local_inside = inside_;
+        if (!one_side)
+            local_inside = (local_inside == kTrue) ? kFalse: kTrue;
+
         auto normal = one_side ? normal_ : -normal_;
 
-        return material_->Eval(wi, wo, normal, texcoord_, inside);
+        return material_->Eval(wi, wo, normal, texcoord_, local_inside);
     }
 
     /**
@@ -115,16 +123,20 @@ public:
     __device__ Float Pdf(const vec3 &wi, const vec3 &wo) const
     {
         auto one_side = myvec::dot(wi, normal_) < 0; //入射光线与法线是否同侧
-        auto inside = one_side ? inside_ : !inside_;
+
+        auto local_inside = inside_;
+        if (!one_side)
+            local_inside = (local_inside == kTrue) ? kFalse: kTrue;
+
         auto normal = one_side ? normal_ : -normal_;
 
-        return material_->Pdf(wi, wo, normal, texcoord_, inside);
+        return material_->Pdf(wi, wo, normal, texcoord_, local_inside);
     }
 
 private:
     bool valid_;         //光线与物体的相交是否发生
     bool absorb_;        //光线与单面材质的物体交于物体背面而被吸收
-    bool inside_;        //交点处法线是否朝内
+    int inside_;         //交点处法线是否朝内
     Float distance_;     //从光线起点到该交点的距离
     Float pdf_area_;     //面元概率
     vec2 texcoord_;      //交点纹理坐标

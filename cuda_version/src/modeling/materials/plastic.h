@@ -51,17 +51,15 @@ __device__ void Material::InitPlastic(bool twosided,
     diffuse_reflectance_ = diffuse_reflectance;
     specular_reflectance_ = specular_reflectance;
     nonlinear_ = nonlinear;
-    fdr_int_ = FresnelDiffuseReflectance(1.0 / eta.x);
-    fdr_ext_ = FresnelDiffuseReflectance(eta.x);
+    fdr_int_ = AverageFresnel(1.0 / eta.x);
+    fdr_ext_ = AverageFresnel(eta.x);
 }
 
 __device__ void Material::SamplePlastic(BsdfSampling &bs, const vec3 &sample) const
 {
-    auto eta_inv = bs.inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
-
     auto specular_sampling_weight = SpecularSamplingWeight(bs.texcoord);
 
-    auto kr = Fresnel(-bs.wo, bs.normal, eta_inv);
+    auto kr = Fresnel(-bs.wo, bs.normal, eta_inv_d_);
     auto pdf_specular = kr * specular_sampling_weight,
          pdf_diffuse = (1.0 - kr) * (1.0 - specular_sampling_weight);
     pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
@@ -84,24 +82,18 @@ __device__ void Material::SamplePlastic(BsdfSampling &bs, const vec3 &sample) co
     bs.valid = true;
 }
 
-__device__ vec3 Material::EvalPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ vec3 Material::EvalPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    if (NotSameHemis(wo, normal))
-        return vec3(0);
-
-    auto eta_inv = inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
-    auto fdr_int = inside ? fdr_ext_ : fdr_int_;
-
     auto albedo = vec3(0);
     auto diffuse_reflectance = diffuse_reflectance_ ? diffuse_reflectance_->Color(texcoord) : vec3(0.5);
     if (nonlinear_)
-        albedo = diffuse_reflectance / (vec3(1) - diffuse_reflectance * fdr_int);
+        albedo = diffuse_reflectance / (vec3(1) - diffuse_reflectance * fdr_int_);
     else
-        albedo = diffuse_reflectance / (1.0 - fdr_int);
+        albedo = diffuse_reflectance / (1.0 - fdr_int_);
 
-    auto kr_i = Fresnel(wi, normal, eta_inv);
-    auto kr_o = Fresnel(-wo, normal, eta_inv);
-    albedo *= eta_inv * eta_inv * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
+    auto kr_i = Fresnel(wi, normal, eta_inv_d_);
+    auto kr_o = Fresnel(-wo, normal, eta_inv_d_);
+    albedo *= eta_inv_d_ * eta_inv_d_ * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
 
     if (SameDirection(Reflect(wi, normal), wo))
     {
@@ -114,14 +106,15 @@ __device__ vec3 Material::EvalPlastic(const vec3 &wi, const vec3 &wo, const vec3
     return albedo;
 }
 
-__device__ Float Material::PdfPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ Float Material::PdfPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     if (NotSameHemis(wo, normal))
         return 0;
 
-    auto eta_inv = inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+    if (myvec::dot(wi, normal) * myvec::dot(wo, normal) >= 0)
+        return 0;
 
-    auto kr = Fresnel(wi, normal, eta_inv);
+    auto kr = Fresnel(wi, normal, eta_inv_d_);
     auto specular_sampling_weight = SpecularSamplingWeight(texcoord);
 
     auto pdf_specular = kr * specular_sampling_weight,

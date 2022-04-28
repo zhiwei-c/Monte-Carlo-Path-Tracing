@@ -3,6 +3,8 @@
 #include "material_base.h"
 
 __global__ void InitRoughConductor(uint m_idx,
+                                   float *kulla_conty_table,
+                                   float albedo_avg,
                                    MaterialInfo *material_info_list,
                                    Texture *texture_list,
                                    Material *material_list)
@@ -38,7 +40,9 @@ __global__ void InitRoughConductor(uint m_idx,
                                                 specular_reflectance,
                                                 material_info_list[m_idx].distri,
                                                 alpha_u,
-                                                alpha_v);
+                                                alpha_v,
+                                                kulla_conty_table,
+                                                albedo_avg);
     }
 }
 
@@ -51,7 +55,9 @@ __device__ void Material::InitRoughConductor(bool twosided,
                                              Texture *specular_reflectance,
                                              MicrofacetDistribType distri,
                                              Texture *alpha_u,
-                                             Texture *alpha_v)
+                                             Texture *alpha_v,
+                                             float *kulla_conty_table,
+                                             float albedo_avg)
 {
     type_ = kRoughConductor;
     twosided_ = twosided;
@@ -64,7 +70,20 @@ __device__ void Material::InitRoughConductor(bool twosided,
     distri_ = distri;
     alpha_u_ = alpha_u;
     alpha_v_ = alpha_v;
+
+    if (albedo_avg < 0)
+        return;
+    albedo_avg_ = albedo_avg;
+    kulla_conty_table_ = kulla_conty_table;
+
+    auto reflectivity = vec3(0),
+         edgetint = vec3(0);
+    IorToReflectivityEdgetint(eta_, k_, reflectivity, edgetint);
+
+    auto F_avg = AverageFresnelConductor(reflectivity, edgetint);
+    f_add_ = F_avg * F_avg * albedo_avg / (vec3(1) - F_avg * (1.0 - albedo_avg));
 }
+
 __device__ void Material::SampleRoughConductor(BsdfSampling &bs, const vec3 &sample) const
 {
     auto alpha_u = alpha_u_ ? alpha_u_->Color(bs.texcoord).x : 0.1;
@@ -89,7 +108,7 @@ __device__ void Material::SampleRoughConductor(BsdfSampling &bs, const vec3 &sam
     bs.valid = true;
 }
 
-__device__ vec3 Material::EvalRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ vec3 Material::EvalRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     if (NotSameHemis(wo, normal))
         return vec3(0);
@@ -114,10 +133,14 @@ __device__ vec3 Material::EvalRoughConductor(const vec3 &wi, const vec3 &wo, con
     auto albedo = F * static_cast<Float>(D * G / (4.0 * cos_i_n * cos_o_n));
     if (specular_reflectance_)
         albedo *= specular_reflectance_->Color(texcoord);
+    
+    if(albedo_avg_ > 0)
+        albedo += EvalMultipleScatter(cos_i_n, cos_o_n);
+
     return albedo;
 }
 
-__device__ Float Material::PdfRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ Float Material::PdfRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     if (NotSameHemis(wo, normal))
         return 0;

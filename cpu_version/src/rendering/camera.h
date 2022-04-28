@@ -102,7 +102,7 @@ public:
             std::cout << "[warning] enmpty output file name, use default: \"result." << film_.format << "\"" << std::endl;
             output_name = ChangeSuffix("result.png", film_.format);
         }
-        std::vector<Vector3> look_dirs_now = GetDirections(395, 485);
+        std::vector<Vector3> look_dirs_now = GetDirections(674, 715);
         for (auto look_dir_now : look_dirs_now)
         {
             integrator_->Shade(eye_pos_, look_dir_now);

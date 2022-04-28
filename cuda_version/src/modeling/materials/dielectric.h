@@ -67,9 +67,9 @@ __device__ void Material::SampleDielectric(BsdfSampling &bs, const vec3 &sample)
     bs.valid = true;
 }
 
-__device__ vec3 Material::EvalDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ vec3 Material::EvalDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    auto eta_inv = inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+    auto eta_inv = inside == kTrue ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
     auto kr = Fresnel(wi, normal, eta_inv);
     if (SameDirection(wo, Reflect(wi, normal)))
@@ -92,9 +92,9 @@ __device__ vec3 Material::EvalDielectric(const vec3 &wi, const vec3 &wo, const v
         return vec3(0);
 }
 
-__device__ Float Material::PdfDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ Float Material::PdfDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    auto eta_inv = inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+    auto eta_inv = inside == kTrue ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
     auto kr = Fresnel(wi, normal, eta_inv);
     if (SameDirection(wo, Reflect(wi, normal)))

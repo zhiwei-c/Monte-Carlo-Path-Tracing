@@ -1,8 +1,7 @@
 #pragma once
 
 #include "../envmap.h"
-#include "../../utils/math/sample.h"
-#include "../../utils/math/microfacet_distribution.h"
+#include "../../rendering/kulla_conty.h"
 
 enum MaterialType
 {

@@ -50,7 +50,6 @@ __device__ inline Float ApplyGamma(Float value, Float gamma_inv)
         return pow(value, gamma_inv);
 }
 
-
 struct TextureInfo
 {
     TextureType type;
@@ -66,18 +65,18 @@ struct TextureInfo
     std::string filename;
 
     TextureInfo(Float color)
-        : type(kConstant), width(1), height(1), channel(3)
-    {
-        for (int i = 0; i < 3; i++)
-            colors.emplace_back(color);
-    }
+        : type(kConstant),
+          width(1),
+          height(1),
+          channel(3),
+          color0(vec3(color)) {}
 
     TextureInfo(const vec3 &color)
-        : type(kConstant), width(1), height(1), channel(3)
-    {
-        for (int i = 0; i < 3; i++)
-            colors.emplace_back(color[i]);
-    }
+        : type(kConstant),
+          width(1),
+          height(1),
+          channel(3),
+          color0(color) {}
 
     TextureInfo(const vec3 &color0,
                 const vec3 &color1,

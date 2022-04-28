@@ -7,6 +7,11 @@ __device__ inline bool NotSameHemis(const vec3 &a, const vec3 &b)
     return myvec::dot(a, b) < kEpsilon;
 }
 
+__device__ inline bool SameHemis(const vec3 &a, const vec3 &b)
+{
+    return myvec::dot(a, b) > -kEpsilon;
+}
+
 __device__ inline bool SameDirection(const vec3 &a, const vec3 &b)
 {
     return abs(myvec::dot(a, b) - 1) < kEpsilonL;
@@ -35,7 +40,7 @@ inline gvec3 TransfromPt(const gmat4 &trans, const gvec3 &pt)
     return ret;
 }
 
-__device__ inline vec3 ToWorld(const vec3 &dir, const vec3 &normal)
+__host__ __device__ inline vec3 ToWorld(const vec3 &dir, const vec3 &normal)
 {
     auto B = vec3(0),
          C = vec3(0);
@@ -53,7 +58,7 @@ __device__ inline vec3 ToWorld(const vec3 &dir, const vec3 &normal)
     return myvec::normalize(dir.x * B + dir.y * C + dir.z * normal);
 }
 
-__device__ inline vec3 ToLocal(const vec3 &dir, const vec3 &up)
+__host__ __device__ inline vec3 ToLocal(const vec3 &dir, const vec3 &up)
 {
     auto B = vec3(0),
          C = vec3(0);

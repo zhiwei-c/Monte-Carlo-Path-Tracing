@@ -64,7 +64,7 @@ __device__ void Material::SampleConductor(BsdfSampling &bs, const vec3 &sample) 
     bs.valid = true;
 }
 
-__device__ vec3 Material::EvalConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ vec3 Material::EvalConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     if (!SameDirection(wo, Reflect(wi, normal)))
         return vec3(0);
@@ -77,7 +77,7 @@ __device__ vec3 Material::EvalConductor(const vec3 &wi, const vec3 &wo, const ve
 
     return albedo;
 }
-__device__ Float Material::PdfConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ Float Material::PdfConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     if (SameDirection(wo, Reflect(wi, normal)))
         return 1;

@@ -58,7 +58,7 @@ __device__ void Material::SampleDiffuse(BsdfSampling &bs, const vec3 &sample) co
     bs.valid = true;
 }
 
-__device__ vec3 Material::EvalDiffuse(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ vec3 Material::EvalDiffuse(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     if (NotSameHemis(wo, normal))
         return vec3(0);
@@ -71,7 +71,7 @@ __device__ vec3 Material::EvalDiffuse(const vec3 &wi, const vec3 &wo, const vec3
     }
 }
 
-__device__ Float Material::PdfDiffuse(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ Float Material::PdfDiffuse(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     if (NotSameHemis(wo, normal))
         return 0;

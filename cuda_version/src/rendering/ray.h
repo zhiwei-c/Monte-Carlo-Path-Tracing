@@ -38,7 +38,7 @@ private:
  * \param normal 表面法线方向（注意：已处理为与光线入射方向夹角大于90度）
  * \return 完美镜面反射方向
  */
-__device__ inline vec3 Reflect(const vec3 &wi, vec3 normal)
+__host__ __device__ inline vec3 Reflect(const vec3 &wi, vec3 normal)
 {
     return myvec::normalize(wi - static_cast<Float>(2 * myvec::dot(wi, normal)) * normal);
 }
@@ -132,7 +132,7 @@ __device__ inline vec3 FresnelConductor(const vec3 &wi, const vec3 &normal, cons
  * \param eta Relative refraction coefficient
  * \return F, the unpolarized Fresnel coefficient.
  */
-__device__ inline Float FresnelDiffuseReflectance(Float eta)
+__device__ inline Float AverageFresnel(Float eta)
 {
     if (eta < 1)
     {
@@ -160,6 +160,36 @@ __device__ inline Float FresnelDiffuseReflectance(Float eta)
              inv_eta_5 = inv_eta_4 * inv_eta;
         return 0.919317 - 3.4793 * inv_eta + 6.75335 * inv_eta_2 - 7.80989 * inv_eta_3 + 4.98554 * inv_eta_4 - 1.36881 * inv_eta_5;
     }
+}
+/**
+ * \brief 根据 Gulbrandsen 提出的方法，将金属的折射率 eta 和消光系数 k 重新映射为两个更直观的参数——反射率 reflectivity 和边缘色差 edgetint，
+ * 		反射率具体而言是光线垂直表面入射时的反射率，边缘色差控制了观察方向与表面平行时颜色的偏差，
+ * 		参见 [《artist Friendly Metallic Fresnel》](https://jcgt.org/published/0003/04/03/paper.pdf)
+ * \param eta 相对折射率的实部
+ * \param k 相对折射率的虚部（消光系数）
+ * \return 由两个 Spectrum 类型构成的 pair，分别代表反射率 reflectivity 和边缘色差 edgetint
+ */
+__device__ inline void IorToReflectivityEdgetint(const vec3 &eta,
+                                                 const vec3 &k,
+                                                 vec3 &reflectivity,
+                                                 vec3 &edgetint)
+{
+    Float temp1, temp2, temp3;
+    for (int i = 0; i < 3; i++)
+    {
+        reflectivity[i] = (pow(eta[i] - 1, 2) + pow(k[i], 2)) / (pow(eta[i] + 1, 2) + pow(k[i], 2));
+
+        temp1 = 1.0 + sqrt(reflectivity[i]);
+        temp2 = 1.0 - sqrt(reflectivity[i]);
+        temp3 = (1.0 - reflectivity[i]) / (1.0 + reflectivity[i]);
+        edgetint[i] = (temp1 - eta[i] * temp2) / (temp1 - temp3 * temp2);
+    }
+}
+
+///\brief 导体材质的平均菲涅尔系数，https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
+__device__ inline vec3 AverageFresnelConductor(const vec3 &r, const vec3 &g)
+{
+    return vec3(0.087237) + 0.0230685 * g - 0.0864902 * g * g + 0.0774594 * g * g * g + 0.782654 * r - 0.136432 * r * r + 0.278708 * r * r * r + 0.19744 * g * r + 0.0360605 * g * g * r - 0.2586 * g * r * r;
 }
 
 // 各种电介质材质（dielectric）的折射率（refractive index）

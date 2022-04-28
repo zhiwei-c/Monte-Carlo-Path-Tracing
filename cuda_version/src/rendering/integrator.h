@@ -192,13 +192,13 @@ __device__ bool Integrator::EmitterDirectArea(const Intersection &its,
     if (Perpendicular(-wi, its.normal()))
         return false;
 
-    auto local_attenuation = its.Eval(wi, wo);
-    if (local_attenuation.x + local_attenuation.y + local_attenuation.z < kEpsilon)
+    auto local_pdf = its.Pdf(wi, wo);
+    if (local_pdf < kEpsilonPdf)
         return false;
 
     auto pdf_direct = pdf_area * distance_sqr / cos_theta_prime;
-    auto local_pdf = its.Pdf(wi, wo);
     auto weight_direct = MisWeight(pdf_direct, local_pdf);
+    auto local_attenuation = its.Eval(wi, wo);
     auto cos_theta = abs(myvec::dot(wi, its.normal()));
 
     L += history_attenuation * weight_direct * its_pre.radiance() * local_attenuation * cos_theta / pdf_direct;

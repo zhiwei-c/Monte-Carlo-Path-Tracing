@@ -81,68 +81,70 @@ __device__ void Material::Sample(BsdfSampling &bs, const vec3 &sample) const
     }
 }
 
-__device__ vec3 Material::Eval(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ vec3 Material::Eval(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
+    auto attenuation = vec3(0);
     switch (type_)
     {
     case kDiffuse:
-        return EvalDiffuse(wi, wo, normal, texcoord, inside);
+        attenuation = EvalDiffuse(wi, wo, normal, texcoord, inside);
         break;
     case kDielectric:
-        EvalDielectric(wi, wo, normal, texcoord, inside);
+        attenuation = EvalDielectric(wi, wo, normal, texcoord, inside);
         break;
     case kRoughDielectric:
-        EvalRoughDielectric(wi, wo, normal, texcoord, inside);
+        attenuation = EvalRoughDielectric(wi, wo, normal, texcoord, inside);
         break;
     case kThinDielectric:
-        EvalThinDielectric(wi, wo, normal, texcoord, inside);
+        attenuation = EvalThinDielectric(wi, wo, normal, texcoord, inside);
         break;
     case kConductor:
-        EvalConductor(wi, wo, normal, texcoord, inside);
+        attenuation = EvalConductor(wi, wo, normal, texcoord, inside);
         break;
     case kRoughConductor:
-        EvalRoughConductor(wi, wo, normal, texcoord, inside);
+        attenuation = EvalRoughConductor(wi, wo, normal, texcoord, inside);
         break;
     case kPlastic:
-        EvalPlastic(wi, wo, normal, texcoord, inside);
+        attenuation = EvalPlastic(wi, wo, normal, texcoord, inside);
         break;
     case kRoughPlastic:
-        EvalRoughPlastic(wi, wo, normal, texcoord, inside);
+        attenuation = EvalRoughPlastic(wi, wo, normal, texcoord, inside);
         break;
     }
-    return vec3(0);
+    return attenuation;
 }
 
-__device__ Float Material::Pdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ Float Material::Pdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
+    Float pdf = 0;
     switch (type_)
     {
     case kDiffuse:
-        return PdfDiffuse(wi, wo, normal, texcoord, inside);
+        pdf = PdfDiffuse(wi, wo, normal, texcoord, inside);
         break;
     case kDielectric:
-        return PdfDielectric(wi, wo, normal, texcoord, inside);
+        pdf = PdfDielectric(wi, wo, normal, texcoord, inside);
         break;
     case kRoughDielectric:
-        return PdfRoughDielectric(wi, wo, normal, texcoord, inside);
+        pdf = PdfRoughDielectric(wi, wo, normal, texcoord, inside);
         break;
     case kThinDielectric:
-        return PdfThinDielectric(wi, wo, normal, texcoord, inside);
+        pdf = PdfThinDielectric(wi, wo, normal, texcoord, inside);
         break;
     case kConductor:
-        return PdfConductor(wi, wo, normal, texcoord, inside);
+        pdf = PdfConductor(wi, wo, normal, texcoord, inside);
         break;
     case kRoughConductor:
-        return PdfRoughConductor(wi, wo, normal, texcoord, inside);
+        pdf = PdfRoughConductor(wi, wo, normal, texcoord, inside);
         break;
     case kPlastic:
-        return PdfPlastic(wi, wo, normal, texcoord, inside);
+        pdf = PdfPlastic(wi, wo, normal, texcoord, inside);
         break;
     case kRoughPlastic:
-        return PdfRoughPlastic(wi, wo, normal, texcoord, inside);
+        pdf = PdfRoughPlastic(wi, wo, normal, texcoord, inside);
         break;
     }
-    return 0;
+    return pdf;
 }
 
 __global__ void SetMaterialOtherInfo(uint m_idx,

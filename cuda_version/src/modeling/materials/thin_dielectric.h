@@ -77,7 +77,7 @@ __device__ void Material::SampleThinDielectric(BsdfSampling &bs, const vec3 &sam
     }
     bs.valid = (bs.pdf > kEpsilonPdf);
 }
-__device__ vec3 Material::EvalThinDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ vec3 Material::EvalThinDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     auto kr = Fresnel(wi, normal, eta_d_);
     //考虑光线在材质内部多次反射: r' = r + trt + tr^3t + ..
@@ -102,7 +102,7 @@ __device__ vec3 Material::EvalThinDielectric(const vec3 &wi, const vec3 &wo, con
         return vec3(0);
 }
 
-__device__ Float Material::PdfThinDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ Float Material::PdfThinDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     auto kr = Fresnel(wi, normal, eta_d_);
     //考虑光线在材质内部多次反射: r' = r + trt + tr^3t + ..

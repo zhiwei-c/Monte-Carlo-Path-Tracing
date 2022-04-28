@@ -516,8 +516,8 @@ MaterialInfo ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric)
 
 MaterialInfo ParseConductor(rapidxml::xml_node<> *node_conductor)
 {
-    auto eta = vec3(1);
-    auto k = vec3(0);
+    auto eta = vec3(0);
+    auto k = vec3(1);
     auto ext_eta = GetIor(node_conductor, "extEta", "air");
     auto node_material = GetChild(node_conductor, "material");
 
@@ -569,8 +569,8 @@ MaterialInfo ParseConductor(rapidxml::xml_node<> *node_conductor)
 MaterialInfo ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor)
 {
 
-    auto eta = vec3(1);
-    auto k = vec3(0);
+    auto eta = vec3(0);
+    auto k = vec3(1);
     auto ext_eta = GetIor(node_rough_conductor, "extEta", "air");
     auto node_material = GetChild(node_rough_conductor, "material");
 

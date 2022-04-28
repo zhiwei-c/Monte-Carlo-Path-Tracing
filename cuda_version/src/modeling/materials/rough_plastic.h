@@ -3,6 +3,8 @@
 #include "material_base.h"
 
 __global__ void InitRoughPlastic(uint m_idx,
+                                 float *kulla_conty_table,
+                                 float albedo_avg,
                                  MaterialInfo *material_info_list,
                                  Texture *texture_list,
                                  Material *material_list)
@@ -37,7 +39,9 @@ __global__ void InitRoughPlastic(uint m_idx,
                                               specular_reflectance,
                                               material_info_list[m_idx].distri,
                                               alpha,
-                                              material_info_list[m_idx].nonlinear);
+                                              material_info_list[m_idx].nonlinear,
+                                              kulla_conty_table,
+                                              albedo_avg);
     }
 }
 
@@ -49,7 +53,9 @@ __device__ void Material::InitRoughPlastic(bool twosided,
                                            Texture *specular_reflectance,
                                            MicrofacetDistribType distri,
                                            Texture *alpha,
-                                           bool nonlinear)
+                                           bool nonlinear,
+                                           float *kulla_conty_table,
+                                           float albedo_avg)
 {
     type_ = kRoughPlastic;
     twosided_ = twosided;
@@ -63,18 +69,24 @@ __device__ void Material::InitRoughPlastic(bool twosided,
     alpha_u_ = alpha;
     alpha_v_ = alpha;
     nonlinear_ = nonlinear;
-    fdr_int_ = FresnelDiffuseReflectance(1.0 / eta.x);
-    fdr_ext_ = FresnelDiffuseReflectance(eta.x);
+    fdr_int_ = AverageFresnel(1.0 / eta.x);
+    fdr_ext_ = AverageFresnel(eta.x);
+
+    if (albedo_avg < 0)
+        return;
+    albedo_avg_ = albedo_avg;
+    kulla_conty_table_ = kulla_conty_table;
+
+    f_add_ = vec3(fdr_ext_ * fdr_ext_ * albedo_avg_ / (1.0 - fdr_ext_ * (1.0 - albedo_avg_)));
 }
 
 __device__ void Material::SampleRoughPlastic(BsdfSampling &bs, const vec3 &sample) const
 {
-    auto eta_inv = bs.inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
     auto alpha = alpha_u_ ? alpha_u_->Color(bs.texcoord).x : 0.1;
 
     auto specular_sampling_weight = SpecularSamplingWeight(bs.texcoord);
 
-    auto kr = Fresnel(-bs.wo, bs.normal, eta_inv);
+    auto kr = Fresnel(-bs.wo, bs.normal, eta_inv_d_);
     auto pdf_specular = kr * specular_sampling_weight,
          pdf_diffuse = (1.0 - kr) * (1.0 - specular_sampling_weight);
     pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
@@ -103,15 +115,9 @@ __device__ void Material::SampleRoughPlastic(BsdfSampling &bs, const vec3 &sampl
     bs.attenuation = EvalRoughPlastic(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
     bs.valid = true;
 }
-__device__ vec3 Material::EvalRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+
+__device__ vec3 Material::EvalRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-
-    if (NotSameHemis(wo, normal))
-        return vec3(0);
-
-    auto eta_inv = inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
-    auto fdr_int = inside ? fdr_ext_ : fdr_int_;
-
     auto alpha = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;
 
     auto cos_i_n = myvec::dot(wi, normal);
@@ -121,16 +127,16 @@ __device__ vec3 Material::EvalRoughPlastic(const vec3 &wi, const vec3 &wo, const
 
     auto diffuse_reflectance = diffuse_reflectance_ ? diffuse_reflectance_->Color(texcoord) : vec3(0.5);
     if (nonlinear_)
-        albedo = diffuse_reflectance / (vec3(1) - diffuse_reflectance * fdr_int);
+        albedo = diffuse_reflectance / (vec3(1) - diffuse_reflectance * fdr_int_);
     else
-        albedo = diffuse_reflectance / (1.0 - fdr_int);
+        albedo = diffuse_reflectance / (1.0 - fdr_int_);
 
-    auto kr_i = Fresnel(wi, normal, eta_inv);
-    auto kr_o = Fresnel(-wo, normal, eta_inv);
-    albedo *= eta_inv * eta_inv * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
+    auto kr_i = Fresnel(wi, normal, eta_inv_d_);
+    auto kr_o = Fresnel(-wo, normal, eta_inv_d_);
+    albedo *= eta_inv_d_ * eta_inv_d_ * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
 
     auto h = myvec::normalize(-wi + wo);
-    auto F = Fresnel(wi, h, eta_inv);
+    auto F = Fresnel(wi, h, eta_inv_d_);
     auto D = PdfNormDistrib(distri_, alpha, alpha, normal, h);
 
     if (D > kEpsilon)
@@ -138,6 +144,10 @@ __device__ vec3 Material::EvalRoughPlastic(const vec3 &wi, const vec3 &wo, const
         auto G = SmithG1(distri_, alpha, alpha, -wi, normal, h) *
                  SmithG1(distri_, alpha, alpha, wo, normal, h);
         auto attenuation = vec3(F * D * G / (4.0 * abs(cos_i_n * cos_o_n)));
+
+        if (albedo_avg_ > 0)
+            attenuation += EvalMultipleScatter(cos_i_n, cos_o_n);
+
         if (specular_reflectance_)
             attenuation *= specular_reflectance_->Color(texcoord);
         albedo += attenuation;
@@ -145,16 +155,17 @@ __device__ vec3 Material::EvalRoughPlastic(const vec3 &wi, const vec3 &wo, const
 
     return albedo;
 }
-__device__ Float Material::PdfRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ Float Material::PdfRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     if (NotSameHemis(wo, normal))
         return 0;
 
-    auto eta_inv = inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+    if (myvec::dot(wi, normal) * myvec::dot(wo, normal) >= 0)
+        return 0;
 
     auto alpha = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;
 
-    auto kr = Fresnel(wi, normal, eta_inv);
+    auto kr = Fresnel(wi, normal, eta_inv_d_);
     auto specular_sampling_weight = SpecularSamplingWeight(texcoord);
 
     auto pdf_specular = kr * specular_sampling_weight,

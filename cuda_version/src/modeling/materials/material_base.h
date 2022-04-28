@@ -5,7 +5,7 @@
 struct BsdfSampling
 {
     bool valid;
-    bool inside;      //表面法线方向是否朝向表面内侧
+    int inside;       //表面法线方向是否朝向表面内侧
     Float pdf;        //光线从该方向入射的概率
     vec2 texcoord;    //表面纹理坐标，可选
     vec3 wi;          //光线入射方向
@@ -14,7 +14,7 @@ struct BsdfSampling
     vec3 attenuation; // BSDF 光能衰减系数
 
     __device__ BsdfSampling()
-        : valid(false), inside(false), pdf(0), texcoord(vec2(0)), wi(vec3(0)), wo(vec3(0)), normal(vec3(0)), attenuation(vec3(0)) {}
+        : valid(kFalse), inside(0), pdf(0), texcoord(vec2(0)), wi(vec3(0)), wo(vec3(0)), normal(vec3(0)), attenuation(vec3(0)) {}
 };
 
 class Material
@@ -42,7 +42,13 @@ public:
           fdr_ext_(0),
           nonlinear_(false),
           pre_(nullptr),
-          next_(nullptr) {}
+          next_(nullptr),
+          kulla_conty_table_(nullptr),
+          albedo_avg_(-1),
+          f_add_(vec3(0)),
+          f_add_inv_(vec3(0)),
+          ratio_t_(0),
+          ratio_t_inv_(0) {}
 
     /**
      * \brief 根据光线出射方向和表面法线方向，抽样光线入射方向
@@ -63,7 +69,7 @@ public:
      * \param inside 表面法线方向是否朝向表面内侧
      * \return BSDF 光能衰减系数
      */
-    __device__ vec3 Eval(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
+    __device__ vec3 Eval(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
 
     /**
      * \brief 根据光线入射方向、出射方向和法线方向，计算光线因从入射方向入射，而从出射方向出射的概率
@@ -74,14 +80,14 @@ public:
      * \param inside 表面法线方向是否朝向表面内侧
      * \return 光线因从入射方向入射，而从出射方向出射的概率
      */
-    __device__ Float Pdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
+    __device__ Float Pdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
 
     ///\return 是否发光
     __device__ bool HasEmission() const;
 
     __device__ bool twosided() const { return twosided_; }
 
-    __device__ bool HarshLobe() const { return type_ == kConductor || type_ == kDielectric  || type_ == kThinDielectric; }
+    __device__ bool HarshLobe() const { return type_ == kConductor || type_ == kDielectric || type_ == kThinDielectric; }
 
     ///\return 辐射亮度
     __device__ vec3 radiance() const;
@@ -109,7 +115,9 @@ public:
                                         Texture *specular_transmittance,
                                         MicrofacetDistribType distri,
                                         Texture *alpha_u,
-                                        Texture *alpha_v);
+                                        Texture *alpha_v,
+                                        float *kulla_conty_table,
+                                        float albedo_avg);
 
     __device__ void InitThinDielectric(bool twosided,
                                        Texture *bump_map,
@@ -135,7 +143,9 @@ public:
                                        Texture *specular_reflectance,
                                        MicrofacetDistribType distri,
                                        Texture *alpha_u,
-                                       Texture *alpha_v);
+                                       Texture *alpha_v,
+                                       float *kulla_conty_table,
+                                       float albedo_avg);
 
     __device__ void InitPlastic(bool twosided,
                                 Texture *bump_map,
@@ -153,7 +163,9 @@ public:
                                      Texture *specular_reflectance,
                                      MicrofacetDistribType distri,
                                      Texture *alpha,
-                                     bool nonlinear);
+                                     bool nonlinear,
+                                     float *kulla_conty_table,
+                                     float albedo_avg);
 
     __device__ void SetOtherInfo(uint idx, Material *pre, Material *next)
     {
@@ -214,39 +226,75 @@ private:
     Texture *alpha_v_;
     Material *pre_;
     Material *next_;
+    float *kulla_conty_table_;
+    float albedo_avg_;
+    vec3 f_add_;        //入射光线在物体内部，补偿多次散射后出射光能的系数
+    vec3 f_add_inv_;    //入射光线在物体外部，补偿多次散射后出射光能的系数
+    Float ratio_t_;     //入射光线在物体内部，补偿多次散射后出射光能，折射的比例
+    Float ratio_t_inv_; //入射光线在物体外部，补偿多次散射后出射光能，折射的比例
 
     __device__ void SampleDiffuse(BsdfSampling &bs, const vec3 &sample) const;
-    __device__ vec3 EvalDiffuse(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
-    __device__ Float PdfDiffuse(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
+    __device__ vec3 EvalDiffuse(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
+    __device__ Float PdfDiffuse(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
 
     __device__ void SampleDielectric(BsdfSampling &bs, const vec3 &sample) const;
-    __device__ vec3 EvalDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
-    __device__ Float PdfDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
+    __device__ vec3 EvalDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
+    __device__ Float PdfDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
 
     __device__ void SampleRoughDielectric(BsdfSampling &bs, const vec3 &sample) const;
-    __device__ vec3 EvalRoughDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
-    __device__ Float PdfRoughDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
+    __device__ vec3 EvalRoughDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
+    __device__ Float PdfRoughDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
 
     __device__ void SampleThinDielectric(BsdfSampling &bs, const vec3 &sample) const;
-    __device__ vec3 EvalThinDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
-    __device__ Float PdfThinDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
+    __device__ vec3 EvalThinDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
+    __device__ Float PdfThinDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
 
     __device__ void SampleConductor(BsdfSampling &bs, const vec3 &sample) const;
-    __device__ vec3 EvalConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
-    __device__ Float PdfConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
+    __device__ vec3 EvalConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
+    __device__ Float PdfConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
 
     __device__ void SampleRoughConductor(BsdfSampling &bs, const vec3 &sample) const;
-    __device__ vec3 EvalRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
-    __device__ Float PdfRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
+    __device__ vec3 EvalRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
+    __device__ Float PdfRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
 
     __device__ void SamplePlastic(BsdfSampling &bs, const vec3 &sample) const;
-    __device__ vec3 EvalPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
-    __device__ Float PdfPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
+    __device__ vec3 EvalPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
+    __device__ Float PdfPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
 
     __device__ void SampleRoughPlastic(BsdfSampling &bs, const vec3 &sample) const;
-    __device__ vec3 EvalRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
-    __device__ Float PdfRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const;
+    __device__ vec3 EvalRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
+    __device__ Float PdfRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
 
     ///\brief 获取给定点抽样镜面反射的权重
     __device__ Float SpecularSamplingWeight(const vec2 &texcoord) const;
+
+    __device__ Float GetAlbedo(Float cos_theta) const
+    {
+        auto offset = cos_theta * kAlbedoResolution;
+        auto idx = static_cast<int>(offset);
+        if (idx >= kAlbedoResolution - 1)
+            return kulla_conty_table_[kAlbedoResolution - 1];
+        else
+            return (1 - (offset - idx)) * kulla_conty_table_[idx] +
+                   (offset - idx) * kulla_conty_table_[idx + 1];
+    }
+
+    ///\brief 补偿多次散射后又射出的光能
+    __device__ vec3 EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const
+    {
+        auto albedo_i = GetAlbedo(abs(cos_i_n));
+        auto albedo_o = GetAlbedo(abs(cos_o_n));
+        auto f_ms = (1.0 - albedo_o) * (1.0 - albedo_i) / (kPi * (1.0 - albedo_avg_));
+        return f_ms * f_add_;
+    }
+
+    ///\brief 补偿多次散射后又射出的光能
+    __device__ vec3 EvalMultipleScatter(Float cos_i_n, Float cos_o_n, int inside) const
+    {
+        auto f_add = inside ? f_add_inv_ : f_add_;
+        auto albedo_i = GetAlbedo(abs(cos_i_n));
+        auto albedo_o = GetAlbedo(abs(cos_o_n));
+        auto f_ms = (1.0 - albedo_o) * (1.0 - albedo_i) / (kPi * (1.0 - albedo_avg_));
+        return f_ms * f_add_;
+    }
 };

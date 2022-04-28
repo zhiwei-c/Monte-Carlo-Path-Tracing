@@ -102,17 +102,18 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
                beta * v_[1].position +
                gamma * v_[2].position;
 
-    bool inside = false;
+    int inside = -1;
 
     if (det < 0)
     {
         normal = -normal;
-        inside = !inside;
+        inside = -inside;
     }
+
     if (flip_normals_)
     {
         normal = -normal;
-        inside = !inside;
+        inside = -inside;
     }
 
     its = Intersection(pos, normal, texcoord, inside, distance, material_, pdf_area_);

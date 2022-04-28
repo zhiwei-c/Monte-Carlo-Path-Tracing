@@ -35,9 +35,6 @@ __global__ void RenderProcess(int width,
     auto j = threadIdx.y + blockIdx.y * blockDim.y;
     if (i >= width || j >= height)
         return;
-    // if (i != 824 || j != 68)
-    //     return;
-
 
     auto pixel_index = j * width + i;
 
@@ -170,6 +167,8 @@ private:
 
     void InitTextureList();
 
+    void InitKullaContyTable(const MaterialInfo &material_info, float *&albedo, float &albedo_avg);
+
     void InitMaterialList();
 
     void InitVertexIndexBuffer(Vertex *&vertex_list, uvec3 *&mesh_idx_list, uint *&mesh_material_idx_list, uint &mesh_num, std::vector<uvec2> &mesh_idx_range_list);
@@ -196,9 +195,7 @@ void Renderer::InitTextureList()
         {
         case kConstant:
         {
-            auto color = vec3();
-            for (int j = 0; j < 3; j++)
-                color[j] = texture_info_list_[texture_idx]->colors[j];
+            auto color = texture_info_list_[texture_idx]->color0;
             InitConstantTexture<<<1, 1>>>(texture_idx, color, texture_list_);
             CheckCudaErrors(cudaGetLastError());
             CheckCudaErrors(cudaDeviceSynchronize());
@@ -234,6 +231,40 @@ void Renderer::InitTextureList()
     }
 }
 
+void Renderer::InitKullaContyTable(const MaterialInfo &material_info,
+                                   float *&albedo,
+                                   float &albedo_avg)
+{
+    Float alpha_u = 0.1;
+    if (material_info.alpha_u_idx != kUintMax)
+    {
+        if (texture_info_list_[material_info.alpha_u_idx]->type != kConstant)
+            return;
+        alpha_u = texture_info_list_[material_info.alpha_u_idx]->color0.x;
+    }
+
+    Float alpha_v = 0.1;
+    if (material_info.alpha_v_idx != kUintMax)
+    {
+        if (texture_info_list_[material_info.alpha_v_idx]->type != kConstant)
+            return;
+        alpha_v = texture_info_list_[material_info.alpha_v_idx]->color0.x;
+    }
+    if (alpha_u < 0.01 && alpha_v < 0.01)
+        return;
+
+    auto local_albedo = std::vector<float>();
+    CreateCosinAlbedoTexture(material_info.distri, alpha_u, alpha_v,
+                             local_albedo, albedo_avg);
+    if (albedo_avg < 0)
+        return;
+
+    albedo = nullptr;
+    CheckCudaErrors(cudaMallocManaged(&albedo, kAlbedoResolution * sizeof(float)));
+    cudaMemcpy(albedo, local_albedo.data(), kAlbedoResolution * sizeof(float), cudaMemcpyHostToDevice);
+    texture_bitmap_data_.push_back(albedo);
+}
+
 void Renderer::InitMaterialList()
 {
     auto material_num = material_info_list_.size();
@@ -257,8 +288,13 @@ void Renderer::InitMaterialList()
             InitDielectric<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
             break;
         case kRoughDielectric:
-            InitRoughDielectric<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
+        {
+            auto kulla_conty_table = static_cast<float *>(nullptr);
+            float albedo_avg = 0;
+            InitKullaContyTable(material_info_list_[material_idx], kulla_conty_table, albedo_avg);
+            InitRoughDielectric<<<1, 1>>>(material_idx, kulla_conty_table, albedo_avg, local_material_info_list, texture_list_, material_list_);
             break;
+        }
         case kThinDielectric:
             InitThinDielectric<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
             break;
@@ -266,14 +302,24 @@ void Renderer::InitMaterialList()
             InitConductor<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
             break;
         case kRoughConductor:
-            InitRoughConductor<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
+        {
+            auto kulla_conty_table = static_cast<float *>(nullptr);
+            float albedo_avg = 0;
+            InitKullaContyTable(material_info_list_[material_idx], kulla_conty_table, albedo_avg);
+            InitRoughConductor<<<1, 1>>>(material_idx, kulla_conty_table, albedo_avg, local_material_info_list, texture_list_, material_list_);
             break;
+        }
         case kPlastic:
             InitPlastic<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
             break;
         case kRoughPlastic:
-            InitRoughPlastic<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
+        {
+            auto kulla_conty_table = static_cast<float *>(nullptr);
+            float albedo_avg = 0;
+            InitKullaContyTable(material_info_list_[material_idx], kulla_conty_table, albedo_avg);
+            InitRoughPlastic<<<1, 1>>>(material_idx, kulla_conty_table, albedo_avg, local_material_info_list, texture_list_, material_list_);
             break;
+        }
         default:
             PrintExcuError();
             break;
@@ -361,7 +407,7 @@ void Renderer::InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list,
                           mesh_material_idx_list,
                           mesh_num,
                           mesh_idx_range_list);
-    
+
     InitTextureList();
     InitMaterialList();
     //

@@ -3,7 +3,8 @@
 #include "material_base.h"
 
 __global__ void InitRoughDielectric(uint m_idx,
-
+                                    float *kulla_conty_table,
+                                    float albedo_avg,
                                     MaterialInfo *material_info_list,
                                     Texture *texture_list,
                                     Material *material_list)
@@ -42,7 +43,9 @@ __global__ void InitRoughDielectric(uint m_idx,
                                                  specular_transmittance,
                                                  material_info_list[m_idx].distri,
                                                  alpha_u,
-                                                 alpha_v);
+                                                 alpha_v,
+                                                 kulla_conty_table,
+                                                 albedo_avg);
     }
 }
 
@@ -54,7 +57,9 @@ __device__ void Material::InitRoughDielectric(bool twosided,
                                               Texture *specular_transmittance,
                                               MicrofacetDistribType distri,
                                               Texture *alpha_u,
-                                              Texture *alpha_v)
+                                              Texture *alpha_v,
+                                              float *kulla_conty_table,
+                                              float albedo_avg)
 {
 
     type_ = kRoughDielectric;
@@ -68,11 +73,28 @@ __device__ void Material::InitRoughDielectric(bool twosided,
     distri_ = distri;
     alpha_u_ = alpha_u;
     alpha_v_ = alpha_v;
+
+    if (albedo_avg < 0)
+        return;
+    albedo_avg_ = albedo_avg;
+    kulla_conty_table_ = kulla_conty_table;
+
+    auto F_avg = AverageFresnel(eta_d_);
+    f_add_ = vec3(F_avg * albedo_avg / (1.0 - F_avg * (1.0 - albedo_avg)));
+
+    auto F_avg_inv = AverageFresnel(eta_inv_d_);
+    f_add_inv_ = vec3(F_avg_inv * albedo_avg / (1.0 - F_avg_inv * (1.0 - albedo_avg)));
+
+    ratio_t_ = (1.0 - F_avg) * (1.0 - F_avg_inv) * eta_d_ * eta_d_ /
+               ((1.0 - F_avg) + (1.0 - F_avg_inv) * eta_d_ * eta_d_);
+
+    ratio_t_inv_ = (1.0 - F_avg_inv) * (1.0 - F_avg) * eta_inv_d_ * eta_inv_d_ /
+                   ((1.0 - F_avg_inv) + (1.0 - F_avg) * eta_inv_d_ * eta_inv_d_);
 }
 
 __device__ void Material::SampleRoughDielectric(BsdfSampling &bs, const vec3 &sample) const
 {
-    auto eta_inv = bs.inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+    auto eta_inv = bs.inside == kTrue ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
     auto alpha_u = alpha_u_ ? alpha_u_->Color(bs.texcoord).x : 0.1;
     auto alpha_v = alpha_v_ ? alpha_v_->Color(bs.texcoord).x : 0.1;
@@ -109,12 +131,16 @@ __device__ void Material::SampleRoughDielectric(BsdfSampling &bs, const vec3 &sa
     if (bs.pdf < kEpsilonPdf)
         return;
 
+    if (albedo_avg_ > 0 && alpha_u > 0.01 && alpha_v > 0.01 && bs.pdf < kEpsilonPdfL)
+        return;
+
     bs.attenuation = EvalRoughDielectric(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
     bs.valid = true;
 }
-__device__ vec3 Material::EvalRoughDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ vec3 Material::EvalRoughDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     auto eta_inv = inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+    auto ratio_t = inside ? ratio_t_inv_ : ratio_t_;
 
     auto alpha_u = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;
     auto alpha_v = alpha_v_ ? alpha_v_->Color(texcoord).x : 0.1;
@@ -148,6 +174,8 @@ __device__ vec3 Material::EvalRoughDielectric(const vec3 &wi, const vec3 &wo, co
         auto attenuation = vec3(F * D * G / (4.0 * abs(cos_i_n * cos_o_n)));
         if (specular_reflectance_)
             attenuation *= specular_reflectance_->Color(texcoord);
+        if (albedo_avg_ > 0)
+            attenuation += (1 - ratio_t) * EvalMultipleScatter(cos_i_n, cos_o_n, inside);
         return attenuation;
     }
     else
@@ -158,12 +186,14 @@ __device__ vec3 Material::EvalRoughDielectric(const vec3 &wi, const vec3 &wo, co
                                     (cos_i_n * cos_o_n * pow(eta_inv * cos_i_h + cos_o_h, 2))));
         if (specular_transmittance_)
             attenuation *= specular_transmittance_->Color(texcoord);
+        if (albedo_avg_ > 0)
+            attenuation += ratio_t * EvalMultipleScatter(cos_i_n, cos_o_n, inside);
         //光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
         attenuation *= eta_inv * eta_inv;
         return attenuation;
     }
 }
-__device__ Float Material::PdfRoughDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, bool inside) const
+__device__ Float Material::PdfRoughDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     auto eta_inv = inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
