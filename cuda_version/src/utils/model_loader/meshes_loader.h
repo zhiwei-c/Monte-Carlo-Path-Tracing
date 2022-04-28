@@ -148,7 +148,7 @@ inline void ProcessNode(const aiScene *scene,
     }
 }
 
-inline void LoadModel(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
+inline void LoadMeshes(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
 {
     std::cout << "[info] begin load " << shape_info->filename << "\r";
 

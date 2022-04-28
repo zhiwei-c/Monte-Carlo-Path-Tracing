@@ -1,10 +1,6 @@
 #pragma once
 
-#ifndef MESH_H
-#define MESH_H
-
-#include "../../rendering/intersection.h"
-
+#include "shape_info.h"
 class Vertex
 {
 public:
@@ -54,5 +50,3 @@ private:
     Mesh *pre_;
     Mesh *next_;
 };
-
-#endif // !MESH_H

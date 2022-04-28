@@ -7,9 +7,7 @@
 
 #include "rendering/camera.h"
 #include "utils/timer.h"
-#include "utils/model_loader/rectangle_loader.h"
-#include "utils/model_loader/model_loader.h"
-#include "utils/model_loader/cube_loader.h"
+#include "utils/model_loader.h"
 
 __global__ void RenderInit(int max_x, int max_y, int resolution, curandState *rand_state)
 {
@@ -37,6 +35,9 @@ __global__ void RenderProcess(int width,
     auto j = threadIdx.y + blockIdx.y * blockDim.y;
     if (i >= width || j >= height)
         return;
+    // if (i != 824 || j != 68)
+    //     return;
+
 
     auto pixel_index = j * width + i;
 
@@ -305,14 +306,22 @@ void Renderer::InitVertexIndexBuffer(Vertex *&vertex_list,
         auto bump_mapping = (material_info_list_[shape_info->material_idx].bump_map_idx != kUintMax);
         switch (shape_info->type)
         {
+        case kCube:
+            LoadCube(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
+            material_info_list_[shape_info->material_idx].twosided = true;
+            break;
+        case kDisk:
+            LoadSphere(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
+            break;
         case kMeshes:
-            LoadModel(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
+            LoadMeshes(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
             break;
         case kRectangle:
             LoadRectangle(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
             break;
-        case kCube:
-            LoadCube(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
+        case kSphere:
+            LoadSphere(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
+            material_info_list_[shape_info->material_idx].twosided = true;
             break;
         default:
             PrintExcuError();
@@ -352,6 +361,9 @@ void Renderer::InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list,
                           mesh_material_idx_list,
                           mesh_num,
                           mesh_idx_range_list);
+    
+    InitTextureList();
+    InitMaterialList();
     //
     mesh_list_ = nullptr;
     CheckCudaErrors(cudaMallocManaged(&mesh_list_, mesh_num * sizeof(Mesh)));
@@ -585,8 +597,6 @@ void Renderer::initIntegratorCamera()
 void Renderer::Render(const std::string &output_filename)
 {
     timer_.Reset();
-    InitTextureList();
-    InitMaterialList();
     auto scene_aabb = AABB();
     InitSceneBvh(scene_aabb);
     InitEnvMap(scene_aabb);

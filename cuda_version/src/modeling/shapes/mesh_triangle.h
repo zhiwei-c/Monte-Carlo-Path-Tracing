@@ -58,7 +58,7 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
     {
         if (flip_normals_)
         {
-            if (det > -kEpsilon)
+            if (det > kEpsilon)
             {
                 its = Intersection(distance);
                 return;
@@ -66,7 +66,7 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
         }
         else
         {
-            if (det < kEpsilon)
+            if (det < -kEpsilon)
             {
                 its = Intersection(distance);
                 return;

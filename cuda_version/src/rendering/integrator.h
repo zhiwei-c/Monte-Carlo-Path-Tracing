@@ -78,12 +78,14 @@ __device__ vec3 Integrator::Shade(const vec3 &eye_pos,
     if (!scenebvh_->Intersect(Ray(eye_pos, look_dir), RandomVec2(local_rand_state), its))
         return env_map_ ? env_map_->radiance(-look_dir) : vec3(0);
 
+    ///单面材质物体的背面，只吸收而不反射或折射光线
+    if (its.absorb())
+        return vec3(0);
+
     //原初光线源于发光物体
     if (its.HasEmission())
         return its.radiance();
 
-    if (its.absorb())
-        return vec3(0);
 
     uint depth = 1;            //光线溯源深度
     auto L = vec3(0),          //着色结果

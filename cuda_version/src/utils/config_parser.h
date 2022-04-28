@@ -20,63 +20,65 @@ std::map<std::string, uint> m_id_to_m_idx;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void ParseBsdf(rapidxml::xml_node<> *node_bsdf, const std::string *id_default = nullptr);
+static void ParseBsdf(rapidxml::xml_node<> *node_bsdf, const std::string *id_default = nullptr);
 
-bool ParseCoating(const std::string &id, rapidxml::xml_node<> *&node_bsdf, std::string &bsdf_type);
+static bool ParseCoating(const std::string &id, rapidxml::xml_node<> *&node_bsdf, std::string &bsdf_type);
 
-MaterialInfo ParseDiffuse(rapidxml::xml_node<> *node_diffuse);
+static MaterialInfo ParseDiffuse(rapidxml::xml_node<> *node_diffuse);
 
-MaterialInfo ParseDielectric(rapidxml::xml_node<> *node_dielectric, bool thin);
+static MaterialInfo ParseDielectric(rapidxml::xml_node<> *node_dielectric, bool thin);
 
-MaterialInfo ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric);
+static MaterialInfo ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric);
 
-MaterialInfo ParseConductor(rapidxml::xml_node<> *node_conductor);
+static MaterialInfo ParseConductor(rapidxml::xml_node<> *node_conductor);
 
-MaterialInfo ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor);
+static MaterialInfo ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor);
 
-MaterialInfo ParsePlastic(rapidxml::xml_node<> *node_plastic);
+static MaterialInfo ParsePlastic(rapidxml::xml_node<> *node_plastic);
 
-MaterialInfo ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic);
-
-//============================================================================================================
-
-void ParseShape(rapidxml::xml_node<> *node_shape);
-
-void ParseIntegrator(rapidxml::xml_node<> *node_integrator);
-
-CameraInfo ParseCamera(rapidxml::xml_node<> *node_sensor);
-
-void ParseEnvmap(rapidxml::xml_node<> *node_envmap, const CameraInfo &camera_info);
+static MaterialInfo ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic);
 
 //============================================================================================================
 
-Float GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::string default_material_name);
+static void ParseShape(rapidxml::xml_node<> *node_shape);
 
-MicrofacetDistribType GetDistrbType(const std::string &name);
+static void ParseIntegrator(rapidxml::xml_node<> *node_integrator);
 
-TextureInfo *ParseTextureOrOther(rapidxml::xml_node<> *node_parent, const std::string &name);
+static CameraInfo ParseCamera(rapidxml::xml_node<> *node_sensor);
 
-TextureInfo *ParseTexture(rapidxml::xml_node<> *node_texture);
+static void ParseEnvmap(rapidxml::xml_node<> *node_envmap, const CameraInfo &camera_info);
 
-vec3 GetVec3(rapidxml::xml_node<> *node_vec3);
+//============================================================================================================
 
-gmat4 *GetToWorld(rapidxml::xml_node<> *node_parent);
+static Float GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::string default_material_name);
 
-std::optional<bool> GetBoolean(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
+static MicrofacetDistribType GetDistrbType(const std::string &name);
 
-std::optional<int> GetInt(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
+static TextureInfo *ParseTextureOrOther(rapidxml::xml_node<> *node_parent, const std::string &name);
 
-std::optional<Float> GetFloat(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
+static TextureInfo *ParseTexture(rapidxml::xml_node<> *node_texture);
 
-std::optional<std::string> GetString(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
+static vec3 GetVec3(rapidxml::xml_node<> *node_vec3);
+
+static gmat4 *GetToWorld(rapidxml::xml_node<> *node_parent);
+
+static std::optional<bool> GetBoolean(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
+
+static std::optional<int> GetInt(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
+
+static std::optional<Float> GetFloat(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
+
+static std::optional<vec3> GetPoint(rapidxml::xml_node<> *node_parent, const std::string &name, bool not_exist_ok = true);
+
+static std::optional<std::string> GetString(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
 
 //================================================================
 
-std::string GetTreeName(rapidxml::xml_node<> *node);
+static std::string GetTreeName(rapidxml::xml_node<> *node);
 
-std::optional<std::string> GetAttri(rapidxml::xml_node<> *node, std::string key, bool not_exist_ok = false);
+static std::optional<std::string> GetAttri(rapidxml::xml_node<> *node, std::string key, bool not_exist_ok = false);
 
-rapidxml::xml_node<> *GetChild(rapidxml::xml_node<> *node, std::string name, bool not_exist_ok = true);
+static rapidxml::xml_node<> *GetChild(rapidxml::xml_node<> *node, std::string name, bool not_exist_ok = true);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -800,17 +802,9 @@ void ParseShape(rapidxml::xml_node<> *node_shape)
     case "cube"_hash:
         renderer->AddShapeInfo(new ShapeInfo(kCube, flip_normals, to_world, material_idx));
         break;
-    case "rectangle"_hash:
-        renderer->AddShapeInfo(new ShapeInfo(kRectangle, flip_normals, to_world, material_idx));
+    case "disk"_hash:
+        renderer->AddShapeInfo(new ShapeInfo(kDisk, flip_normals, to_world, material_idx));
         break;
-    case "ply"_hash:
-    {
-        auto face_normals = GetBoolean(node_shape, "faceNormals").value_or(false);
-        auto filename = xml_directory + GetAttri(GetChild(node_shape, "filename", false), "value").value();
-        auto flip_tex_coords = GetBoolean(node_shape, "flipTexCoords").value_or(true);
-        renderer->AddShapeInfo(new ShapeInfo(filename, face_normals, flip_normals, flip_tex_coords, to_world, material_idx));
-        break;
-    }
     case "obj"_hash:
     {
         auto face_normals = GetBoolean(node_shape, "faceNormals").value_or(false);
@@ -819,6 +813,24 @@ void ParseShape(rapidxml::xml_node<> *node_shape)
         renderer->AddShapeInfo(new ShapeInfo(filename, face_normals, flip_normals, flip_tex_coords, to_world, material_idx));
         break;
     }
+    case "ply"_hash:
+    {
+        auto face_normals = GetBoolean(node_shape, "faceNormals").value_or(false);
+        auto filename = xml_directory + GetAttri(GetChild(node_shape, "filename", false), "value").value();
+        auto flip_tex_coords = GetBoolean(node_shape, "flipTexCoords").value_or(true);
+        renderer->AddShapeInfo(new ShapeInfo(filename, face_normals, flip_normals, flip_tex_coords, to_world, material_idx));
+        break;
+    }
+    case "rectangle"_hash:
+        renderer->AddShapeInfo(new ShapeInfo(kRectangle, flip_normals, to_world, material_idx));
+        break;
+	case "sphere"_hash:
+	{
+		auto radius = GetFloat(node_shape, "radius").value_or(1);
+		auto center = GetPoint(node_shape, "center").value_or(vec3(0));
+		renderer->AddShapeInfo(new ShapeInfo(center, radius, flip_normals, to_world, material_idx));
+        break;
+	}
     default:
         std::cerr << "[warning] " << GetTreeName(node_shape) << std::endl
                   << "\tcannot handle shape type, ignore " << std::endl;
@@ -1068,6 +1080,37 @@ std::optional<Float> GetFloat(rapidxml::xml_node<> *node_parent, std::string nam
     }
 
     return std::stof(GetAttri(node_float, "value").value());
+}
+
+std::optional<vec3> GetPoint(rapidxml::xml_node<> *node_parent, const std::string &name, bool not_exist_ok)
+{
+	auto node_point = GetChild(node_parent, name);
+	if (!node_point)
+	{
+		if (not_exist_ok)
+			return std::nullopt;
+		else
+		{
+			std::cerr << "[error] " << GetTreeName(node_parent) << std::endl
+					  << "\tcannot find child node: " << name << std::endl;
+			exit(1);
+		}
+	}
+
+	if (strcmp(node_point->name(), "point") != 0)
+	{
+		std::cerr << "[error] " << GetTreeName(node_point) << std::endl
+				  << "\tthe type of \"" << name << "\" provided is not point" << std::endl;
+		exit(1);
+	}
+
+	vec3 result;
+
+	result.x = static_cast<Float>(std::stod(GetAttri(node_point, "x").value()));
+	result.y = static_cast<Float>(std::stod(GetAttri(node_point, "y").value()));
+	result.z = static_cast<Float>(std::stod(GetAttri(node_point, "z").value()));
+
+	return result;
 }
 
 std::optional<std::string> GetString(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)
