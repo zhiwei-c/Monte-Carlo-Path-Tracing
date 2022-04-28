@@ -28,8 +28,8 @@ public:
           eta_inv_(ext_ior / int_ior),
           specular_reflectance_(std::move(specular_reflectance))
     {
-        fdr_int_ = FresnelDiffuseReflectance(eta_inv_);
-        fdr_ext_ = FresnelDiffuseReflectance(eta_);
+        fdr_int_ = AverageFresnel(eta_inv_);
+        fdr_ext_ = AverageFresnel(eta_);
         specular_sampling_weight_ = 0;
 
         if (!diffuse_reflectance_->Constant() || (specular_reflectance_ && !specular_reflectance_->Constant()))

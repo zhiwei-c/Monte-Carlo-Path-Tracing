@@ -6,63 +6,6 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
-// 各种电介质材质（dielectric）的折射率（refractive index）
-const std::map<std::string, Float> IOR{
-	//真空
-	{"vacuum", 1.0f},
-	//溴
-	{"bromine", 1.661f},
-	//氦
-	{"helium", 1.000036f},
-	//水冰
-	{"water ice", 1.31f},
-	{"water-ice", 1.31f},
-	//氢
-	{"hydrogen", 1.000132f},
-	//熔融石英
-	{"fused quartz", 1.458f},
-	{"fused-quartz", 1.458f},
-	//空气
-	{"air", 1.000277f},
-	//派热克斯玻璃（一种耐热玻璃）
-	{"pyrex", 1.470f},
-	//二氧化碳
-	{"carbon dioxide", 1.00045f},
-	{"carbon-dioxide", 1.00045f},
-	//丙烯酸玻璃
-	{"acrylic glass", 1.49f},
-	{"acrylic-glass", 1.49f},
-	//水
-	{"water", 1.3330f},
-	//聚丙烯
-	{"polypropylene", 1.49f},
-	//丙酮
-	{"acetone", 1.36f},
-	//BK7玻璃
-	{"bk7", 1.5046f},
-	//乙醇
-	{"ethanol", 1.361f},
-	//氯化钠
-	{"sodium chloride", 1.544f},
-	{"sodium-chloride", 1.544f},
-	//四氯化碳
-	{"carbon tetrachloride", 1.461f},
-	{"carbon-tetrachloride", 1.461f},
-	//琥珀
-	{"amber", 1.55f},
-	//甘油
-	{"glycerol", 1.4729f},
-	//聚对苯二甲酸乙二醇酯
-	{"pet", 1.5750f},
-	//苯
-	{"benzene", 1.501f},
-	//金刚石
-	{"diamond", 2.419f},
-	//硅油
-	{"silicone oil", 1.52045f},
-	{"silicone-oil", 1.52045f},
-};
-
 //光线类
 class Ray
 {
@@ -193,7 +136,7 @@ inline Spectrum FresnelConductor(const Vector3 &wi, const Vector3 &normal, const
  * \param eta Relative refraction coefficient
  * \return F, the unpolarized Fresnel coefficient.
  */
-inline Float FresnelDiffuseReflectance(Float eta)
+inline Float AverageFresnel(Float eta)
 {
 	if (eta < 1)
 	{
@@ -254,17 +197,62 @@ inline Spectrum AverageFresnelConductor(const Spectrum &r, const Spectrum &g)
 	return Spectrum(0.087237) + 0.0230685 * g - 0.0864902 * g * g + 0.0774594 * g * g * g + 0.782654 * r - 0.136432 * r * r + 0.278708 * r * r * r + 0.19744 * g * r + 0.0360605 * g * g * r - 0.2586 * g * r * r;
 }
 
-///\brief 电介质材质的平均菲涅尔系数，来自 https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
-inline Float AverageFresnelDielectric(Float eta)
-{
-	if (eta < 1)
-		return 0.997118 +
-			   0.1014 * eta -
-			   0.965241 * std::pow(eta, 2) -
-			   0.130607 * std::pow(eta, 3);
-	else
-		return (eta - 1) / (4.08567 + 1.00071 * eta);
-}
+// 各种电介质材质（dielectric）的折射率（refractive index）
+const std::map<std::string, Float> IOR{
+	//真空
+	{"vacuum", 1.0f},
+	//溴
+	{"bromine", 1.661f},
+	//氦
+	{"helium", 1.000036f},
+	//水冰
+	{"water ice", 1.31f},
+	{"water-ice", 1.31f},
+	//氢
+	{"hydrogen", 1.000132f},
+	//熔融石英
+	{"fused quartz", 1.458f},
+	{"fused-quartz", 1.458f},
+	//空气
+	{"air", 1.000277f},
+	//派热克斯玻璃（一种耐热玻璃）
+	{"pyrex", 1.470f},
+	//二氧化碳
+	{"carbon dioxide", 1.00045f},
+	{"carbon-dioxide", 1.00045f},
+	//丙烯酸玻璃
+	{"acrylic glass", 1.49f},
+	{"acrylic-glass", 1.49f},
+	//水
+	{"water", 1.3330f},
+	//聚丙烯
+	{"polypropylene", 1.49f},
+	//丙酮
+	{"acetone", 1.36f},
+	//BK7玻璃
+	{"bk7", 1.5046f},
+	//乙醇
+	{"ethanol", 1.361f},
+	//氯化钠
+	{"sodium chloride", 1.544f},
+	{"sodium-chloride", 1.544f},
+	//四氯化碳
+	{"carbon tetrachloride", 1.461f},
+	{"carbon-tetrachloride", 1.461f},
+	//琥珀
+	{"amber", 1.55f},
+	//甘油
+	{"glycerol", 1.4729f},
+	//聚对苯二甲酸乙二醇酯
+	{"pet", 1.5750f},
+	//苯
+	{"benzene", 1.501f},
+	//金刚石
+	{"diamond", 2.419f},
+	//硅油
+	{"silicone oil", 1.52045f},
+	{"silicone-oil", 1.52045f},
+};
 
 //各种导体材质（conductor）的折射率（refractive index）
 const std::map<std::string, Spectrum> IOR_eta{

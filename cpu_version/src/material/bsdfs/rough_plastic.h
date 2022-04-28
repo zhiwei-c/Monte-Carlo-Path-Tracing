@@ -35,8 +35,8 @@ public:
           diffuse_reflectance_(std::move(diffuse_reflectance)),
           nonlinear_(nonlinear)
     {
-        fdr_int_ = FresnelDiffuseReflectance(eta_inv_);
-        fdr_ext_ = FresnelDiffuseReflectance(eta_);
+        fdr_int_ = AverageFresnel(eta_inv_);
+        fdr_ext_ = AverageFresnel(eta_);
 
         specular_sampling_weight_ = 0;
         if (diffuse_reflectance_->Constant() && (!specular_reflectance_ || specular_reflectance_->Constant()))
@@ -54,10 +54,7 @@ public:
 
         f_add_ = 0;
         if (!Microfacet::TextureMapping())
-        {
-            auto F_avg = AverageFresnelDielectric(eta_);
-            f_add_ = Sqr(F_avg) * albedo_avg_ / (1 - F_avg * (1 - albedo_avg_));
-        }
+            f_add_ = Sqr(fdr_ext_) * albedo_avg_ / (1 - fdr_ext_ * (1 - albedo_avg_));
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
@@ -89,15 +86,14 @@ public:
         }
 
         bs.pdf = Pdf(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
-		if (bs.pdf < kEpsilonL)
-		{
-			bs.pdf = 0;
-			return;
-		}
+        if (bs.pdf < kEpsilonL)
+        {
+            bs.pdf = 0;
+            return;
+        }
 
-		if (bs.get_weight)
-			bs.weight = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
-	
+        if (bs.get_weight)
+            bs.weight = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
     }
 
     ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
@@ -189,7 +185,7 @@ public:
         return result;
     }
 
-	///\brief 是否映射纹理
+    ///\brief 是否映射纹理
     bool TextureMapping() const override
     {
         return Microfacet::TextureMapping() ||
@@ -197,7 +193,7 @@ public:
                (specular_reflectance_ && !specular_reflectance_->Constant());
     }
 
-	///\brief 给定点是否透明
+    ///\brief 给定点是否透明
     bool Transparent(const Vector2 &texcoord) const override
     {
         return Material::Transparent(texcoord) ||
@@ -215,7 +211,7 @@ private:
     std::unique_ptr<Texture> specular_reflectance_; // 镜面反射系数。注意，对于物理真实感绘制默认为 1，应为空指针。
     std::unique_ptr<Texture> diffuse_reflectance_;  // 漫反射系数
 
-	///\brief 补偿多次散射后又射出的光能
+    ///\brief 补偿多次散射后又射出的光能
     Float EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const
     {
         auto albedo_i = GetAlbedo(std::fabs(cos_i_n));

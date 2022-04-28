@@ -43,7 +43,6 @@ public:
 			k_ = Spectrum(1) / ext_ior;
 		}
 
-		f_add_ = Spectrum(0);
 		if (Microfacet::TextureMapping())
 			return;
 

@@ -41,10 +41,10 @@ public:
 		if (Microfacet::TextureMapping())
 			return;
 
-		auto F_avg = AverageFresnelDielectric(eta_);
+		auto F_avg = AverageFresnel(eta_);
 		f_add_ = F_avg * albedo_avg_ / (1 - F_avg * (1 - albedo_avg_));
 
-		auto F_avg_inv = AverageFresnelDielectric(eta_inv_);
+		auto F_avg_inv = AverageFresnel(eta_inv_);
 		f_add_inv_ = F_avg_inv * albedo_avg_ / (1 - F_avg_inv * (1 - albedo_avg_));
 
 		ratio_t_ = (1 - F_avg) * (1 - F_avg_inv) * Sqr(eta_) /
