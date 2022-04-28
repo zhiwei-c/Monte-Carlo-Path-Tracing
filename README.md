@@ -31,7 +31,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 | 耗时  | 8 min 59 s   | 1 min 14s   |
 | 相对耗时  | 1   | 7.28   |
 
-对于[相对复杂的场景](resources/rendering_resources/bathroom2/scene.xml)，可能是由于代码实现问题，效果没有那么好，但使用 GPU 加速仍能节约一定的时间，耗时是原本的约 71.4%。
+对于[相对复杂的场景](resources/rendering_resources/bathroom2/scene.xml)，可能是由于代码实现问题，使用 GPU 加速的效果没有那么好，但仍能节约一定的时间，耗时是原本的约 71.4%。
 
 - 1280*720 分辨率，64 spp
 
