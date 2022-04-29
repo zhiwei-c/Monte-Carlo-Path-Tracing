@@ -11,7 +11,7 @@
 			<matrix value="-0.993341 -0.0130485 -0.114467 4.44315 0 0.993565 -0.11326 16.9344 0.115208 -0.112506 -0.98695 49.9102 0 0 0 1"/>
 		</transform>
 		<sampler type="sobol" >
-			<integer name="sampleCount" value="4" />
+			<integer name="sampleCount" value="64" />
 		</sampler>
 		<film type="ldrfilm" >
 			<integer name="width" value="1280" />
