@@ -2,32 +2,6 @@
 
 #include "material_base.h"
 
-__global__ void InitDiffuse(uint m_idx,
-                            MaterialInfo *material_info_list,
-                            Texture *texture_list,
-                            Material *material_list)
-{
-    if (threadIdx.x == 0 && blockIdx.x == 0)
-    {
-        auto bump_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].bump_map_idx != kUintMax)
-            bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
-
-        auto opacity_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].opacity_idx != kUintMax)
-            opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
-
-        auto diffuse_reflectance = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].diffuse_reflectance_idx != kUintMax)
-            diffuse_reflectance = texture_list + material_info_list[m_idx].diffuse_reflectance_idx;
-
-        material_list[m_idx].InitDiffuse(material_info_list[m_idx].twosided,
-                                         bump_map,
-                                         opacity_map,
-                                         diffuse_reflectance);
-    }
-}
-
 __device__ void Material::InitDiffuse(bool twosided,
                                       Texture *bump_map,
                                       Texture *opacity_map,
@@ -79,4 +53,27 @@ __device__ Float Material::PdfDiffuse(const vec3 &wi, const vec3 &wo, const vec3
     auto wo_local = ToLocal(wo, normal);
     auto pdf = PdfHemisCos(wo_local);
     return pdf;
+}
+
+__device__ inline  void InitDiffuse(uint m_idx,
+                            MaterialInfo *material_info_list,
+                            Texture *texture_list,
+                            Material *material_list)
+{
+    auto bump_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].bump_map_idx != kUintMax)
+        bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
+
+    auto opacity_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].opacity_idx != kUintMax)
+        opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
+
+    auto diffuse_reflectance = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].diffuse_reflectance_idx != kUintMax)
+        diffuse_reflectance = texture_list + material_info_list[m_idx].diffuse_reflectance_idx;
+
+    material_list[m_idx].InitDiffuse(material_info_list[m_idx].twosided,
+                                     bump_map,
+                                     opacity_map,
+                                     diffuse_reflectance);
 }

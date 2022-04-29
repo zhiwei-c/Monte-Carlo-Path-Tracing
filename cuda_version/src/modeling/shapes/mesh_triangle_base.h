@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shape_info.h"
+
 class Vertex
 {
 public:

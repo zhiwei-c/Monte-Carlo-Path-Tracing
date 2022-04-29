@@ -1,32 +1,14 @@
 #pragma once
 
-#include "materials/materials.h"
-
-__device__ Float Material::SpecularSamplingWeight(const vec2 &texcoord) const
-{
-    if (!diffuse_reflectance_ && !specular_reflectance_)
-        return 2.0 / 3.0;
-    else if (!diffuse_reflectance_)
-    {
-        auto ks = specular_reflectance_->Color(texcoord);
-        auto s_sum = ks.x + ks.y + ks.z;
-        return s_sum / (1.5 + s_sum);
-    }
-    else if (!specular_reflectance_)
-    {
-        auto kd = diffuse_reflectance_->Color(texcoord);
-        auto d_sum = kd.x + kd.y + kd.z;
-        return 3.0 / (d_sum + 3.0);
-    }
-    else
-    {
-        auto ks = specular_reflectance_->Color(texcoord);
-        auto s_sum = ks.x + ks.y + ks.z;
-        auto kd = diffuse_reflectance_->Color(texcoord);
-        auto d_sum = kd.x + kd.y + kd.z;
-        return s_sum / (d_sum + s_sum);
-    }
-}
+#include "materials/area_light.h"
+#include "materials/diffuse.h"
+#include "materials/dielectric.h"
+#include "materials/rough_dielectric.h"
+#include "materials/thin_dielectric.h"
+#include "materials/conductor.h"
+#include "materials/rough_conductor.h"
+#include "materials/plastic.h"
+#include "materials/rough_plastic.h"
 
 __device__ bool Material::HasEmission() const
 {
@@ -161,5 +143,48 @@ __global__ void SetMaterialOtherInfo(uint m_idx,
             pre = material_list + m_idx + 1;
 
         material_list[m_idx].SetOtherInfo(m_idx, pre, next);
+    }
+}
+
+__global__ void CreateMaterials(uint material_num,
+                                MaterialInfo *material_info_list,
+                                Texture *texture_list,
+                                Material *material_list)
+{
+    if (threadIdx.x != 0 && blockIdx.x != 0)
+        return;
+
+    for (uint material_idx = 0; material_idx < material_num; material_idx++)
+    {
+        switch (material_info_list[material_idx].type)
+        {
+        case kAreaLight:
+            InitAreaLight(material_idx, material_info_list, texture_list, material_list);
+            break;
+        case kDielectric:
+            InitDielectric(material_idx, material_info_list, texture_list, material_list);
+            break;
+        case kRoughDielectric:
+            InitRoughDielectric(material_idx, material_info_list, texture_list, material_list);
+            break;
+        case kThinDielectric:
+            InitThinDielectric(material_idx, material_info_list, texture_list, material_list);
+            break;
+        case kConductor:
+            InitConductor(material_idx, material_info_list, texture_list, material_list);
+            break;
+        case kRoughConductor:
+            InitRoughConductor(material_idx, material_info_list, texture_list, material_list);
+            break;
+        case kPlastic:
+            InitPlastic(material_idx, material_info_list, texture_list, material_list);
+            break;
+        case kRoughPlastic:
+            InitRoughPlastic(material_idx, material_info_list, texture_list, material_list);
+            break;
+        default:
+            InitDiffuse(material_idx, material_info_list, texture_list, material_list);
+            break;
+        }
     }
 }

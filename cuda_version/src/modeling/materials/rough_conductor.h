@@ -2,50 +2,6 @@
 
 #include "material_base.h"
 
-__global__ void InitRoughConductor(uint m_idx,
-                                   float *kulla_conty_table,
-                                   float albedo_avg,
-                                   MaterialInfo *material_info_list,
-                                   Texture *texture_list,
-                                   Material *material_list)
-{
-    if (threadIdx.x == 0 && blockIdx.x == 0)
-    {
-        auto bump_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].bump_map_idx != kUintMax)
-            bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
-
-        auto opacity_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].opacity_idx != kUintMax)
-            opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
-
-        auto specular_reflectance = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
-            specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
-
-        auto alpha_u = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].alpha_u_idx != kUintMax)
-            alpha_u = texture_list + material_info_list[m_idx].alpha_u_idx;
-
-        auto alpha_v = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].alpha_v_idx != kUintMax)
-            alpha_v = texture_list + material_info_list[m_idx].alpha_v_idx;
-
-        material_list[m_idx].InitRoughConductor(material_info_list[m_idx].twosided,
-                                                bump_map,
-                                                opacity_map,
-                                                material_info_list[m_idx].mirror,
-                                                material_info_list[m_idx].eta,
-                                                material_info_list[m_idx].k,
-                                                specular_reflectance,
-                                                material_info_list[m_idx].distri,
-                                                alpha_u,
-                                                alpha_v,
-                                                kulla_conty_table,
-                                                albedo_avg);
-    }
-}
-
 __device__ void Material::InitRoughConductor(bool twosided,
                                              Texture *bump_map,
                                              Texture *opacity_map,
@@ -133,8 +89,8 @@ __device__ vec3 Material::EvalRoughConductor(const vec3 &wi, const vec3 &wo, con
     auto albedo = F * static_cast<Float>(D * G / (4.0 * cos_i_n * cos_o_n));
     if (specular_reflectance_)
         albedo *= specular_reflectance_->Color(texcoord);
-    
-    if(albedo_avg_ > 0)
+
+    if (albedo_avg_ > 0)
         albedo += EvalMultipleScatter(cos_i_n, cos_o_n);
 
     return albedo;
@@ -158,4 +114,48 @@ __device__ Float Material::PdfRoughConductor(const vec3 &wi, const vec3 &wo, con
         return 0;
     else
         return D * abs(1.0 / (4.0 * myvec::dot(wo, h)));
+}
+
+__device__ inline void InitRoughConductor(uint m_idx,
+                                          MaterialInfo *material_info_list,
+                                          Texture *texture_list,
+                                          Material *material_list)
+{
+    auto bump_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].bump_map_idx != kUintMax)
+        bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
+
+    auto opacity_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].opacity_idx != kUintMax)
+        opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
+
+    auto specular_reflectance = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
+        specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
+
+    auto alpha_u = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].alpha_u_idx != kUintMax)
+        alpha_u = texture_list + material_info_list[m_idx].alpha_u_idx;
+
+    auto alpha_v = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].alpha_v_idx != kUintMax)
+        alpha_v = texture_list + material_info_list[m_idx].alpha_v_idx;
+
+    auto albedo_avg = static_cast<float>(-1);
+    auto kulla_conty_table = static_cast<float *>(nullptr);
+    CreateCosinAlbedoTexture(material_info_list[m_idx].distri, alpha_u, alpha_v,
+                             kulla_conty_table, albedo_avg);
+
+    material_list[m_idx].InitRoughConductor(material_info_list[m_idx].twosided,
+                                            bump_map,
+                                            opacity_map,
+                                            material_info_list[m_idx].mirror,
+                                            material_info_list[m_idx].eta,
+                                            material_info_list[m_idx].k,
+                                            specular_reflectance,
+                                            material_info_list[m_idx].distri,
+                                            alpha_u,
+                                            alpha_v,
+                                            kulla_conty_table,
+                                            albedo_avg);
 }

@@ -2,38 +2,6 @@
 
 #include "material_base.h"
 
-__global__ void InitDielectric(uint m_idx,
-                               MaterialInfo *material_info_list,
-                               Texture *texture_list,
-                               Material *material_list)
-{
-    if (threadIdx.x == 0 && blockIdx.x == 0)
-    {
-        auto bump_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].bump_map_idx != kUintMax)
-            bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
-
-        auto opacity_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].opacity_idx != kUintMax)
-            opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
-
-        auto specular_reflectance = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
-            specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
-
-        auto specular_transmittance = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].specular_transmittance_idx != kUintMax)
-            specular_transmittance = texture_list + material_info_list[m_idx].specular_transmittance_idx;
-
-        material_list[m_idx].InitDielectric(material_info_list[m_idx].twosided,
-                                            bump_map,
-                                            opacity_map,
-                                            material_info_list[m_idx].eta,
-                                            specular_reflectance,
-                                            specular_transmittance);
-    }
-}
-
 __device__ void Material::InitDielectric(bool twosided,
                                          Texture *bump_map,
                                          Texture *opacity_map,
@@ -53,7 +21,7 @@ __device__ void Material::InitDielectric(bool twosided,
 
 __device__ void Material::SampleDielectric(BsdfSampling &bs, const vec3 &sample) const
 {
-    auto eta_inv = bs.inside ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+    auto eta_inv = (bs.inside == kTrue) ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
     auto kr = Fresnel(-bs.wo, bs.normal, eta_inv);
     if (sample.x < kr)
@@ -69,7 +37,7 @@ __device__ void Material::SampleDielectric(BsdfSampling &bs, const vec3 &sample)
 
 __device__ vec3 Material::EvalDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    auto eta_inv = inside == kTrue ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+    auto eta_inv = (inside == kTrue) ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
     auto kr = Fresnel(wi, normal, eta_inv);
     if (SameDirection(wo, Reflect(wi, normal)))
@@ -94,7 +62,7 @@ __device__ vec3 Material::EvalDielectric(const vec3 &wi, const vec3 &wo, const v
 
 __device__ Float Material::PdfDielectric(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    auto eta_inv = inside == kTrue ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+    auto eta_inv = (inside == kTrue) ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
 
     auto kr = Fresnel(wi, normal, eta_inv);
     if (SameDirection(wo, Reflect(wi, normal)))
@@ -105,4 +73,33 @@ __device__ Float Material::PdfDielectric(const vec3 &wi, const vec3 &wo, const v
         return 1.0 - kr;
     else
         return 0;
+}
+
+__device__ inline  void InitDielectric(uint m_idx,
+                               MaterialInfo *material_info_list,
+                               Texture *texture_list,
+                               Material *material_list)
+{
+    auto bump_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].bump_map_idx != kUintMax)
+        bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
+
+    auto opacity_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].opacity_idx != kUintMax)
+        opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
+
+    auto specular_reflectance = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
+        specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
+
+    auto specular_transmittance = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].specular_transmittance_idx != kUintMax)
+        specular_transmittance = texture_list + material_info_list[m_idx].specular_transmittance_idx;
+
+    material_list[m_idx].InitDielectric(material_info_list[m_idx].twosided,
+                                        bump_map,
+                                        opacity_map,
+                                        material_info_list[m_idx].eta,
+                                        specular_reflectance,
+                                        specular_transmittance);
 }

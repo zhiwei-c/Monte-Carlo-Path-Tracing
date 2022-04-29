@@ -11,19 +11,6 @@ __device__ void Texture::InitBitmap(int width, int height, int channel, float *c
     colors_ = colors;
 }
 
-__global__ void InitBitmapTexture(uint idx,
-                                  int width,
-                                  int height,
-                                  int channel,
-                                  float *colors,
-                                  Texture *texture_list)
-{
-    if (threadIdx.x == 0 && blockIdx.x == 0)
-    {
-        texture_list[idx].InitBitmap(width, height, channel, colors);
-    }
-}
-
 __device__ vec3 Texture::ColorBitmap(const vec2 &texcoord) const
 {
     auto x = static_cast<int>(texcoord.x * width_),
@@ -46,4 +33,17 @@ __device__ vec2 Texture::GradientBitmap(const vec2 &texcoord) const
     auto du = kh * kn * (value_u - value),
          dv = kh * kn * (value_v - value);
     return vec2(du, dv);
+}
+
+__global__ void InitBitmapTexture(uint idx,
+                                  int width,
+                                  int height,
+                                  int channel,
+                                  float *colors,
+                                  Texture *texture_list)
+{
+    if (threadIdx.x == 0 && blockIdx.x == 0)
+    {
+        texture_list[idx].InitBitmap(width, height, channel, colors);
+    }
 }

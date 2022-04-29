@@ -2,38 +2,6 @@
 
 #include "material_base.h"
 
-__global__ void InitPlastic(uint m_idx,
-                            MaterialInfo *material_info_list,
-                            Texture *texture_list,
-                            Material *material_list)
-{
-    if (threadIdx.x == 0 && blockIdx.x == 0)
-    {
-        auto bump_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].bump_map_idx != kUintMax)
-            bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
-
-        auto opacity_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].opacity_idx != kUintMax)
-            opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
-
-        auto diffuse_reflectance = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].diffuse_reflectance_idx != kUintMax)
-            diffuse_reflectance = texture_list + material_info_list[m_idx].diffuse_reflectance_idx;
-
-        auto specular_reflectance = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
-            specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
-
-        material_list[m_idx].InitPlastic(material_info_list[m_idx].twosided,
-                                         bump_map,
-                                         opacity_map,
-                                         material_info_list[m_idx].eta,
-                                         diffuse_reflectance,
-                                         specular_reflectance,
-                                         material_info_list[m_idx].nonlinear);
-    }
-}
 __device__ void Material::InitPlastic(bool twosided,
                                       Texture *bump_map,
                                       Texture *opacity_map,
@@ -46,13 +14,11 @@ __device__ void Material::InitPlastic(bool twosided,
     twosided_ = twosided;
     bump_map_ = bump_map;
     opacity_map_ = opacity_map;
-    eta_d_ = eta.x;
     eta_inv_d_ = 1.0 / eta.x;
     diffuse_reflectance_ = diffuse_reflectance;
     specular_reflectance_ = specular_reflectance;
     nonlinear_ = nonlinear;
-    fdr_int_ = AverageFresnel(1.0 / eta.x);
-    fdr_ext_ = AverageFresnel(eta.x);
+    fdr_int_ = AverageFresnel(eta.x);
 }
 
 __device__ void Material::SamplePlastic(BsdfSampling &bs, const vec3 &sample) const
@@ -131,4 +97,34 @@ __device__ Float Material::PdfPlastic(const vec3 &wi, const vec3 &wo, const vec3
         pdf += pdf_specular;
     }
     return pdf;
+}
+
+__device__ inline  void InitPlastic(uint m_idx,
+                            MaterialInfo *material_info_list,
+                            Texture *texture_list,
+                            Material *material_list)
+{
+    auto bump_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].bump_map_idx != kUintMax)
+        bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
+
+    auto opacity_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].opacity_idx != kUintMax)
+        opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
+
+    auto diffuse_reflectance = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].diffuse_reflectance_idx != kUintMax)
+        diffuse_reflectance = texture_list + material_info_list[m_idx].diffuse_reflectance_idx;
+
+    auto specular_reflectance = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
+        specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
+
+    material_list[m_idx].InitPlastic(material_info_list[m_idx].twosided,
+                                     bump_map,
+                                     opacity_map,
+                                     material_info_list[m_idx].eta,
+                                     diffuse_reflectance,
+                                     specular_reflectance,
+                                     material_info_list[m_idx].nonlinear);
 }

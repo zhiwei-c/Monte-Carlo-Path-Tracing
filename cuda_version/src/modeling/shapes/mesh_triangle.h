@@ -1,6 +1,6 @@
 #pragma once
 
-#include "shape_base.h"
+#include "mesh_triangle_base.h"
 
 __device__ void Mesh::InitTriangle(Vertex *v,
                                    Material *material,

@@ -3,8 +3,6 @@
 #include <vector>
 #include <unordered_set>
 
-#include <fstream>
-
 #include "rendering/camera.h"
 #include "utils/timer.h"
 #include "utils/model_loader.h"
@@ -98,11 +96,44 @@ public:
 
     ~Renderer()
     {
+        CheckCudaErrors(cudaDeviceSynchronize());
         for (auto &texture_info : texture_info_list_)
         {
             delete texture_info;
             texture_info = nullptr;
         }
+
+        for (auto &shape_info : shape_info_list_)
+        {
+            delete shape_info;
+            shape_info = nullptr;
+        }
+
+        if (env_map_info_)
+        {
+            delete env_map_info_;
+            env_map_info_ = nullptr;
+        }
+
+        CheckCudaErrors(cudaGetLastError());
+
+        for (auto &texture_bitmap_data : texture_bitmap_data_)
+            CheckCudaErrors(cudaFree(texture_bitmap_data));
+
+        for (auto &bvhnode : bvhnode_list_)
+            CheckCudaErrors(cudaFree(bvhnode));
+
+        CheckCudaErrors(cudaFree(texture_list_));
+        CheckCudaErrors(cudaFree(material_list_));
+        CheckCudaErrors(cudaFree(mesh_list_));
+        CheckCudaErrors(cudaFree(shapebvh_list_));
+        CheckCudaErrors(cudaFree(scenebvh_node_list_));
+        CheckCudaErrors(cudaFree(scenebvh_));
+        CheckCudaErrors(cudaFree(integrator_));
+        CheckCudaErrors(cudaFree(camera_));
+        CheckCudaErrors(cudaFree(emitter_idx_list_));
+        CheckCudaErrors(cudaFree(env_map_));
+        cudaDeviceReset();
     }
 
     void AddMaterialInfo(const MaterialInfo &material_info)
@@ -167,8 +198,6 @@ private:
 
     void InitTextureList();
 
-    void InitKullaContyTable(const MaterialInfo &material_info, float *&albedo, float &albedo_avg);
-
     void InitMaterialList();
 
     void InitVertexIndexBuffer(Vertex *&vertex_list, uvec3 *&mesh_idx_list, uint *&mesh_material_idx_list, uint &mesh_num, std::vector<uvec2> &mesh_idx_range_list);
@@ -231,105 +260,19 @@ void Renderer::InitTextureList()
     }
 }
 
-void Renderer::InitKullaContyTable(const MaterialInfo &material_info,
-                                   float *&albedo,
-                                   float &albedo_avg)
-{
-    Float alpha_u = 0.1;
-    if (material_info.alpha_u_idx != kUintMax)
-    {
-        if (texture_info_list_[material_info.alpha_u_idx]->type != kConstant)
-            return;
-        alpha_u = texture_info_list_[material_info.alpha_u_idx]->color0.x;
-    }
-
-    Float alpha_v = 0.1;
-    if (material_info.alpha_v_idx != kUintMax)
-    {
-        if (texture_info_list_[material_info.alpha_v_idx]->type != kConstant)
-            return;
-        alpha_v = texture_info_list_[material_info.alpha_v_idx]->color0.x;
-    }
-    if (alpha_u < 0.01 && alpha_v < 0.01)
-        return;
-
-    auto local_albedo = std::vector<float>();
-    CreateCosinAlbedoTexture(material_info.distri, alpha_u, alpha_v,
-                             local_albedo, albedo_avg);
-    if (albedo_avg < 0)
-        return;
-
-    albedo = nullptr;
-    CheckCudaErrors(cudaMallocManaged(&albedo, kAlbedoResolution * sizeof(float)));
-    cudaMemcpy(albedo, local_albedo.data(), kAlbedoResolution * sizeof(float), cudaMemcpyHostToDevice);
-    texture_bitmap_data_.push_back(albedo);
-}
-
 void Renderer::InitMaterialList()
 {
     auto material_num = material_info_list_.size();
     material_list_ = nullptr;
-    CheckCudaErrors(cudaMallocManaged(&material_list_, material_num * sizeof(Material)));
+    CheckCudaErrors(cudaMalloc(&material_list_, material_num * sizeof(Material)));
     MaterialInfo *local_material_info_list = nullptr;
     CheckCudaErrors(cudaMallocManaged(&local_material_info_list, material_num * sizeof(MaterialInfo)));
     cudaMemcpy(local_material_info_list, material_info_list_.data(), material_num * sizeof(MaterialInfo), cudaMemcpyHostToDevice);
 
-    for (uint material_idx = 0; material_idx < material_num; material_idx++)
-    {
-        switch (material_info_list_[material_idx].type)
-        {
-        case kAreaLight:
-            InitAreaLight<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
-            break;
-        case kDiffuse:
-            InitDiffuse<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
-            break;
-        case kDielectric:
-            InitDielectric<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
-            break;
-        case kRoughDielectric:
-        {
-            auto kulla_conty_table = static_cast<float *>(nullptr);
-            float albedo_avg = 0;
-            InitKullaContyTable(material_info_list_[material_idx], kulla_conty_table, albedo_avg);
-            InitRoughDielectric<<<1, 1>>>(material_idx, kulla_conty_table, albedo_avg, local_material_info_list, texture_list_, material_list_);
-            break;
-        }
-        case kThinDielectric:
-            InitThinDielectric<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
-            break;
-        case kConductor:
-            InitConductor<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
-            break;
-        case kRoughConductor:
-        {
-            auto kulla_conty_table = static_cast<float *>(nullptr);
-            float albedo_avg = 0;
-            InitKullaContyTable(material_info_list_[material_idx], kulla_conty_table, albedo_avg);
-            InitRoughConductor<<<1, 1>>>(material_idx, kulla_conty_table, albedo_avg, local_material_info_list, texture_list_, material_list_);
-            break;
-        }
-        case kPlastic:
-            InitPlastic<<<1, 1>>>(material_idx, local_material_info_list, texture_list_, material_list_);
-            break;
-        case kRoughPlastic:
-        {
-            auto kulla_conty_table = static_cast<float *>(nullptr);
-            float albedo_avg = 0;
-            InitKullaContyTable(material_info_list_[material_idx], kulla_conty_table, albedo_avg);
-            InitRoughPlastic<<<1, 1>>>(material_idx, kulla_conty_table, albedo_avg, local_material_info_list, texture_list_, material_list_);
-            break;
-        }
-        default:
-            PrintExcuError();
-            break;
-        }
-        CheckCudaErrors(cudaGetLastError());
-        CheckCudaErrors(cudaDeviceSynchronize());
-        SetMaterialOtherInfo<<<1, 1>>>(material_idx, material_num, material_list_);
-        CheckCudaErrors(cudaGetLastError());
-        CheckCudaErrors(cudaDeviceSynchronize());
-    }
+    CreateMaterials<<<1, 1>>>(material_num, local_material_info_list, texture_list_, material_list_);
+    CheckCudaErrors(cudaGetLastError());
+    CheckCudaErrors(cudaDeviceSynchronize());
+
     CheckCudaErrors(cudaGetLastError());
     CheckCudaErrors(cudaFree(local_material_info_list));
     local_material_info_list = nullptr;

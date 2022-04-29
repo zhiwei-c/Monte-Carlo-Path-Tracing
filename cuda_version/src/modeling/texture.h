@@ -1,4 +1,9 @@
-#include "textures/textures.h"
+#pragma once
+
+#include "textures/constant_texture.h"
+#include "textures/bitmap.h"
+#include "textures/checkerboard.h"
+#include "textures/grid_texture.h"
 
 __device__ vec3 Texture::Color(const vec2 &texcoord) const
 {

@@ -1,9 +1,6 @@
 #pragma once
 
-#ifndef SHAPE_H
-#define SHAPE_H
-
-#include "shapes/shapes.h"
+#include "shapes/mesh_triangle.h"
 
 __global__ void CreateMeshes(uint max_x,
                              uint max_y,
@@ -64,5 +61,3 @@ __global__ void SetMeshesOtherInfo(uint mesh_idx_begin,
         }
     }
 }
-
-#endif // !SHAPE_H

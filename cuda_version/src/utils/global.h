@@ -1,10 +1,9 @@
-#ifndef GLOBAL_H
-#define GLOBAL_H
-
-#include "vector.h"
+#pragma once
 
 #include <iostream>
 #include <curand_kernel.h>
+
+#include "vector.h"
 
 // limited version of checkCudaErrors from helper_cuda.h in CUDA examples
 #define CheckCudaErrors(val) CheckCuda((val), #val, __FILE__, __LINE__)
@@ -74,4 +73,3 @@ constexpr size_t operator"" _hash(const char *str, size_t)
     return Hash(str);
 }
 
-#endif // !GLOBAL_H

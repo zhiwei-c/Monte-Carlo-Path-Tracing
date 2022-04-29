@@ -2,49 +2,6 @@
 
 #include "material_base.h"
 
-__global__ void InitRoughPlastic(uint m_idx,
-                                 float *kulla_conty_table,
-                                 float albedo_avg,
-                                 MaterialInfo *material_info_list,
-                                 Texture *texture_list,
-                                 Material *material_list)
-{
-    if (threadIdx.x == 0 && blockIdx.x == 0)
-    {
-        auto bump_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].bump_map_idx != kUintMax)
-            bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
-
-        auto opacity_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].opacity_idx != kUintMax)
-            opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
-
-        auto diffuse_reflectance = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].diffuse_reflectance_idx != kUintMax)
-            diffuse_reflectance = texture_list + material_info_list[m_idx].diffuse_reflectance_idx;
-
-        auto specular_reflectance = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
-            specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
-
-        auto alpha = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].alpha_u_idx != kUintMax)
-            alpha = texture_list + material_info_list[m_idx].alpha_u_idx;
-
-        material_list[m_idx].InitRoughPlastic(material_info_list[m_idx].twosided,
-                                              bump_map,
-                                              opacity_map,
-                                              material_info_list[m_idx].eta,
-                                              diffuse_reflectance,
-                                              specular_reflectance,
-                                              material_info_list[m_idx].distri,
-                                              alpha,
-                                              material_info_list[m_idx].nonlinear,
-                                              kulla_conty_table,
-                                              albedo_avg);
-    }
-}
-
 __device__ void Material::InitRoughPlastic(bool twosided,
                                            Texture *bump_map,
                                            Texture *opacity_map,
@@ -61,7 +18,6 @@ __device__ void Material::InitRoughPlastic(bool twosided,
     twosided_ = twosided;
     bump_map_ = bump_map;
     opacity_map_ = opacity_map;
-    eta_d_ = eta.x;
     eta_inv_d_ = 1.0 / eta.x;
     diffuse_reflectance_ = diffuse_reflectance;
     specular_reflectance_ = specular_reflectance;
@@ -69,15 +25,14 @@ __device__ void Material::InitRoughPlastic(bool twosided,
     alpha_u_ = alpha;
     alpha_v_ = alpha;
     nonlinear_ = nonlinear;
-    fdr_int_ = AverageFresnel(1.0 / eta.x);
-    fdr_ext_ = AverageFresnel(eta.x);
+    fdr_int_ = AverageFresnel(eta.x);
 
     if (albedo_avg < 0)
         return;
     albedo_avg_ = albedo_avg;
     kulla_conty_table_ = kulla_conty_table;
 
-    f_add_ = vec3(fdr_ext_ * fdr_ext_ * albedo_avg_ / (1.0 - fdr_ext_ * (1.0 - albedo_avg_)));
+    f_add_ = vec3(fdr_int_ * fdr_int_ * albedo_avg_ / (1.0 - fdr_int_ * (1.0 - albedo_avg_)));
 }
 
 __device__ void Material::SampleRoughPlastic(BsdfSampling &bs, const vec3 &sample) const
@@ -186,4 +141,47 @@ __device__ Float Material::PdfRoughPlastic(const vec3 &wi, const vec3 &wo, const
         pdf += pdf_specular * D * jacobian;
     }
     return pdf;
+}
+
+__device__ inline void InitRoughPlastic(uint m_idx,
+                                        MaterialInfo *material_info_list,
+                                        Texture *texture_list,
+                                        Material *material_list)
+{
+    auto bump_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].bump_map_idx != kUintMax)
+        bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
+
+    auto opacity_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].opacity_idx != kUintMax)
+        opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
+
+    auto diffuse_reflectance = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].diffuse_reflectance_idx != kUintMax)
+        diffuse_reflectance = texture_list + material_info_list[m_idx].diffuse_reflectance_idx;
+
+    auto specular_reflectance = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
+        specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
+
+    auto alpha = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].alpha_u_idx != kUintMax)
+        alpha = texture_list + material_info_list[m_idx].alpha_u_idx;
+
+    auto albedo_avg = static_cast<float>(-1);
+    auto kulla_conty_table = static_cast<float *>(nullptr);
+    CreateCosinAlbedoTexture(material_info_list[m_idx].distri, alpha, alpha,
+                             kulla_conty_table, albedo_avg);
+
+    material_list[m_idx].InitRoughPlastic(material_info_list[m_idx].twosided,
+                                          bump_map,
+                                          opacity_map,
+                                          material_info_list[m_idx].eta,
+                                          diffuse_reflectance,
+                                          specular_reflectance,
+                                          material_info_list[m_idx].distri,
+                                          alpha,
+                                          material_info_list[m_idx].nonlinear,
+                                          kulla_conty_table,
+                                          albedo_avg);
 }

@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef SAMPLE_H
-#define SAMPLE_H
-
 #include "../global.h"
 
 __device__ inline Float MisWeight(Float pdf1, Float pdf2)
@@ -29,5 +26,3 @@ __device__ inline Float PdfHemisCos(const vec3 &dir_local)
     auto pdf = kPiInv * cos_theta;
     return pdf;
 }
-
-#endif // !SAMPLE_H

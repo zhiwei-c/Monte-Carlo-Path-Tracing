@@ -2,53 +2,6 @@
 
 #include "material_base.h"
 
-__global__ void InitRoughDielectric(uint m_idx,
-                                    float *kulla_conty_table,
-                                    float albedo_avg,
-                                    MaterialInfo *material_info_list,
-                                    Texture *texture_list,
-                                    Material *material_list)
-{
-    if (threadIdx.x == 0 && blockIdx.x == 0)
-    {
-        auto bump_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].bump_map_idx != kUintMax)
-            bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
-
-        auto opacity_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].opacity_idx != kUintMax)
-            opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
-
-        auto specular_reflectance = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
-            specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
-
-        auto specular_transmittance = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].specular_transmittance_idx != kUintMax)
-            specular_transmittance = texture_list + material_info_list[m_idx].specular_transmittance_idx;
-
-        auto alpha_u = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].alpha_u_idx != kUintMax)
-            alpha_u = texture_list + material_info_list[m_idx].alpha_u_idx;
-
-        auto alpha_v = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].alpha_v_idx != kUintMax)
-            alpha_v = texture_list + material_info_list[m_idx].alpha_v_idx;
-
-        material_list[m_idx].InitRoughDielectric(material_info_list[m_idx].twosided,
-                                                 bump_map,
-                                                 opacity_map,
-                                                 material_info_list[m_idx].eta,
-                                                 specular_reflectance,
-                                                 specular_transmittance,
-                                                 material_info_list[m_idx].distri,
-                                                 alpha_u,
-                                                 alpha_v,
-                                                 kulla_conty_table,
-                                                 albedo_avg);
-    }
-}
-
 __device__ void Material::InitRoughDielectric(bool twosided,
                                               Texture *bump_map,
                                               Texture *opacity_map,
@@ -61,7 +14,6 @@ __device__ void Material::InitRoughDielectric(bool twosided,
                                               float *kulla_conty_table,
                                               float albedo_avg)
 {
-
     type_ = kRoughDielectric;
     twosided_ = twosided;
     bump_map_ = bump_map;
@@ -233,4 +185,51 @@ __device__ Float Material::PdfRoughDielectric(const vec3 &wi, const vec3 &wo, co
                             pow(eta_inv * myvec::dot(-wi, h) + myvec::dot(wo, h), 2));
         return (1.0 - F) * D * jacobian;
     }
+}
+
+__device__ inline void InitRoughDielectric(uint m_idx,
+                                           MaterialInfo *material_info_list,
+                                           Texture *texture_list,
+                                           Material *material_list)
+{
+    auto bump_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].bump_map_idx != kUintMax)
+        bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
+
+    auto opacity_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].opacity_idx != kUintMax)
+        opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
+
+    auto specular_reflectance = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
+        specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
+
+    auto specular_transmittance = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].specular_transmittance_idx != kUintMax)
+        specular_transmittance = texture_list + material_info_list[m_idx].specular_transmittance_idx;
+
+    auto alpha_u = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].alpha_u_idx != kUintMax)
+        alpha_u = texture_list + material_info_list[m_idx].alpha_u_idx;
+
+    auto alpha_v = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].alpha_v_idx != kUintMax)
+        alpha_v = texture_list + material_info_list[m_idx].alpha_v_idx;
+
+    auto albedo_avg = static_cast<float>(-1);
+    auto kulla_conty_table = static_cast<float *>(nullptr);
+    CreateCosinAlbedoTexture(material_info_list[m_idx].distri, alpha_u, alpha_v,
+                             kulla_conty_table, albedo_avg);
+
+    material_list[m_idx].InitRoughDielectric(material_info_list[m_idx].twosided,
+                                             bump_map,
+                                             opacity_map,
+                                             material_info_list[m_idx].eta,
+                                             specular_reflectance,
+                                             specular_transmittance,
+                                             material_info_list[m_idx].distri,
+                                             alpha_u,
+                                             alpha_v,
+                                             kulla_conty_table,
+                                             albedo_avg);
 }

@@ -1,8 +1,5 @@
 #pragma once
 
-#ifndef FILE_PATH_H
-#define FILE_PATH_H
-
 #include <string>
 
 inline std::string ConvertBackSlash(std::string path)
@@ -42,7 +39,5 @@ inline std::string ChangeSuffix(const std::string& path, const std::string& new_
     else
         return path + "." + new_suffix;
 }
-
-#endif // !FILE_PATH_H
 
 

@@ -2,35 +2,6 @@
 
 #include "material_base.h"
 
-__global__ void InitConductor(size_t m_idx,
-                              MaterialInfo *material_info_list,
-                              Texture *texture_list,
-                              Material *material_list)
-{
-    if (threadIdx.x == 0 && blockIdx.x == 0)
-    {
-        auto bump_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].bump_map_idx != kUintMax)
-            bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
-
-        auto opacity_map = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].opacity_idx != kUintMax)
-            opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
-
-        auto specular_reflectance = static_cast<Texture *>(nullptr);
-        if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
-            specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
-
-        material_list[m_idx].InitConductor(material_info_list[m_idx].twosided,
-                                           bump_map,
-                                           opacity_map,
-                                           material_info_list[m_idx].mirror,
-                                           material_info_list[m_idx].eta,
-                                           material_info_list[m_idx].k,
-                                           specular_reflectance);
-    }
-}
-
 __device__ void Material::InitConductor(bool twosided,
                                         Texture *bump_map,
                                         Texture *opacity_map,
@@ -83,4 +54,30 @@ __device__ Float Material::PdfConductor(const vec3 &wi, const vec3 &wo, const ve
         return 1;
     else
         return 0;
+}
+
+__device__ inline void InitConductor(size_t m_idx,
+                                     MaterialInfo *material_info_list,
+                                     Texture *texture_list,
+                                     Material *material_list)
+{
+    auto bump_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].bump_map_idx != kUintMax)
+        bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
+
+    auto opacity_map = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].opacity_idx != kUintMax)
+        opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
+
+    auto specular_reflectance = static_cast<Texture *>(nullptr);
+    if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
+        specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
+
+    material_list[m_idx].InitConductor(material_info_list[m_idx].twosided,
+                                       bump_map,
+                                       opacity_map,
+                                       material_info_list[m_idx].mirror,
+                                       material_info_list[m_idx].eta,
+                                       material_info_list[m_idx].k,
+                                       specular_reflectance);
 }

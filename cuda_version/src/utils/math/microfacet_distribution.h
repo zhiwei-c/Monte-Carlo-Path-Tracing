@@ -13,7 +13,7 @@ enum MicrofacetDistribType
     kGgx
 };
 
-__host__ __device__ inline void SampleNormDistrib(MicrofacetDistribType type,
+__device__ inline void SampleNormDistrib(MicrofacetDistribType type,
                                          Float alpha_u,
                                          Float alpha_v,
                                          const vec3 &macro_normal,
@@ -131,7 +131,7 @@ __device__ inline Float PdfNormDistrib(MicrofacetDistribType type,
     return pdf;
 }
 
-__host__ __device__ inline Float SmithG1(MicrofacetDistribType type,
+__device__ inline Float SmithG1(MicrofacetDistribType type,
                                 Float alpha_u,
                                 Float alpha_v,
                                 const vec3 &v,

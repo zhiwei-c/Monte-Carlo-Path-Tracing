@@ -39,7 +39,6 @@ public:
           alpha_u_(nullptr),
           alpha_v_(nullptr),
           fdr_int_(0),
-          fdr_ext_(0),
           nonlinear_(false),
           pre_(nullptr),
           next_(nullptr),
@@ -49,6 +48,15 @@ public:
           f_add_inv_(vec3(0)),
           ratio_t_(0),
           ratio_t_inv_(0) {}
+
+    __device__ ~Material()
+    {
+        if (kulla_conty_table_)
+        {
+            delete[] kulla_conty_table_;
+            kulla_conty_table_ = nullptr;
+        }
+    }
 
     /**
      * \brief 根据光线出射方向和表面法线方向，抽样光线入射方向
@@ -92,13 +100,9 @@ public:
     ///\return 辐射亮度
     __device__ vec3 radiance() const;
 
-    __device__ void InitAreaLight(bool twosided,
-                                  Texture *radiance);
+    __device__ void InitAreaLight(bool twosided, Texture *radiance);
 
-    __device__ void InitDiffuse(bool twosided,
-                                Texture *bump_map,
-                                Texture *opacity_map,
-                                Texture *diffuse_reflectance);
+    __device__ void InitDiffuse(bool twosided, Texture *bump_map, Texture *opacity_map, Texture *diffuse_reflectance);
 
     __device__ void InitDielectric(bool twosided,
                                    Texture *bump_map,
@@ -205,33 +209,43 @@ public:
 
 private:
     uint idx_;
+    Material *pre_;
+    Material *next_;
     MaterialType type_;
-    MicrofacetDistribType distri_;
     bool twosided_;
-    bool nonlinear_;
+    Texture *bump_map_;
+    Texture *opacity_map_;
     bool mirror_;
-    Float fdr_int_;
-    Float fdr_ext_;
     Float eta_d_;
     Float eta_inv_d_;
     vec3 eta_;
     vec3 k_;
-    Texture *bump_map_;
-    Texture *opacity_map_;
     Texture *radiance_;
     Texture *diffuse_reflectance_;
     Texture *specular_reflectance_;
     Texture *specular_transmittance_;
+    MicrofacetDistribType distri_;
     Texture *alpha_u_;
     Texture *alpha_v_;
-    Material *pre_;
-    Material *next_;
-    float *kulla_conty_table_;
+    bool nonlinear_;
     float albedo_avg_;
-    vec3 f_add_;        //入射光线在物体内部，补偿多次散射后出射光能的系数
-    vec3 f_add_inv_;    //入射光线在物体外部，补偿多次散射后出射光能的系数
-    Float ratio_t_;     //入射光线在物体内部，补偿多次散射后出射光能，折射的比例
-    Float ratio_t_inv_; //入射光线在物体外部，补偿多次散射后出射光能，折射的比例
+    float *kulla_conty_table_;
+    vec3 f_add_;
+    vec3 f_add_inv_;
+    Float ratio_t_;
+    Float ratio_t_inv_;
+    Float fdr_int_;
+
+    ///\brief 获取给定点抽样镜面反射的权重
+    __device__ Float SpecularSamplingWeight(const vec2 &texcoord) const;
+
+    __device__ Float GetAlbedo(Float cos_theta) const;
+
+    ///\brief 补偿多次散射后又射出的光能
+    __device__ vec3 EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const;
+
+    ///\brief 补偿多次散射后又射出的光能
+    __device__ vec3 EvalMultipleScatter(Float cos_i_n, Float cos_o_n, int inside) const;
 
     __device__ void SampleDiffuse(BsdfSampling &bs, const vec3 &sample) const;
     __device__ vec3 EvalDiffuse(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
@@ -264,37 +278,57 @@ private:
     __device__ void SampleRoughPlastic(BsdfSampling &bs, const vec3 &sample) const;
     __device__ vec3 EvalRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
     __device__ Float PdfRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const;
-
-    ///\brief 获取给定点抽样镜面反射的权重
-    __device__ Float SpecularSamplingWeight(const vec2 &texcoord) const;
-
-    __device__ Float GetAlbedo(Float cos_theta) const
-    {
-        auto offset = cos_theta * kAlbedoResolution;
-        auto idx = static_cast<int>(offset);
-        if (idx >= kAlbedoResolution - 1)
-            return kulla_conty_table_[kAlbedoResolution - 1];
-        else
-            return (1 - (offset - idx)) * kulla_conty_table_[idx] +
-                   (offset - idx) * kulla_conty_table_[idx + 1];
-    }
-
-    ///\brief 补偿多次散射后又射出的光能
-    __device__ vec3 EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const
-    {
-        auto albedo_i = GetAlbedo(abs(cos_i_n));
-        auto albedo_o = GetAlbedo(abs(cos_o_n));
-        auto f_ms = (1.0 - albedo_o) * (1.0 - albedo_i) / (kPi * (1.0 - albedo_avg_));
-        return f_ms * f_add_;
-    }
-
-    ///\brief 补偿多次散射后又射出的光能
-    __device__ vec3 EvalMultipleScatter(Float cos_i_n, Float cos_o_n, int inside) const
-    {
-        auto f_add = inside ? f_add_inv_ : f_add_;
-        auto albedo_i = GetAlbedo(abs(cos_i_n));
-        auto albedo_o = GetAlbedo(abs(cos_o_n));
-        auto f_ms = (1.0 - albedo_o) * (1.0 - albedo_i) / (kPi * (1.0 - albedo_avg_));
-        return f_ms * f_add_;
-    }
 };
+
+__device__ Float Material::SpecularSamplingWeight(const vec2 &texcoord) const
+{
+    if (!diffuse_reflectance_ && !specular_reflectance_)
+        return 2.0 / 3.0;
+    else if (!diffuse_reflectance_)
+    {
+        auto ks = specular_reflectance_->Color(texcoord);
+        auto s_sum = ks.x + ks.y + ks.z;
+        return s_sum / (1.5 + s_sum);
+    }
+    else if (!specular_reflectance_)
+    {
+        auto kd = diffuse_reflectance_->Color(texcoord);
+        auto d_sum = kd.x + kd.y + kd.z;
+        return 3.0 / (d_sum + 3.0);
+    }
+    else
+    {
+        auto ks = specular_reflectance_->Color(texcoord);
+        auto s_sum = ks.x + ks.y + ks.z;
+        auto kd = diffuse_reflectance_->Color(texcoord);
+        auto d_sum = kd.x + kd.y + kd.z;
+        return s_sum / (d_sum + s_sum);
+    }
+}
+__device__ Float Material::GetAlbedo(Float cos_theta) const
+{
+    auto offset = cos_theta * kAlbedoResolution;
+    auto idx = static_cast<int>(offset);
+    if (idx >= kAlbedoResolution - 1)
+        return kulla_conty_table_[kAlbedoResolution - 1];
+    else
+        return (1 - (offset - idx)) * kulla_conty_table_[idx] +
+               (offset - idx) * kulla_conty_table_[idx + 1];
+}
+
+__device__ vec3 Material::EvalMultipleScatter(Float cos_i_n, Float cos_o_n) const
+{
+    auto albedo_i = GetAlbedo(abs(cos_i_n));
+    auto albedo_o = GetAlbedo(abs(cos_o_n));
+    auto f_ms = (1.0 - albedo_o) * (1.0 - albedo_i) / (kPi * (1.0 - albedo_avg_));
+    return f_ms * f_add_;
+}
+
+__device__ vec3 Material::EvalMultipleScatter(Float cos_i_n, Float cos_o_n, int inside) const
+{
+    auto f_add = (inside == kTrue) ? f_add_inv_ : f_add_;
+    auto albedo_i = GetAlbedo(abs(cos_i_n));
+    auto albedo_o = GetAlbedo(abs(cos_o_n));
+    auto f_ms = (1.0 - albedo_o) * (1.0 - albedo_i) / (kPi * (1.0 - albedo_avg_));
+    return f_ms * f_add;
+}

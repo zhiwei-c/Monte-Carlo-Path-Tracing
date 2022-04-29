@@ -1,4 +1,5 @@
 #pragma once
+
 #include "texture_base.h"
 
 __device__ void Texture::InitCheckerboard(const vec3 &color0,
