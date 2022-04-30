@@ -29,7 +29,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 | ------------------------------ | ------------------------------------------------------ | ------------------------------------------------------ |
 | 生成图像 | ![Cornell Box, OpenMP, 8 min 59 s](resources/rendering_results/cpu_box_8min59s.png) | ![Cornell Box, CUDA  , 8 min 59 s](resources/rendering_results/cuda_box_1min14s.png) |
 | 耗时  | 8 min 59 s   | 1 min 14s   |
-| 相对耗时  | 1   | 7.28   |
+| 相对速度  | 1   | 7.28   |
 
 对于[相对复杂的场景](resources/rendering_resources/bathroom2/scene.xml)，可能是由于代码实现问题，使用 GPU 加速的效果没有那么好，但仍能节约一定的时间，耗时是原本的约 71.4%。
 
@@ -39,7 +39,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 | ------------------------------ | ------------------------------------------------------ | ------------------------------------------------------ |
 | 生成图像 | ![bathroom2, OpenMP, 47 min 10 s](resources/rendering_results/cpu_bathroom2_47min10s.png) | ![bathroom2, CUDA, 33 min 42 s](resources/rendering_results/cuda_bathroom2_33min42s.png) |
 | 耗时  | 47 min 10s   | 33 min 42 s   |
-| 相对耗时  | 1   | 1.4   |
+| 相对速度 | 1   | 1.4   |
 
 ### 1.3 多重重要抽样（Multiple Importance Sampling）
 
@@ -100,7 +100,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 - 凹凸映射（bump mapping）
 
-- 内置了一些电介质材质的[折射率（refractive index）](cpu_version/src/rendering/ray.h#L9)，在配置文件中可根据名称直接调用
+- 内置了一些材质的[折射率（refractive index）](cpu_version/src/rendering/ray.h#L200)和[消光系数（extinction coefficient）](cpu_version/src/rendering/ray.h#L374)，在配置文件中可根据名称直接调用
 
 ## 3 支持的绘制配置文件格式及使用说明
 
