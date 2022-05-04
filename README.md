@@ -104,7 +104,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 - 凹凸映射（bump mapping）
 
-- 内置了一些材质的[折射率（refractive index）](cpu_version/src/rendering/ray.h#L200)和[消光系数（extinction coefficient）](cpu_version/src/rendering/ray.h#L374)，在配置文件中可根据名称直接调用
+- 内置了一些材质的[折射率（refractive index）](cpu_version/src/core/ray.h#L200)和[消光系数（extinction coefficient）](cpu_version/src/core/ray.h#L374)，在配置文件中可根据名称直接调用
 
 ## 3 支持的绘制配置文件格式及使用说明
 
