@@ -16,25 +16,48 @@ endif()
 
 project(${PROJECT_NAME} LANGUAGES CXX)
 
-FILE(GLOB_RECURSE FILE_BSDF "${CMAKE_CURRENT_SOURCE_DIR}/src/material/*.*")
-FILE(GLOB_RECURSE FILE_MODEL "${CMAKE_CURRENT_SOURCE_DIR}/src/modeling/*.*")
-FILE(GLOB FILE_RENDER "${CMAKE_CURRENT_SOURCE_DIR}/src/rendering/*.*")
-FILE(GLOB FILE_INTEGRATORS "${CMAKE_CURRENT_SOURCE_DIR}/src/rendering/integrators/*.*")
-FILE(GLOB_RECURSE FILE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.*")
+FILE(GLOB_RECURSE FILE_ACC "${CMAKE_CURRENT_SOURCE_DIR}/src/accelerator/*.*")
+FILE(GLOB_RECURSE FILE_BSDFS "${CMAKE_CURRENT_SOURCE_DIR}/src/bsdfs/*.*")
+FILE(GLOB_RECURSE FILE_CORE "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.*")
+FILE(GLOB_RECURSE FILE_EMITTERS "${CMAKE_CURRENT_SOURCE_DIR}/src/emitters/*.*")
+FILE(GLOB_RECURSE FILE_INTEGRATORS "${CMAKE_CURRENT_SOURCE_DIR}/src/integrators/*.*")
+FILE(GLOB_RECURSE FILE_MICROFACET_DISTRIB "${CMAKE_CURRENT_SOURCE_DIR}/src/microfacet_distribution/*.*")
+FILE(GLOB_RECURSE FILE_SHAPES "${CMAKE_CURRENT_SOURCE_DIR}/src/shapes/*.*")
+FILE(GLOB_RECURSE FILE_TEXTURE "${CMAKE_CURRENT_SOURCE_DIR}/src/textures/*.*")
+FILE(GLOB FILE_CONFIG_PARSER "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/config_parser/*.*")
+FILE(GLOB FILE_MODEL_LOADER "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/model_loader/*.*")
+FILE(GLOB FILE_MATH "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/math/*.*")
+FILE(GLOB FILE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/src/utils/*.*")
 
 add_executable(${PROJECT_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
-                                ${FILE_BSDF}
-                                ${FILE_MODEL}
-                                ${FILE_RENDER}
+                                "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer.h"
+                                ${FILE_ACC}
+                                ${FILE_BSDFS}
+                                ${FILE_CORE}
+                                ${FILE_EMITTERS}
                                 ${FILE_INTEGRATORS}
+                                ${FILE_MICROFACET_DISTRIB}
+                                ${FILE_SHAPES}
+                                ${FILE_TEXTURE}
+                                ${FILE_CONFIG_PARSER}
+                                ${FILE_MODEL_LOADER}
+                                ${FILE_MATH}
                                 ${FILE_UTILS})
 
-source_group("Files\\material" FILES ${FILE_BSDF})
-source_group("Files\\modeling" FILES ${FILE_MODEL})
-source_group("Files\\rendering" FILES ${FILE_RENDER})
-source_group("Files\\rendering\\integrator" FILES ${FILE_INTEGRATORS})
+source_group("Files\\accelerator" FILES ${FILE_ACC})
+source_group("Files\\bsdfs" FILES ${FILE_BSDFS})
+source_group("Files\\core" FILES ${FILE_CORE})
+source_group("Files\\emitters" FILES ${FILE_EMITTERS})
+source_group("Files\\integrators" FILES ${FILE_INTEGRATORS})
+source_group("Files\\microfacet distribution" FILES ${FILE_MICROFACET_DISTRIB})
+source_group("Files\\shapes" FILES ${FILE_SHAPES})
+source_group("Files\\textures" FILES ${FILE_TEXTURE})
+source_group("Files\\utils\\config parser" FILES ${FILE_CONFIG_PARSER})
+source_group("Files\\utils\\model loader" FILES ${FILE_MODEL_LOADER})
+source_group("Files\\utils\\math" FILES ${FILE_MATH})
 source_group("Files\\utils" FILES ${FILE_UTILS})
 source_group("Files" FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+source_group("Files" FILES "${CMAKE_CURRENT_SOURCE_DIR}/src/renderer.h")
 
 # OpenMP
 find_package(OpenMP)
