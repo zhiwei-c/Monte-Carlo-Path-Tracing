@@ -3,12 +3,9 @@
 #include <fstream>
 #include <iostream>
 
-#include "../file_path.h"
-#include "../../rendering/integrators/integrators.h"
-
 NAMESPACE_BEGIN(simple_renderer)
 
-std::tuple<Scene *, Camera *> ParseJsonCfg(const std::string &file_path)
+Renderer* ParseJsonCfg(const std::string &file_path)
 {
 	std::ifstream in(file_path);
 	std::string dir_path = GetDirectory(file_path);
@@ -18,30 +15,26 @@ std::tuple<Scene *, Camera *> ParseJsonCfg(const std::string &file_path)
 				  << "open " << file_path << " failed" << std::endl;
 		exit(1);
 	}
-
 	std::string contents((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
 	in.close();
 
 	auto json_data = nlohmann::json::parse(contents.c_str());
 
-	auto scene = InitScene(dir_path, json_data);
+	auto renderer = new Renderer();
+
+	auto model_name = GetString(json_data, "scene", false).value();
+	renderer->AddShapesMaterials(dir_path + model_name);
+
+	auto envmap = InitEnvmap(dir_path, json_data);
+	renderer->SetEnvmap(envmap);
+
 	auto integrator = InitIntegrator(json_data);
-	auto camera = InitCamera(json_data, integrator);
+	renderer->SetIntegrator(integrator);
 
-	return {scene, camera};
-}
+	auto camera = InitCamera(json_data);
+	renderer->SetCamera(camera);
 
-Scene *InitScene(const std::string &dir_path, nlohmann::json &data)
-{
-	auto scene = new Scene();
-
-	auto model_name = GetString(data, "scene", false).value();
-	scene->AddSceneObj(dir_path + model_name);
-
-	auto envmap = InitEnvmap(dir_path, data);
-	scene->setEnvmap(envmap);
-
-	return scene;
+	return renderer;
 }
 
 Integrator *InitIntegrator(nlohmann::json &data)
@@ -85,7 +78,7 @@ Integrator *InitIntegrator(nlohmann::json &data)
 	return integrator;
 }
 
-Camera *InitCamera(nlohmann::json &data, Integrator *integrator)
+Camera *InitCamera(nlohmann::json &data)
 {
 	if (!data.contains("camera"))
 	{
@@ -105,7 +98,7 @@ Camera *InitCamera(nlohmann::json &data, Integrator *integrator)
 	auto fov_height = GetFloat(data["camera"], "fov_height", false).value();
 	auto spp = GetInt(data["camera"], "spp", false).value();
 	auto film = InitFilm(data);
-	return new Camera(integrator, film, eye_pos, look_at, up, fov_height, spp);
+	return new Camera(film, eye_pos, look_at, up, fov_height, spp);
 }
 
 Film InitFilm(nlohmann::json &data)

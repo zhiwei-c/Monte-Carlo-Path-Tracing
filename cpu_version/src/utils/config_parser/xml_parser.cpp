@@ -9,87 +9,24 @@
 #include "rapidxml/rapidxml_utils.hpp"
 #include "glm/gtx/matrix_query.hpp"
 
-#include "../../modeling/model_loader/obj_parser.h"
-#include "../../rendering/integrators/integrators.h"
-#include "../file_path.h"
-
 NAMESPACE_BEGIN(simple_renderer)
 
-static Spectrum GetSpectrum(rapidxml::xml_node<> *node_spectrum);
-
-static std::optional<std::string> GetAttri(rapidxml::xml_node<> *node, std::string key, bool not_exist_ok = false);
-
-static rapidxml::xml_node<> *GetChild(rapidxml::xml_node<> *node, std::string name, bool not_exist_ok = true);
-
-static std::unique_ptr<Mat4> GetToWorld(rapidxml::xml_node<> *node_parent);
-
-static Float GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::string default_material_name);
-
-static std::string GetTreeName(rapidxml::xml_node<> *node);
-
-static std::optional<std::string> GetString(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
-
-static std::optional<bool> GetBoolean(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
-
-static std::optional<int> GetInt(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
-
-static std::optional<Float> GetFloat(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
-
-static std::optional<Vector3> GetPoint(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok = true);
-
-static MicrofacetDistribType GetDistrbType(const std::string &name);
-
-std::tuple<Scene *, Camera *> XmlParser::Parse(const std::string &path)
+Renderer *XmlParser::Parse(const std::string &path)
 {
 	Reset();
+	auto renderer = new Renderer();
+
 	xml_directory_ = GetDirectory(ConvertBackSlash(path));
 	auto file_doc = new rapidxml::file<>(path.c_str());
 	auto xml_doc = new rapidxml::xml_document<>();
 	xml_doc->parse<0>(file_doc->data());
-
 	auto node_scene = xml_doc->first_node("scene");
-	auto scene = ParseScene(node_scene);
-	integrator_ = ParseIntegrator(node_scene->first_node("integrator"));
-	auto camera = ParseCamera(node_scene->first_node("sensor"));
 
-	delete file_doc;
-	delete xml_doc;
-
-	return {scene, camera};
-}
-
-Integrator *XmlParser::ParseIntegrator(rapidxml::xml_node<> *node_integrator)
-{
-	auto type = GetAttri(node_integrator, "type").value();
-	auto max_depth = GetInt(node_integrator, "maxDepth", true).value_or(-1);
-	auto rr_depth = GetInt(node_integrator, "rrDepth", true).value_or(5);
-
-	Integrator *integrator = nullptr;
-	switch (Hash(type.c_str()))
-	{
-	case "path"_hash:
-		integrator = new PathIntegrator(max_depth, rr_depth);
-		break;
-	case "bdpt"_hash:
-		integrator = new BdptIntegrator(max_depth, rr_depth);
-		break;
-	default:
-		std::cerr << "[error] " << GetTreeName(node_integrator) << std::endl
-				  << "\tcannot handle integrator type" << type << "\"" << std::endl;
-		exit(1);
-		break;
-	}
-
-	return integrator;
-}
-
-Scene *XmlParser::ParseScene(rapidxml::xml_node<> *node_scene)
-{
 	std::cout << "[info] load bsdfs..." << std::endl;
 	auto node_bsdf = node_scene->first_node("bsdf");
 	while (node_bsdf)
 	{
-		ParseBsdf(node_bsdf);
+		ParseMaterial(node_bsdf, renderer);
 		node_bsdf = node_bsdf->next_sibling("bsdf");
 	}
 
@@ -97,12 +34,45 @@ Scene *XmlParser::ParseScene(rapidxml::xml_node<> *node_scene)
 	auto node_shape = node_scene->first_node("shape");
 	while (node_shape)
 	{
-		ParseShape(node_shape);
+		ParseShape(node_shape, renderer);
 		node_shape = node_shape->next_sibling("shape");
 	}
 
 	auto envmap = ParseEnvmap(node_scene->first_node("emitter"));
-	return new Scene(shapes_, bsdfs_, envmap);
+	renderer->SetEnvmap(envmap);
+
+	auto camera = ParseCamera(node_scene->first_node("sensor"));
+	renderer->SetCamera(camera);
+
+	auto integrator = ParseIntegrator(node_scene->first_node("integrator"));
+	renderer->SetIntegrator(integrator);
+
+	delete file_doc;
+	delete xml_doc;
+
+	return renderer;
+}
+
+Integrator *XmlParser::ParseIntegrator(rapidxml::xml_node<> *node_integrator)
+{
+	auto type = GetAttri(node_integrator, "type").value();
+	auto max_depth = GetInt(node_integrator, "maxDepth", true).value_or(-1);
+	auto rr_depth = GetInt(node_integrator, "rrDepth", true).value_or(5);
+	switch (Hash(type.c_str()))
+	{
+	case "path"_hash:
+		return new PathIntegrator(max_depth, rr_depth);
+		break;
+	case "bdpt"_hash:
+		return new BdptIntegrator(max_depth, rr_depth);
+		break;
+	default:
+		std::cerr << "[warning] " << GetTreeName(node_integrator) << std::endl
+				  << "\tcannot handle integrator type" << type << "\"" << std::endl
+				  << "use default \"path\" integrator" << std::endl;
+		return new PathIntegrator(max_depth, rr_depth);
+		break;
+	}
 }
 
 Camera *XmlParser::ParseCamera(rapidxml::xml_node<> *node_sensor)
@@ -117,7 +87,6 @@ Camera *XmlParser::ParseCamera(rapidxml::xml_node<> *node_sensor)
 
 	auto fov_width = GetFloat(node_sensor, "fov", false).value();
 	auto to_world = GetToWorld(node_sensor);
-
 	auto eye_pos = Vector3(0, 0, 0);
 	auto up = Vector3(0, 1, 0);
 	auto look_dir = Vector3(0, 0, 1);
@@ -130,19 +99,15 @@ Camera *XmlParser::ParseCamera(rapidxml::xml_node<> *node_sensor)
 
 	auto film = ParseFilm(node_sensor);
 	auto fov_height = fov_width * film.height / film.width;
-
 	auto node_sampler = node_sensor->first_node("sampler");
 	auto sample_count = GetInt(node_sampler, "sampleCount", false).value();
-
-	return new Camera(integrator_, film, eye_pos, eye_pos + look_dir, up, fov_height, sample_count);
+	return new Camera(film, eye_pos, eye_pos + look_dir, up, fov_height, sample_count);
 }
 
 Film XmlParser::ParseFilm(rapidxml::xml_node<> *node_sensor)
 {
-
 	auto node_film = node_sensor->first_node("film");
 	auto film_type = GetAttri(node_film, "type").value();
-
 	Film film;
 	film.width = GetInt(node_film, "width").value_or(768);
 	film.height = GetInt(node_film, "height").value_or(576);
@@ -152,43 +117,107 @@ Film XmlParser::ParseFilm(rapidxml::xml_node<> *node_sensor)
 	return film;
 }
 
-void XmlParser::ParseBsdf(rapidxml::xml_node<> *node_bsdf, const std::string *id_default)
+std::unique_ptr<Texture> XmlParser::ParseBumpMapping(rapidxml::xml_node<> *&node_bsdf, std::string &bsdf_type)
+{
+	if (bsdf_type != "bumpmap")
+		return nullptr;
+
+	auto node_bump = node_bsdf->first_node("texture");
+	auto bump_map = ParseTexture(node_bump);
+
+	node_bsdf = node_bsdf->first_node("bsdf");
+	if (!node_bsdf)
+	{
+		std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
+				  << "\tnot enough bsdf information" << std::endl;
+		exit(1);
+	}
+	bsdf_type = GetAttri(node_bsdf, "type").value();
+
+	return bump_map;
+}
+
+std::unique_ptr<Texture> XmlParser::ParseOpacity(rapidxml::xml_node<> *&node_bsdf, std::string &bsdf_type)
+{
+	if (bsdf_type != "mask")
+		return nullptr;
+
+	auto node_opacity = GetChild(node_bsdf, "opacity", false);
+	auto opacity_map = ParseTextureOrOther(node_opacity, "opacity");
+	if (!opacity_map)
+	{
+		std::cerr << "[error] " << GetTreeName(node_opacity) << std::endl
+				  << "\tnot enough opacity information" << std::endl;
+		exit(1);
+	}
+
+	if (opacity_map->Constant() &&
+		(!FloatEqual(opacity_map->Color(Vector2(0)).r, opacity_map->Color(Vector2(0)).g) ||
+		 !FloatEqual(opacity_map->Color(Vector2(0)).r, opacity_map->Color(Vector2(0)).b) ||
+		 !FloatEqual(opacity_map->Color(Vector2(0)).g, opacity_map->Color(Vector2(0)).b)))
+	{
+		std::cerr << "[error] " << GetTreeName(node_opacity) << std::endl
+				  << "\tnot support different opacity for different color channel" << std::endl;
+		exit(1);
+	}
+
+	node_bsdf = node_bsdf->first_node("bsdf");
+	if (!node_bsdf)
+	{
+		std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
+				  << "\tnot enough bsdf information" << std::endl;
+		exit(1);
+	}
+	bsdf_type = GetAttri(node_bsdf, "type").value();
+
+	return opacity_map;
+}
+
+bool XmlParser::ParseCoating(const std::string &id, rapidxml::xml_node<> *&node_bsdf, std::string &bsdf_type)
+{
+	if (bsdf_type != "coating" &&
+		bsdf_type != "roughcoating")
+		return false;
+	std::cout << "[warning] not support coating bsdf, ignore it." << std::endl;
+	if (auto node_ref = node_bsdf->first_node("ref"); node_ref)
+	{
+		if (node_ref->next_sibling("ref"))
+		{
+			std::cerr << "[error] " << GetTreeName(node_ref) << std::endl
+					  << "\tfind multiple ref" << std::endl;
+			exit(1);
+		}
+		auto ref_id = GetAttri(node_ref, "id").value();
+		if (!id_to_material_.count(ref_id))
+		{
+			std::cerr << "[error] " << GetTreeName(node_ref) << std::endl
+					  << "\tcannot find existed material with id: " << ref_id << std::endl;
+			exit(1);
+		}
+		else
+		{
+			id_to_material_[id] = id_to_material_[ref_id];
+			return true;
+		}
+	}
+	node_bsdf = node_bsdf->first_node("bsdf");
+	if (!node_bsdf)
+	{
+		std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
+				  << "\tnot enough bsdf information" << std::endl;
+		exit(1);
+	}
+	bsdf_type = GetAttri(node_bsdf, "type").value();
+	return false;
+}
+
+void XmlParser::ParseMaterial(rapidxml::xml_node<> *node_bsdf, Renderer *renderer, const std::string &id_default)
 {
 	auto bsdf_type = GetAttri(node_bsdf, "type").value();
-
-	std::unique_ptr<Texture> bump_map = nullptr;
-	if (bsdf_type == "bumpmap")
-	{
-		auto node_bump = node_bsdf->first_node("texture");
-		bump_map.reset(ParseTexture(node_bump).release());
-
-		node_bsdf = node_bsdf->first_node("bsdf");
-		if (!node_bsdf)
-		{
-			std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
-					  << "\tnot enough bsdf information" << std::endl;
-			exit(1);
-		}
-		bsdf_type = GetAttri(node_bsdf, "type").value();
-	}
-
-	auto id = id_default ? *id_default : GetAttri(node_bsdf, "id").value();
-
-	rapidxml::xml_node<> *node_mask = nullptr;
-	if (bsdf_type == "mask")
-	{
-		node_mask = node_bsdf;
-		node_bsdf = node_bsdf->first_node("bsdf");
-		if (!node_bsdf)
-		{
-			std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
-					  << "\tnot enough bsdf information" << std::endl;
-			exit(1);
-		}
-		bsdf_type = GetAttri(node_bsdf, "type").value();
-	}
-
-	bool twsided = false;
+	auto bump_map = ParseBumpMapping(node_bsdf, bsdf_type);
+	auto id = id_default.empty() ? GetAttri(node_bsdf, "id").value() : id_default;
+	auto opacity_map = ParseOpacity(node_bsdf, bsdf_type);
+	auto twsided = false;
 	if (bsdf_type == "twosided")
 	{
 		twsided = true;
@@ -201,75 +230,41 @@ void XmlParser::ParseBsdf(rapidxml::xml_node<> *node_bsdf, const std::string *id
 		}
 		bsdf_type = GetAttri(node_bsdf, "type").value();
 	}
-
-	if (bsdf_type == "coating" || bsdf_type == "roughcoating")
-	{
-		std::cout << "[warning] not support coating bsdf, ignore it." << std::endl;
-
-		if (auto node_ref = node_bsdf->first_node("ref"); node_ref)
-		{
-			if (node_ref->next_sibling("ref"))
-			{
-				std::cerr << "[error] " << GetTreeName(node_ref) << std::endl
-						  << "\tfind multiple ref" << std::endl;
-				exit(1);
-			}
-			auto ref_id = GetAttri(node_ref, "id").value();
-			if (bsdf_map_.find(ref_id) == bsdf_map_.end())
-			{
-				std::cerr << "[error] " << GetTreeName(node_ref) << std::endl
-						  << "\tcannot find existed material with id: " << ref_id << std::endl;
-				exit(1);
-			}
-			else
-			{
-				bsdf_map_[id] = bsdf_map_[ref_id];
-				return;
-			}
-		}
-
-		node_bsdf = node_bsdf->first_node("bsdf");
-		if (!node_bsdf)
-		{
-			std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
-					  << "\tnot enough bsdf information" << std::endl;
-			exit(1);
-		}
-		bsdf_type = GetAttri(node_bsdf, "type").value();
-	}
-
+	if (ParseCoating(id, node_bsdf, bsdf_type))
+		return;
+	auto material = static_cast<Material *>(nullptr);
 	switch (Hash(bsdf_type.c_str()))
 	{
 	case "diffuse"_hash:
-		ParseDiffuse(node_bsdf, id);
+		material = ParseDiffuse(node_bsdf);
 		break;
 	case "roughdiffuse"_hash:
 		std::cout << "[warning] unsupported rough diffuse bsdf, treat as diffuse." << std::endl;
-		ParseDiffuse(node_bsdf, id);
+		material = ParseDiffuse(node_bsdf);
 		break;
 	case "dielectric"_hash:
 		twsided = true;
-		ParseDielectric(node_bsdf, id);
+		material = ParseDielectric(node_bsdf);
 		break;
 	case "roughdielectric"_hash:
 		twsided = true;
-		ParseRoughDielectric(node_bsdf, id);
+		material = ParseRoughDielectric(node_bsdf);
 		break;
 	case "thindielectric"_hash:
 		twsided = true;
-		ParseDielectric(node_bsdf, id, true);
+		material = ParseDielectric(node_bsdf, true);
 		break;
 	case "conductor"_hash:
-		ParseConductor(node_bsdf, id);
+		material = ParseConductor(node_bsdf);
 		break;
 	case "roughconductor"_hash:
-		ParseRoughConductor(node_bsdf, id);
+		material = ParseRoughConductor(node_bsdf);
 		break;
 	case "plastic"_hash:
-		ParsePlastic(node_bsdf, id);
+		material = ParsePlastic(node_bsdf);
 		break;
 	case "roughplastic"_hash:
-		ParseRoughPlastic(node_bsdf, id);
+		material = ParseRoughPlastic(node_bsdf);
 		break;
 	default:
 		std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
@@ -277,109 +272,83 @@ void XmlParser::ParseBsdf(rapidxml::xml_node<> *node_bsdf, const std::string *id
 		exit(1);
 	}
 
-	bsdfs_.back()->setTwosided(twsided);
-	bsdfs_.back()->setBump(std::move(bump_map));
-
-	if (node_mask)
-	{
-		auto node_opacity = GetChild(node_mask, "opacity", false);
-		auto opacity_type = node_opacity->name();
-		switch (Hash(opacity_type))
-		{
-		case "rgb"_hash:
-		case "spectrum"_hash:
-		{
-			auto opacity = GetSpectrum(node_opacity);
-			if (!FloatEqual(opacity.r, opacity.g) ||
-				!FloatEqual(opacity.r, opacity.b) ||
-				!FloatEqual(opacity.g, opacity.b))
-			{
-				std::cerr << "[error] " << GetTreeName(node_opacity) << std::endl
-						  << "\tnot support different opacity for different color channel" << std::endl;
-				exit(1);
-			}
-			bsdfs_.back()->setOpacity(opacity);
-			break;
-		}
-		case "texture"_hash:
-		{
-			auto opacity_map = ParseTexture(node_opacity);
-			bsdfs_.back()->setOpacity(std::move(opacity_map));
-			break;
-		}
-		default:
-			std::cerr << "[error] " << GetTreeName(node_opacity) << std::endl
-					  << "\tcannot handle mask opacity type except from spectrum or texture" << std::endl;
-			exit(1);
-		}
-	}
-	bsdf_map_[id] = bsdfs_.back();
+	material->SetTwosided(twsided);
+	material->SetBumpMapping(std::move(bump_map));
+	material->SetOpacity(std::move(opacity_map));
+	id_to_material_[id] = material;
+	renderer->AddMaterial(material);
 }
 
-void XmlParser::ParseDiffuse(rapidxml::xml_node<> *node_diffuse, std::string id)
+Material *XmlParser::ParseDiffuse(rapidxml::xml_node<> *node_diffuse)
 {
 	auto reflectance = ParseTextureOrOther(node_diffuse, "reflectance");
 	if (!reflectance)
 		reflectance.reset(new ConstantTexture(Spectrum(0.5)));
 
-	bsdfs_.push_back(new Diffuse(std::move(reflectance)));
+	return new Diffuse(std::move(reflectance));
 }
 
-void XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, std::string id, bool thin)
+Material *XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, bool thin)
 {
 	auto int_ior = GetIor(node_dielectric, "intIOR", "bk7");
 	auto ext_ior = GetIor(node_dielectric, "extIOR", "air");
 	auto specular_reflectance = ParseTextureOrOther(node_dielectric, "specularReflectance");
 	auto specular_transmittance = ParseTextureOrOther(node_dielectric, "specularTransmittance");
 	if (thin)
-		bsdfs_.push_back(new ThinDielectric(int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
+		return new ThinDielectric(int_ior,
+								  ext_ior,
+								  std::move(specular_reflectance),
+								  std::move(specular_transmittance));
 	else
-		bsdfs_.push_back(new Dielectric(int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
+		return new Dielectric(int_ior,
+							  ext_ior,
+							  std::move(specular_reflectance),
+							  std::move(specular_transmittance));
 }
 
-void XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric, std::string id)
+Material *XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric)
 {
-	auto distri = GetString(node_rough_dielectric, "distribution").value_or("beckmann");
-
-	auto alpha = ParseTextureOrOther(node_rough_dielectric, "alpha");
-	if (!alpha)
-		alpha.reset(new ConstantTexture(Spectrum(0.1)));
-
-	auto alpha_u = ParseTextureOrOther(node_rough_dielectric, "alphaU");
-	if (!alpha_u && alpha)
-		alpha_u.reset(alpha.release());
-
-	auto alpha_v = ParseTextureOrOther(node_rough_dielectric, "alphaV");
-
 	auto int_ior = GetIor(node_rough_dielectric, "intIOR", "bk7");
 	auto ext_ior = GetIor(node_rough_dielectric, "extIOR", "air");
 
 	auto specular_reflectance = ParseTextureOrOther(node_rough_dielectric, "specularReflectance");
 	auto specular_transmittance = ParseTextureOrOther(node_rough_dielectric, "specularTransmittance");
-	bsdfs_.push_back(new RoughDielectric(GetDistrbType(distri), std::move(alpha_u), std::move(alpha_v), int_ior, ext_ior, std::move(specular_reflectance), std::move(specular_transmittance)));
+
+	auto distri = GetString(node_rough_dielectric, "distribution").value_or("beckmann");
+
+	auto alpha_u = ParseTextureOrOther(node_rough_dielectric, "alpha");
+	if (!alpha_u)
+		alpha_u = ParseTextureOrOther(node_rough_dielectric, "alphaU");
+	if (!alpha_u)
+		alpha_u.reset(new ConstantTexture(Spectrum(0.1)));
+	auto alpha_v = ParseTextureOrOther(node_rough_dielectric, "alphaV");
+
+	return new RoughDielectric(int_ior,
+							   ext_ior,
+							   std::move(specular_reflectance),
+							   std::move(specular_transmittance),
+							   GetDistrbType(distri),
+							   std::move(alpha_u),
+							   std::move(alpha_v));
 }
 
-void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string id)
+Material *XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor)
 {
-	bool mirror = true;
+	auto mirror = true;
 	auto eta = Spectrum(0);
 	auto k = Spectrum(1);
 	auto ext_eta = GetIor(node_conductor, "extEta", "air");
 	auto node_material = GetChild(node_conductor, "material");
-	auto specular_reflectance = ParseTextureOrOther(node_conductor, "specularReflectance");
-
 	if (node_material)
 	{
 		auto material_name = GetAttri(node_material, "value").value();
-		if (material_name == "none")
-			mirror = true;
-		else if (IOR_eta.find(material_name) != IOR_eta.end())
+		if (IOR_eta.count(material_name))
 		{
 			mirror = false;
 			eta = IOR_eta.at(material_name),
 			k = IOR_k.at(material_name);
 		}
-		else
+		else if (material_name != "none")
 		{
 			std::cerr << "[error] " << GetTreeName(node_material) << std::endl
 					  << " unsupported material :" << material_name << ", "
@@ -387,9 +356,7 @@ void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string
 			exit(1);
 		}
 	}
-	else if (node_conductor->first_node() == nullptr)
-		mirror = true;
-	else
+	else if (node_conductor->first_node())
 	{
 		mirror = false;
 		auto node_eta = GetChild(node_conductor, "eta", false);
@@ -398,43 +365,32 @@ void XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor, std::string
 		k = GetSpectrum(node_k);
 	}
 
-	bsdfs_.push_back(new Conductor(mirror, eta, k, ext_eta, std::move(specular_reflectance)));
+	auto specular_reflectance = ParseTextureOrOther(node_conductor, "specularReflectance");
+
+	return new Conductor(mirror,
+						 eta,
+						 k,
+						 ext_eta,
+						 std::move(specular_reflectance));
 }
 
-void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, std::string id)
+Material *XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor)
 {
-	auto distri = GetString(node_rough_conductor, "distribution").value_or("beckmann");
-
-	auto alpha = ParseTextureOrOther(node_rough_conductor, "alpha");
-	if (!alpha)
-		alpha.reset(new ConstantTexture(Spectrum(0.1)));
-
-	auto alpha_u = ParseTextureOrOther(node_rough_conductor, "alphaU");
-	if (!alpha_u && alpha)
-		alpha_u.reset(alpha.release());
-
-	auto alpha_v = ParseTextureOrOther(node_rough_conductor, "alphaV");
-
-	bool mirror = true;
+	auto mirror = true;
 	auto eta = Spectrum(0);
 	auto k = Spectrum(1);
 	auto ext_eta = GetIor(node_rough_conductor, "extEta", "air");
-	auto specular_reflectance = ParseTextureOrOther(node_rough_conductor, "specularReflectance");
-
 	auto node_material = GetChild(node_rough_conductor, "material");
 	if (node_material)
 	{
 		auto material_name = GetAttri(node_material, "value").value();
-		if (material_name == "none")
-			mirror = true;
-
-		else if (IOR_eta.find(material_name) != IOR_eta.end())
+		if (IOR_eta.count(material_name))
 		{
 			mirror = false;
 			eta = IOR_eta.at(material_name),
 			k = IOR_k.at(material_name);
 		}
-		else
+		else if (material_name != "none")
 		{
 			std::cerr << "[error] " << GetTreeName(node_material) << std::endl
 					  << "unsupported material :" << material_name << ", "
@@ -442,7 +398,7 @@ void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, 
 			exit(1);
 		}
 	}
-	else
+	else if (node_rough_conductor->first_node())
 	{
 		mirror = false;
 		auto node_eta = GetChild(node_rough_conductor, "eta", false);
@@ -450,10 +406,28 @@ void XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor, 
 		auto node_k = GetChild(node_rough_conductor, "k", false);
 		k = GetSpectrum(node_k);
 	}
-	bsdfs_.push_back(new RoughConductor(GetDistrbType(distri), std::move(alpha_u), std::move(alpha_v), mirror, eta, k, ext_eta, std::move(specular_reflectance)));
+
+	auto specular_reflectance = ParseTextureOrOther(node_rough_conductor, "specularReflectance");
+
+	auto distri = GetString(node_rough_conductor, "distribution").value_or("beckmann");
+	auto alpha_u = ParseTextureOrOther(node_rough_conductor, "alpha");
+	if (!alpha_u)
+		alpha_u = ParseTextureOrOther(node_rough_conductor, "alphaU");
+	if (!alpha_u)
+		alpha_u.reset(new ConstantTexture(Spectrum(0.1)));
+	auto alpha_v = ParseTextureOrOther(node_rough_conductor, "alphaV");
+
+	return new RoughConductor(mirror,
+							  eta,
+							  k,
+							  ext_eta,
+							  std::move(specular_reflectance),
+							  GetDistrbType(distri),
+							  std::move(alpha_u),
+							  std::move(alpha_v));
 }
 
-void XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic, std::string id)
+Material *XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic)
 {
 	auto int_ior = GetIor(node_plastic, "intIOR", "polypropylene");
 	auto ext_ior = GetIor(node_plastic, "extIOR", "air");
@@ -463,17 +437,15 @@ void XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic, std::string id)
 		diffuse_reflectance.reset(new ConstantTexture(Spectrum(0.5)));
 	bool nonlinear = GetBoolean(node_plastic, "nonlinear").value_or(false);
 
-	bsdfs_.push_back(new Plastic(int_ior, ext_ior, std::move(diffuse_reflectance), nonlinear, std::move(specular_reflectance)));
+	return new Plastic(int_ior,
+					   ext_ior,
+					   std::move(diffuse_reflectance),
+					   std::move(specular_reflectance),
+					   nonlinear);
 }
 
-void XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std::string id)
+Material *XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic)
 {
-	auto distri = GetString(node_rough_plastic, "distribution").value_or("beckmann");
-
-	auto alpha = ParseTextureOrOther(node_rough_plastic, "alpha");
-	if (!alpha)
-		alpha.reset(new ConstantTexture(Spectrum(0.1)));
-
 	auto int_ior = GetIor(node_rough_plastic, "intIOR", "polypropylene");
 	auto ext_ior = GetIor(node_rough_plastic, "extIOR", "air");
 
@@ -482,12 +454,23 @@ void XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic, std:
 	if (!diffuse_reflectance)
 		diffuse_reflectance.reset(new ConstantTexture(0.5));
 
+	auto distri = GetString(node_rough_plastic, "distribution").value_or("beckmann");
+	auto alpha = ParseTextureOrOther(node_rough_plastic, "alpha");
+	if (!alpha)
+		alpha.reset(new ConstantTexture(Spectrum(0.1)));
+
 	auto nonlinear = GetBoolean(node_rough_plastic, "nonlinear").value_or(false);
 
-	bsdfs_.push_back(new RoughPlastic(GetDistrbType(distri), std::move(alpha), int_ior, ext_ior, std::move(diffuse_reflectance), nonlinear, std::move(specular_reflectance)));
+	return new RoughPlastic(int_ior,
+							ext_ior,
+							std::move(diffuse_reflectance),
+							std::move(specular_reflectance),
+							GetDistrbType(distri),
+							std::move(alpha),
+							nonlinear);
 }
 
-void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape)
+void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape, Renderer *renderer)
 {
 	std::string ref;
 	if (auto node_emitter = node_shape->first_node("emitter"); node_emitter)
@@ -507,8 +490,9 @@ void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape)
 		}
 		auto node_radiance = GetChild(node_emitter, "radiance");
 		auto radiance = GetSpectrum(node_radiance);
-		bsdfs_.push_back(new AreaLight(radiance));
-		bsdf_map_[ref] = bsdfs_.back();
+		auto area_light = new AreaLight(radiance);
+		renderer->AddMaterial(area_light);
+		id_to_material_[ref] = area_light;
 	}
 	else if (auto node_ref = node_shape->first_node("ref"); node_ref)
 	{
@@ -524,7 +508,7 @@ void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape)
 	{
 		ref = "unnamed_" + std::to_string(bsdf_cnt_++);
 		if (auto node_bsdf = node_shape->first_node("bsdf"); node_bsdf)
-			ParseBsdf(node_bsdf, &ref);
+			ParseMaterial(node_bsdf, renderer, ref);
 		else
 		{
 			std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
@@ -536,45 +520,46 @@ void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape)
 	auto type = GetAttri(node_shape, "type").value();
 	auto flip_normals = GetBoolean(node_shape, "flipNormals").value_or(false);
 
-	if (bsdf_map_.find(ref) == bsdf_map_.end())
+	if (!id_to_material_.count(ref))
 	{
-
 		std::cerr << "[error] " << GetTreeName(node_shape) << std::endl
 				  << "\tcannot find material with name: \"" << ref << "\"" << std::endl;
 		exit(1);
 	}
 
+	auto material = id_to_material_[ref];
+	auto shape = static_cast<Shape *>(nullptr);
 	switch (Hash(type.c_str()))
 	{
 	case "disk"_hash:
-		shapes_.push_back(new Disk(bsdf_map_[ref], std::move(to_world), flip_normals));
+		shape = new Disk(material, std::move(to_world), flip_normals);
 		break;
 	case "sphere"_hash:
 	{
 		auto radius = GetFloat(node_shape, "radius").value_or(1);
 		auto center = GetPoint(node_shape, "center").value_or(Vector3(0));
-		shapes_.push_back(new Sphere(bsdf_map_[ref], center, radius, std::move(to_world), flip_normals));
+		shape = new Sphere(material, center, radius, std::move(to_world), flip_normals);
 		break;
 	}
 	case "cube"_hash:
-		shapes_.push_back(new Cube(bsdf_map_[ref], std::move(to_world), flip_normals));
+		shape = new Cube(material, std::move(to_world), flip_normals);
 		break;
 	case "rectangle"_hash:
-		shapes_.push_back(new Rectangle(bsdf_map_[ref], std::move(to_world), flip_normals));
+		shape = new Rectangle(material, std::move(to_world), flip_normals);
 		break;
 	case "obj"_hash:
 	{
 		auto face_normals = GetBoolean(node_shape, "faceNormals").value_or(false);
 		auto flip_tex_coords = GetBoolean(node_shape, "flipTexCoords").value_or(true);
 		auto model_path = xml_directory_ + GetAttri(GetChild(node_shape, "filename", false), "value").value();
-		shapes_.push_back(ObjParser::Parse(model_path, bsdf_map_[ref], std::move(to_world), flip_normals, face_normals, flip_tex_coords));
+		shape = ModelParser::Parse(model_path, material, std::move(to_world), flip_normals, face_normals, flip_tex_coords);
 		break;
 	}
 	case "ply"_hash:
 	{
 		auto face_normals = GetBoolean(node_shape, "faceNormals").value_or(false);
 		auto model_path = xml_directory_ + GetAttri(GetChild(node_shape, "filename", false), "value").value();
-		shapes_.push_back(ObjParser::Parse(model_path, bsdf_map_[ref], std::move(to_world), flip_normals, face_normals));
+		shape = ModelParser::Parse(model_path, material, std::move(to_world), flip_normals, face_normals);
 		break;
 	}
 	default:
@@ -582,6 +567,7 @@ void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape)
 				  << "\tcannot handle shape type " << std::endl;
 		exit(1);
 	}
+	renderer->AddShape(shape);
 }
 
 Envmap *XmlParser::ParseEnvmap(rapidxml::xml_node<> *node_envmap)
@@ -690,7 +676,7 @@ std::unique_ptr<Texture> XmlParser::ParseTexture(rapidxml::xml_node<> *node_text
 			 u_scale = GetFloat(node_texture, "uscale", false).value(),
 			 v_scale = GetFloat(node_texture, "vscale", false).value();
 
-		return std::make_unique<Checkerboard>(color0, color1, Vector2(u_offset, v_offset),  Vector2(u_scale, v_scale));
+		return std::make_unique<Checkerboard>(color0, color1, Vector2(u_offset, v_offset), Vector2(u_scale, v_scale));
 		break;
 	}
 	case "gridtexture"_hash:
@@ -707,7 +693,7 @@ std::unique_ptr<Texture> XmlParser::ParseTexture(rapidxml::xml_node<> *node_text
 			 u_scale = GetFloat(node_texture, "uscale", false).value(),
 			 v_scale = GetFloat(node_texture, "vscale", false).value();
 
-		return std::make_unique<GridTexture>(color0, color1, line_width, Vector2(u_offset, v_offset),  Vector2(u_scale, v_scale));
+		return std::make_unique<GridTexture>(color0, color1, line_width, Vector2(u_offset, v_offset), Vector2(u_scale, v_scale));
 		break;
 	}
 
@@ -720,7 +706,7 @@ std::unique_ptr<Texture> XmlParser::ParseTexture(rapidxml::xml_node<> *node_text
 	return nullptr;
 }
 
-std::optional<std::string> GetAttri(rapidxml::xml_node<> *node, std::string key, bool not_exist_ok)
+std::optional<std::string> XmlParser::GetAttri(rapidxml::xml_node<> *node, std::string key, bool not_exist_ok)
 {
 	auto attri = node->first_attribute(key.c_str());
 	if (!attri)
@@ -740,7 +726,7 @@ std::optional<std::string> GetAttri(rapidxml::xml_node<> *node, std::string key,
 	return attri->value();
 }
 
-rapidxml::xml_node<> *GetChild(rapidxml::xml_node<> *node, std::string name, bool not_exist_ok)
+rapidxml::xml_node<> *XmlParser::GetChild(rapidxml::xml_node<> *node, std::string name, bool not_exist_ok)
 {
 	for (auto child = node->first_node(); child; child = child->next_sibling())
 	{
@@ -758,7 +744,7 @@ rapidxml::xml_node<> *GetChild(rapidxml::xml_node<> *node, std::string name, boo
 	}
 }
 
-std::unique_ptr<Mat4> GetToWorld(rapidxml::xml_node<> *node_parent)
+std::unique_ptr<Mat4> XmlParser::GetToWorld(rapidxml::xml_node<> *node_parent)
 {
 	auto node_toworld = GetChild(node_parent, "toWorld");
 	if (!node_toworld)
@@ -772,15 +758,9 @@ std::unique_ptr<Mat4> GetToWorld(rapidxml::xml_node<> *node_parent)
 		exit(1);
 	}
 	auto matrix_str = GetAttri(node_matrix, "value").value();
-	Mat4 result;
-	auto in_format_str = kFstr;
-	for (int i = 0; i < 15; i++)
-	{
-		in_format_str += (" " + kFstr);
-	}
-	auto in_format_c = in_format_str.c_str();
 
-	sscanf(matrix_str.c_str(), in_format_c,
+	Mat4 result;
+	sscanf(matrix_str.c_str(), "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
 		   &result[0][0], &result[1][0], &result[2][0], &result[3][0],
 		   &result[0][1], &result[1][1], &result[2][1], &result[3][1],
 		   &result[0][2], &result[1][2], &result[2][2], &result[3][2],
@@ -792,7 +772,7 @@ std::unique_ptr<Mat4> GetToWorld(rapidxml::xml_node<> *node_parent)
 		return std::make_unique<Mat4>(result);
 }
 
-Spectrum GetSpectrum(rapidxml::xml_node<> *node_spectrum)
+Spectrum XmlParser::GetSpectrum(rapidxml::xml_node<> *node_spectrum)
 {
 	if (strcmp(node_spectrum->name(), "rgb") != 0)
 	{
@@ -803,19 +783,12 @@ Spectrum GetSpectrum(rapidxml::xml_node<> *node_spectrum)
 	auto value_str = GetAttri(node_spectrum, "value").value();
 	Spectrum result;
 
-	auto in_format_str = kFstr;
-	for (int i = 0; i < 2; i++)
-	{
-		in_format_str += (", " + kFstr);
-	}
-	auto in_format_c = in_format_str.c_str();
-
-	sscanf(value_str.c_str(), in_format_c, &result[0], &result[1], &result[2]);
+	sscanf(value_str.c_str(), "%lf, %lf, %lf", &result[0], &result[1], &result[2]);
 
 	return result;
 }
 
-std::optional<bool> GetBoolean(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)
+std::optional<bool> XmlParser::GetBoolean(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)
 {
 	auto node_boolean = GetChild(node_parent, name);
 	if (!node_boolean)
@@ -836,7 +809,7 @@ std::optional<bool> GetBoolean(rapidxml::xml_node<> *node_parent, std::string na
 		return false;
 }
 
-std::optional<std::string> GetString(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)
+std::optional<std::string> XmlParser::GetString(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)
 {
 	auto node_string = GetChild(node_parent, name);
 	if (!node_string)
@@ -854,7 +827,7 @@ std::optional<std::string> GetString(rapidxml::xml_node<> *node_parent, std::str
 		return GetAttri(node_string, "value");
 }
 
-std::optional<int> GetInt(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)
+std::optional<int> XmlParser::GetInt(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)
 {
 	auto node_int = GetChild(node_parent, name);
 	if (!node_int)
@@ -878,7 +851,7 @@ std::optional<int> GetInt(rapidxml::xml_node<> *node_parent, std::string name, b
 	return std::stoi(GetAttri(node_int, "value").value());
 }
 
-std::optional<Float> GetFloat(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)
+std::optional<Float> XmlParser::GetFloat(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)
 {
 	auto node_float = GetChild(node_parent, name);
 	if (!node_float)
@@ -903,12 +876,11 @@ std::optional<Float> GetFloat(rapidxml::xml_node<> *node_parent, std::string nam
 	return std::stof(GetAttri(node_float, "value").value());
 }
 
-Float GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::string default_material_name)
+Float XmlParser::GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::string default_material_name)
 {
 	auto node_ior = GetChild(node_parent, ior_type);
 	if (!node_ior)
 		return IOR.at(default_material_name);
-
 	if (strcmp(node_ior->name(), "float") == 0)
 		return std::stof(GetAttri(node_ior, "value").value());
 	else
@@ -925,7 +897,7 @@ Float GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::strin
 	}
 }
 
-std::string GetTreeName(rapidxml::xml_node<> *node)
+std::string XmlParser::GetTreeName(rapidxml::xml_node<> *node)
 {
 	if (!node || node->name_size() == 0)
 		return "root";
@@ -941,7 +913,8 @@ std::string GetTreeName(rapidxml::xml_node<> *node)
 		return result;
 	}
 }
-std::optional<Vector3> GetPoint(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)
+
+std::optional<Vector3> XmlParser::GetPoint(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)
 {
 	auto node_point = GetChild(node_parent, name);
 	if (!node_point)
@@ -955,24 +928,20 @@ std::optional<Vector3> GetPoint(rapidxml::xml_node<> *node_parent, std::string n
 			exit(1);
 		}
 	}
-
 	if (strcmp(node_point->name(), "point") != 0)
 	{
 		std::cerr << "[error] " << GetTreeName(node_point) << std::endl
 				  << "\tthe type of \"" << name << "\" provided is not point" << std::endl;
 		exit(1);
 	}
-
 	Vector3 result;
-
 	result.x = static_cast<Float>(std::stod(GetAttri(node_point, "x").value()));
 	result.y = static_cast<Float>(std::stod(GetAttri(node_point, "y").value()));
 	result.z = static_cast<Float>(std::stod(GetAttri(node_point, "z").value()));
-
 	return result;
 }
 
-MicrofacetDistribType GetDistrbType(const std::string &name)
+MicrofacetDistribType XmlParser::GetDistrbType(const std::string &name)
 {
 	switch (Hash(name.c_str()))
 	{

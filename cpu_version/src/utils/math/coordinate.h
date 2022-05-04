@@ -1,6 +1,6 @@
 #pragma once
 
-#include "math.h"
+#include "math_base.h"
 
 NAMESPACE_BEGIN(simple_renderer)
 
@@ -8,6 +8,7 @@ constexpr int UP_DIM_WORLD = 1;
 constexpr int FRONT_DIM_WORLD = 2;
 constexpr int RIGHT_DIM_WORLD = 0;
 
+///\brief 对位置左乘齐次坐标矩阵，进行变换
 inline Vector3 TransfromDir(Mat4 trans, Vector3 dir)
 {
     Vector3 ret(0);
@@ -17,6 +18,7 @@ inline Vector3 TransfromDir(Mat4 trans, Vector3 dir)
     return glm::normalize(ret);
 }
 
+///\brief 对方向左乘齐次坐标矩阵，进行变换
 inline Vector3 TransfromPt(Mat4 trans, Vector3 pt)
 {
     Vector3 ret(0);
@@ -26,41 +28,33 @@ inline Vector3 TransfromPt(Mat4 trans, Vector3 pt)
     return ret;
 }
 
-inline Float Angle(const Vector3 &a, const Vector3 &b)
-{
-    return glm::acos(glm::dot(a, b)) * kPiInv * 180;
-}
-
-//\brief 两个向量是否同向
+///\brief 两个向量是否同向
 inline bool SameDirection(const Vector3 &a, const Vector3 &b)
 {
     return FloatEqual(glm::dot(a, b), 1, kEpsilonL);
 }
 
-//\brief 两个向量是否不在同一个半球之中（夹角大于90度）
+///\brief 两个向量是否不在同一个半球之中（夹角大于90度）
 inline bool NotSameHemis(const Vector3 &a, const Vector3 &b)
 {
     return glm::dot(a, b) < kEpsilon;
 }
 
-//\brief 两个向量是否在同一个半球之中（夹角小于90度）
+///\brief 两个向量是否在同一个半球之中（夹角小于90度）
 inline bool SameHemis(const Vector3 &a, const Vector3 &b)
 {
     return glm::dot(a, b) > kEpsilon;
 }
 
+///\brief 两个向量是否垂直
 inline bool Perpendicular(const Vector3 &a, const Vector3 &b)
 {
     return FloatEqual(glm::dot(a, b), 0, kEpsilonL);
 }
 
-//\brief 将向量转换至目标坐标系下
-//
-//\param dir 待转换的向量
-//
-//\param normal 目标坐标系的竖直向上方向
-//
-//\return 获得的转换后的向量
+///\brief 将单位向量从局部坐标系转换到世界坐标系
+///\param dir 待转换的单位向量
+///\param normal 局部坐标系的竖直向上方向在世界坐标系下的方向
 inline Vector3 ToWorld(const Vector3 &dir, const Vector3 &normal)
 {
     Vector3 B, C;
@@ -78,6 +72,9 @@ inline Vector3 ToWorld(const Vector3 &dir, const Vector3 &normal)
     return glm::normalize(dir.x * B + dir.y * C + dir.z * normal);
 }
 
+///\brief 将单位向量从世界坐标系转换到局部坐标系
+///\param dir 待转换的单位向量
+///\param normal 局部坐标系的竖直向上方向在世界坐标系下的方向
 inline Vector3 ToLocal(const Vector3 &dir, const Vector3 &up)
 {
     Vector3 B, C;
@@ -95,13 +92,10 @@ inline Vector3 ToLocal(const Vector3 &dir, const Vector3 &up)
     return Vector3(glm::dot(dir, B), glm::dot(dir, C), glm::dot(dir, up));
 }
 
-//\brief 将单位向量坐标从笛卡尔坐标系转换至球坐标系
-//
-//\param dir - 待转换的单位向量
-//
-//\param phi - 向量与 Front 方向的夹角
-//
-//\param theta - 向量与 Up 方向的夹角
+///\brief 将单位向量坐标从笛卡尔坐标系转换到球坐标系
+///\param dir - 待转换的单位向量
+///\param phi - 向量与 Front 方向的夹角（方位角）
+///\param theta - 向量与 Up 方向的夹角（天顶角）
 inline void CartesianToSpherical(const Vector3 &dir, Float &theta, Float &phi)
 {
     auto cos_theta = dir[UP_DIM_WORLD];
@@ -120,21 +114,21 @@ inline void CartesianToSpherical(const Vector3 &dir, Float &theta, Float &phi)
         phi -= 2 * kPi;
 }
 
-//\brief 将起点是原点的向量从笛卡尔坐标系转换至球坐标系
-//
-//\param dir 待转换的，起点是原点的向量
-//
-//\param phi 向量与 Front 方向的夹角
-//
-//\param theta 向量与 Up 方向的夹角
-//
-//\param r 向量长度
+///\brief 将起点是原点的向量从笛卡尔坐标系转换到球坐标系
+///\param dir 待转换的，起点是原点的向量
+///\param phi 向量与 Front 方向的夹角（方位角）
+///\param theta 向量与 Up 方向的夹角（天顶角）
+///\param r 向量长度
 inline void CartesianToSpherical(const Vector3 &dir, Float &theta, Float &phi, Float &r)
 {
     r = glm::length(dir);
     CartesianToSpherical(glm::normalize(dir), theta, phi);
 }
 
+///\brief 将单位向量坐标从球坐标系转换到笛卡尔坐标系
+///\param phi 向量在球坐标系下的方位角
+///\param theta 向量在球坐标系下的天顶角
+///\return 转换得到的单位向量
 inline Vector3 SphericalToCartesian(Float theta, Float phi, Float r = 1)
 {
     Vector3 dir(0);

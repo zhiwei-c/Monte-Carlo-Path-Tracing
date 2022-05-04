@@ -12,8 +12,6 @@
 
 #include <string>
 
-// #define NO_RECURSION
-
 #include <glm/glm.hpp>
 #include <glm/ext/scalar_constants.hpp>
 
@@ -25,8 +23,6 @@ using Spectrum = Vector3;
 using Vector2 = glm::dvec2;
 using Mat4 = glm::dmat4;
 using Mat3 = glm::dmat3;
-
-const std::string kFstr = "%lf";
 
 constexpr auto kEpsilon = static_cast<Float>(1e-10);
 constexpr auto kOneMinusEpsilon = static_cast<Float>(1 - 1e-10);

@@ -2,7 +2,7 @@
 
 <scene version="0.5.0" >
 	<integrator type="path" >
-		<integer name="maxDepth" value="65" />
+		<integer name="maxDepth" value="3" />
 		<boolean name="strictNormals" value="true" />
 	</integrator>
 	<sensor type="perspective" >
@@ -11,7 +11,7 @@
 			<matrix value="-4.37113e-008 0 -1 28.2792 0 1 0 3.5 1 0 -4.37113e-008 1.23612e-006 0 0 0 1"/>
 		</transform>
 		<sampler type="sobol" >
-			<integer name="sampleCount" value="256" />
+			<integer name="sampleCount" value="64" />
 		</sampler>
 		<film type="ldrfilm" >
 			<integer name="width" value="1280" />

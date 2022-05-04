@@ -95,7 +95,7 @@ public:
 
     __device__ bool twosided() const { return twosided_; }
 
-    __device__ bool HarshLobe() const { return type_ == kConductor || type_ == kDielectric || type_ == kThinDielectric; }
+    __device__ bool HarshLobe() const { return type_ == kConductor; }
 
     ///\return 辐射亮度
     __device__ vec3 radiance() const;

@@ -1,10 +1,7 @@
 #include <filesystem>
 
-#include "utils/config_parser/json_parser.h"
 #include "utils/config_parser/xml_parser.h"
-#include "utils/timer.h"
-#include "utils/file_path.h"
-#include "rendering/integrators/integrators.h"
+#include "utils/config_parser/json_parser.h"
 
 int main(int argc, char *argv[])
 {
@@ -40,15 +37,15 @@ int main(int argc, char *argv[])
 	}
 	std::cout << "[info] read config file: \"" << file_path.c_str() << "\"" << std::endl;
 
-	simple_renderer::Scene *scene = nullptr;
-	simple_renderer::Camera *camera = nullptr;
+	//解析绘制图像配置文件
+	auto renderer = static_cast<simple_renderer::Renderer *>(nullptr);
 	auto suffix = simple_renderer::GetSuffix(file_path);
 	if (suffix == "json")
-		std::tie(scene, camera) = simple_renderer::ParseJsonCfg(file_path);
+		renderer = simple_renderer::ParseJsonCfg(file_path);
 	else if (suffix == "xml")
 	{
 		auto parser = simple_renderer::XmlParser();
-		std::tie(scene, camera) = parser.Parse(file_path);
+		renderer = parser.Parse(file_path);
 	}
 	else
 	{
@@ -57,12 +54,11 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	camera->Shoot(scene, output_name);
+	//生成图像
+	renderer->Render(output_name);
 
-	delete scene;
-	delete camera;
-	scene = nullptr;
-	camera = nullptr;
+	delete renderer;
+	renderer = nullptr;
 
 	return 0;
 }

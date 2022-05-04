@@ -1,5 +1,6 @@
 # 蒙特卡洛路径追踪（Monte Carlo Path Tracing）
-一个简单的路径追踪小程序，最初参考了《[GAMES101: 现代计算机图形学入门 ](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》的作业7，有大幅度的调整。
+
+一个简单的路径追踪小程序，最初参考了《[GAMES101: 现代计算机图形学入门](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》的作业7，有大幅度的调整。
 
 [学习记录](https://zhuanlan.zhihu.com/p/459580639)
 
@@ -16,14 +17,15 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 ### 1.2 CUDA 加速计算
 
-测试设备信息： 
+测试设备信息：
+
 - 操作系统：Windows 10 21H2
 - CPU：AMD Ryzen 7 4800HS
 - GPU：NVIDIA RTX 2060 Max-Q
 
 对于[简单的场景](resources/rendering_resources/cornell-box-2/scene.xml)，GPU 加速后计算时间减少到原本的约 13.72%。
 
-- 640*640 分辨率，64 spp
+- 1024*1024 分辨率，64 spp
 
 | 并发编程 | CPU 多线程加速计算（OpenMP） | GPU 加速计算（CUDA） |
 | ------------------------------ | ------------------------------------------------------ | ------------------------------------------------------ |
@@ -43,9 +45,9 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 ### 1.3 多重重要抽样（Multiple Importance Sampling）
 
-- [1280*720 分辨率，256 spp](resources/rendering_resources/veach-mis/scene.xml)
+- [1280*720 分辨率，64 spp](resources/rendering_resources/veach-mis/scene.xml)
 
-![multiple importance sampling](resources/rendering_results/mis.png)
+![multiple importance sampling](resources/rendering_results/cpu_mis_2min2s.png)
 
 ## 2 实现的功能
 
@@ -57,38 +59,38 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
   - 多重重要性抽样（multiple importance sampling）：
     - 按发光物体表面积直接采样光源；
     - 按 BSDF 采样光源；
-  - 俄罗斯轮盘赌（Russian roulette）控制路径追踪深度； 
+  - 俄罗斯轮盘赌（Russian roulette）控制路径追踪深度；
 - 基于双向路径追踪（bidirectional path tracing，BDPT）算法的[积分器](cpu_version/src/rendering/integrators/bdpt.h)；
 
 ### 2.2 表面散射模型（Surface Scattering Models）
 
-- 朗伯模型（Lambert's model）定义的，[平滑的漫反射材质（smooth diffuse material）](cpu_version/src/material/bsdfs/diffuse.h)；
+- 朗伯模型（Lambert's model）定义的，[平滑的漫反射材质（smooth diffuse material）](cpu_version/src/bsdfs/diffuse.h)；
 
-- 冯模型（Phong model）定义的，[有光泽的材质（glossy material）](cpu_version/src/material/bsdfs/glossy.h);
+- 冯模型（Phong model）定义的，[有光泽的材质（glossy material）](cpu_version/src/bsdfs/glossy.h);
 
-- [平滑的电介质材质（smooth dielectric material）](cpu_version/src/material/bsdfs/dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-dielectric-material-dielectric)；
+- [平滑的电介质材质（smooth dielectric material）](cpu_version/src/bsdfs/dielectric.h)，模仿 [mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-dielectric-material-dielectric)；
 
   ![cornell_box-dielectric](resources/rendering_results/cornell_box-dielectric.png)
 
-- 微表面模型（microfacet model）定义的，[粗糙的电介质材质（rough dielectric material）](cpu_version/src/material/bsdfs/rough_dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-dielectric-material-roughdielectric)；
+- 微表面模型（microfacet model）定义的，[粗糙的电介质材质（rough dielectric material）](cpu_version/src/bsdfs/rough_dielectric.h)，模仿 [mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-dielectric-material-roughdielectric)；
 
   ![rough_dielectric](resources/rendering_results/rough_dielectric.png)
 
-- [薄的电介质材质（thin dielectric material）](cpu_version/src/material/bsdfs/thin_dielectric.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#thin-dielectric-material-thindielectric)；
+- [薄的电介质材质（thin dielectric material）](cpu_version/src/bsdfs/thin_dielectric.h)，模仿 [mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#thin-dielectric-material-thindielectric)；
 
-- [平滑的导体材质（smooth conductor material）](cpu_version/src/material/bsdfs/conductor.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-conductor-conductor)；
+- [平滑的导体材质（smooth conductor material）](cpu_version/src/bsdfs/conductor.h)，模仿 [mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-conductor-conductor)；
 
   ![Au](resources/rendering_results/Au.png)
 
-- 微表面模型（microfacet model）定义的，[粗糙的导体材质（rough conductor material）](cpu_version/src/material/bsdfs/rough_conductor.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-conductor-material-roughconductor)；
+- 微表面模型（microfacet model）定义的，[粗糙的导体材质（rough conductor material）](cpu_version/src/bsdfs/rough_conductor.h)，模仿 [mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-conductor-material-roughconductor)；
 
   ![rough_Au](resources/rendering_results/rough_Au.png)
 
-- [平滑的塑料材质（smooth plastic material）](cpu_version/src/material/bsdfs/plastic.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-plastic-material-plastic)；
+- [平滑的塑料材质（smooth plastic material）](cpu_version/src/bsdfs/plastic.h)，模仿 [mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#smooth-plastic-material-plastic)；
 
   ![plastic](resources/rendering_results/plastic.png)
 
-- [粗糙的塑料材质（rough plastic material）](cpu_version/src/material/bsdfs/rough_plastic.h)，模仿[ mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-plastic-material-roughplastic)；
+- [粗糙的塑料材质（rough plastic material）](cpu_version/src/bsdfs/rough_plastic.h)，模仿 [mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-plastic-material-roughplastic)；
 
   ![rough_plastic](resources/rendering_results/rough_plastic.png)
 
