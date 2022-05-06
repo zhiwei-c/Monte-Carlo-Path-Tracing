@@ -178,7 +178,7 @@ CameraInfo ParseCamera(rapidxml::xml_node<> *node_sensor)
         up = TransfromDir(*to_world, up);
     }
     camera_info.eye_pos = eye_pos;
-    camera_info.look_dir = look_at - eye_pos;
+    camera_info.look_dir = glm::normalize(look_at - eye_pos);
     camera_info.up = up;
 
     auto node_film = node_sensor->first_node("film");

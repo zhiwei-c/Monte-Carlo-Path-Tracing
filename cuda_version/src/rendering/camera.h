@@ -23,11 +23,11 @@ public:
     __device__ void InitCamera(const CameraInfo &info)
     {
         info_ = info;
-        auto fov_width = info.fov_height * info.width / info.height;
-        auto right_dir = myvec::normalize(myvec::cross(info.look_dir, info.up));
-        info_.up = myvec::normalize(myvec::cross(right_dir, info.look_dir));
+        auto fov_width = info_.fov_height * info_.width / info_.height;
+        auto right_dir = myvec::normalize(myvec::cross(info_.look_dir, info_.up));
+        info_.up = myvec::normalize(myvec::cross(right_dir, info_.look_dir));
         view_dx_ = right_dir * static_cast<Float>(glm::tan(glm::radians(0.5 * fov_width)));
-        view_dy_ = info_.up * static_cast<Float>(glm::tan(glm::radians(0.5 * info.fov_height)));
+        view_dy_ = info_.up * static_cast<Float>(glm::tan(glm::radians(0.5 * info_.fov_height)));
     }
 
     __device__ vec3 GetDirection(int u, int v, const vec2 &offset)
