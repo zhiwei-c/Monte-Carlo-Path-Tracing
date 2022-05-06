@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "bvh_node.h"
 
 NAMESPACE_BEGIN(simple_renderer)

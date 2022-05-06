@@ -22,7 +22,6 @@ inline void LoadDisk(ShapeInfo *shape_info, bool bump_mapping, std::vector<Verte
     const Float d_phi = (2.0 * kPi) / (phi_steps - 1);
 
     auto vector = gvec3(0);
-    auto vec = gvec2(0);
     auto old_v_num = vertex_list.size();
     auto vertex_num = 2 * phi_steps;
     vertex_list.resize(old_v_num + vertex_num);

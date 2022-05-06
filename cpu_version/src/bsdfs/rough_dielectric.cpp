@@ -1,5 +1,3 @@
-#pragma once
-
 #include "rough_dielectric.h"
 
 NAMESPACE_BEGIN(simple_renderer)

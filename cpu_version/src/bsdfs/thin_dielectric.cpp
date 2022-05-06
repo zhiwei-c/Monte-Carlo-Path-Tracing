@@ -1,5 +1,3 @@
-#pragma once
-
 #include "thin_dielectric.h"
 
 NAMESPACE_BEGIN(simple_renderer)
