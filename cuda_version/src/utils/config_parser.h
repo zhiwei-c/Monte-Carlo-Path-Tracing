@@ -155,19 +155,30 @@ CameraInfo ParseCamera(rapidxml::xml_node<> *node_sensor)
     CameraInfo camera_info;
 
     auto fov_width = GetFloat(node_sensor, "fov", false).value();
-    auto to_world = GetToWorld(node_sensor);
-
     auto eye_pos = gvec3(0, 0, 0);
+    auto look_at = gvec3(0, 0, 1);
     auto up = gvec3(0, 1, 0);
-    auto look_dir = gvec3(0, 0, 1);
-    if (to_world)
+    if (auto node_lookat = GetChild(node_sensor, "toWorld")->first_node("lookat");
+        node_lookat)
+    {
+        auto origin_str = GetAttri(node_lookat, "origin").value();
+        sscanf(origin_str.c_str(), "%lf, %lf, %lf", &eye_pos[0], &eye_pos[1], &eye_pos[2]);
+
+        auto target_str = GetAttri(node_lookat, "target").value();
+        sscanf(target_str.c_str(), "%lf, %lf, %lf", &look_at[0], &look_at[1], &look_at[2]);
+
+        auto up_str = GetAttri(node_lookat, "up").value();
+        sscanf(up_str.c_str(), "%lf, %lf, %lf", &up[0], &up[1], &up[2]);
+    }
+    else if (auto to_world = GetToWorld(node_sensor);
+             to_world)
     {
         eye_pos = TransfromPt(*to_world, eye_pos);
+        look_at = TransfromPt(*to_world, look_at);
         up = TransfromDir(*to_world, up);
-        look_dir = TransfromDir(*to_world, look_dir);
     }
     camera_info.eye_pos = eye_pos;
-    camera_info.look_dir = look_dir;
+    camera_info.look_dir = look_at - eye_pos;
     camera_info.up = up;
 
     auto node_film = node_sensor->first_node("film");
@@ -824,13 +835,13 @@ void ParseShape(rapidxml::xml_node<> *node_shape)
     case "rectangle"_hash:
         renderer->AddShapeInfo(new ShapeInfo(kRectangle, flip_normals, to_world, material_idx));
         break;
-	case "sphere"_hash:
-	{
-		auto radius = GetFloat(node_shape, "radius").value_or(1);
-		auto center = GetPoint(node_shape, "center").value_or(vec3(0));
-		renderer->AddShapeInfo(new ShapeInfo(center, radius, flip_normals, to_world, material_idx));
+    case "sphere"_hash:
+    {
+        auto radius = GetFloat(node_shape, "radius").value_or(1);
+        auto center = GetPoint(node_shape, "center").value_or(vec3(0));
+        renderer->AddShapeInfo(new ShapeInfo(center, radius, flip_normals, to_world, material_idx));
         break;
-	}
+    }
     default:
         std::cerr << "[warning] " << GetTreeName(node_shape) << std::endl
                   << "\tcannot handle shape type, ignore " << std::endl;
@@ -1084,33 +1095,33 @@ std::optional<Float> GetFloat(rapidxml::xml_node<> *node_parent, std::string nam
 
 std::optional<vec3> GetPoint(rapidxml::xml_node<> *node_parent, const std::string &name, bool not_exist_ok)
 {
-	auto node_point = GetChild(node_parent, name);
-	if (!node_point)
-	{
-		if (not_exist_ok)
-			return std::nullopt;
-		else
-		{
-			std::cerr << "[error] " << GetTreeName(node_parent) << std::endl
-					  << "\tcannot find child node: " << name << std::endl;
-			exit(1);
-		}
-	}
+    auto node_point = GetChild(node_parent, name);
+    if (!node_point)
+    {
+        if (not_exist_ok)
+            return std::nullopt;
+        else
+        {
+            std::cerr << "[error] " << GetTreeName(node_parent) << std::endl
+                      << "\tcannot find child node: " << name << std::endl;
+            exit(1);
+        }
+    }
 
-	if (strcmp(node_point->name(), "point") != 0)
-	{
-		std::cerr << "[error] " << GetTreeName(node_point) << std::endl
-				  << "\tthe type of \"" << name << "\" provided is not point" << std::endl;
-		exit(1);
-	}
+    if (strcmp(node_point->name(), "point") != 0)
+    {
+        std::cerr << "[error] " << GetTreeName(node_point) << std::endl
+                  << "\tthe type of \"" << name << "\" provided is not point" << std::endl;
+        exit(1);
+    }
 
-	vec3 result;
+    vec3 result;
 
-	result.x = static_cast<Float>(std::stod(GetAttri(node_point, "x").value()));
-	result.y = static_cast<Float>(std::stod(GetAttri(node_point, "y").value()));
-	result.z = static_cast<Float>(std::stod(GetAttri(node_point, "z").value()));
+    result.x = static_cast<Float>(std::stod(GetAttri(node_point, "x").value()));
+    result.y = static_cast<Float>(std::stod(GetAttri(node_point, "y").value()));
+    result.z = static_cast<Float>(std::stod(GetAttri(node_point, "z").value()));
 
-	return result;
+    return result;
 }
 
 std::optional<std::string> GetString(rapidxml::xml_node<> *node_parent, std::string name, bool not_exist_ok)

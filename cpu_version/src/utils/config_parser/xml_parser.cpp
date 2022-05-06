@@ -84,24 +84,35 @@ Camera *XmlParser::ParseCamera(rapidxml::xml_node<> *node_sensor)
 				  << "\tcannot handle sensor except from perspective" << std::endl;
 		exit(1);
 	}
-
 	auto fov_width = GetFloat(node_sensor, "fov", false).value();
-	auto to_world = GetToWorld(node_sensor);
 	auto eye_pos = Vector3(0, 0, 0);
+	auto look_at = Vector3(0, 0, 1);
 	auto up = Vector3(0, 1, 0);
-	auto look_dir = Vector3(0, 0, 1);
-	if (to_world)
+	if (auto node_lookat = GetChild(node_sensor, "toWorld")->first_node("lookat");
+		node_lookat)
+	{
+		auto origin_str = GetAttri(node_lookat, "origin").value();
+		sscanf(origin_str.c_str(), "%lf, %lf, %lf", &eye_pos[0], &eye_pos[1], &eye_pos[2]);
+
+		auto target_str = GetAttri(node_lookat, "target").value();
+		sscanf(target_str.c_str(), "%lf, %lf, %lf", &look_at[0], &look_at[1], &look_at[2]);
+
+		auto up_str = GetAttri(node_lookat, "up").value();
+		sscanf(up_str.c_str(), "%lf, %lf, %lf", &up[0], &up[1], &up[2]);
+	}
+	else if (auto to_world = GetToWorld(node_sensor);
+			 to_world)
 	{
 		eye_pos = TransfromPt(*to_world, eye_pos);
+		look_at = TransfromPt(*to_world, look_at);
 		up = TransfromDir(*to_world, up);
-		look_dir = TransfromDir(*to_world, look_dir);
 	}
 
 	auto film = ParseFilm(node_sensor);
 	auto fov_height = fov_width * film.height / film.width;
 	auto node_sampler = node_sensor->first_node("sampler");
 	auto sample_count = GetInt(node_sampler, "sampleCount", false).value();
-	return new Camera(film, eye_pos, eye_pos + look_dir, up, fov_height, sample_count);
+	return new Camera(film, eye_pos, look_at, up, fov_height, sample_count);
 }
 
 Film XmlParser::ParseFilm(rapidxml::xml_node<> *node_sensor)
@@ -759,7 +770,7 @@ std::unique_ptr<Mat4> XmlParser::GetToWorld(rapidxml::xml_node<> *node_parent)
 	}
 	auto matrix_str = GetAttri(node_matrix, "value").value();
 
-	Mat4 result;
+	auto result = Mat4(1);
 	sscanf(matrix_str.c_str(), "%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf",
 		   &result[0][0], &result[1][0], &result[2][0], &result[3][0],
 		   &result[0][1], &result[1][1], &result[2][1], &result[3][1],

@@ -29,11 +29,12 @@ public:
     ///\param fov_height 垂直方向的视角（弧度制）
     ///\param spp 每个像素点采样的次数
     Camera(Film film, Vector3 eye_pos, Vector3 look_at, Vector3 up, Float fov_height, int spp)
-        : film_(film), eye_pos_(eye_pos), up_(glm::normalize(up)), fov_height_(fov_height), spp_(spp)
+        : film_(film), eye_pos_(eye_pos), fov_height_(fov_height), spp_(spp)
     {
         auto fov_width = fov_height_ * film_.width / film_.height;
         look_dir_ = glm::normalize(look_at - eye_pos_);
-        Vector3 right_dir_ = glm::normalize(glm::cross(look_dir_, up_));
+        Vector3 right_dir_ = glm::normalize(glm::cross(look_dir_, up));
+        up_ = glm::normalize(glm::cross(right_dir_, look_dir_));
         view_dx = right_dir_ * static_cast<Float>(glm::tan(glm::radians(0.5 * fov_width)));
         view_dy = up_ * static_cast<Float>(glm::tan(glm::radians(0.5 * fov_height_)));
 
@@ -80,7 +81,7 @@ public:
 
         auto frame = new Bitmap(film_.width, film_.height, 3, film_.gamma);
 
-        std::vector<Vector3> look_dirs_now = GetDirections(846, 144);
+        std::vector<Vector3> look_dirs_now = GetDirections(250, 183);
         for (auto look_dir_now : look_dirs_now)
         {
             integrator->Shade(eye_pos_, look_dir_now);

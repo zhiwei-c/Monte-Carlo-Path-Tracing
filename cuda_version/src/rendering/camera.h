@@ -24,9 +24,10 @@ public:
     {
         info_ = info;
         auto fov_width = info.fov_height * info.width / info.height;
-        vec3 right_dir = myvec::normalize(myvec::cross(info.look_dir, info.up));
+        auto right_dir = myvec::normalize(myvec::cross(info.look_dir, info.up));
+        info_.up = myvec::normalize(myvec::cross(right_dir, info.look_dir));
         view_dx_ = right_dir * static_cast<Float>(glm::tan(glm::radians(0.5 * fov_width)));
-        view_dy_ = info.up * static_cast<Float>(glm::tan(glm::radians(0.5 * info.fov_height)));
+        view_dy_ = info_.up * static_cast<Float>(glm::tan(glm::radians(0.5 * info.fov_height)));
     }
 
     __device__ vec3 GetDirection(int u, int v, const vec2 &offset)
