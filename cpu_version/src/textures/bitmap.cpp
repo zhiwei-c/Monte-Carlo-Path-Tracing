@@ -93,10 +93,15 @@ Spectrum Bitmap::Color(const Vector2 &coord) const
     x = Modulo(x, width_);
     y = Modulo(y, height_);
     auto offset = (x + static_cast<size_t>(width_) * y) * channels_;
-    auto r = data_[offset];
-    auto g = data_[offset + 1];
-    auto b = data_[offset + 2];
-    return Spectrum(r, g, b);
+    if (channels_ == 1)
+        return Spectrum(data_[offset], data_[offset], data_[offset]);
+    else
+    {
+        auto r = data_[offset];
+        auto g = data_[offset + 1];
+        auto b = data_[offset + 2];
+        return Spectrum(r, g, b);
+    }
 }
 
 ///\return 纹理在给定坐标处梯度
@@ -109,10 +114,15 @@ Vector2 Bitmap::Gradient(const Vector2 &coord) const
         x = Modulo(x, width_);
         y = Modulo(y, height_);
         auto offset = (x + static_cast<size_t>(width_) * y) * channels_;
-        auto r = 255 * data_[offset];
-        auto g = 255 * data_[offset + 1];
-        auto b = 255 * data_[offset + 2];
-        return glm::length(Vector3(r, g, b));
+        if (channels_ == 1)
+            return 255 * data_[offset];
+        else
+        {
+            auto r = 255 * data_[offset];
+            auto g = 255 * data_[offset + 1];
+            auto b = 255 * data_[offset + 2];
+            return glm::length(Vector3(r, g, b));
+        }
     };
     Float kh = 0.2, kn = 0.1;
     auto value = GetNorm(coord, 0, 0),
