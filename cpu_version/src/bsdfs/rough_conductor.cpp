@@ -48,24 +48,37 @@ void RoughConductor::Sample(BsdfSampling &bs) const
 	auto [alpha_u, alpha_v] = GetAlpha(bs.texcoord);
 
 	auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);
-	auto [normal_micro, pdf] = distrib->Sample(bs.normal, {UniformFloat(), UniformFloat()});
+	auto [h, D] = distrib->Sample(bs.normal, {UniformFloat(), UniformFloat()});
 
-	if (pdf < kEpsilon)
+	if (D < kEpsilon)
 		return;
 
-	bs.wi = -Reflect(-bs.wo, normal_micro);
-	if (glm::dot(bs.wi, bs.normal) >= 0)
+	bs.wi = -Reflect(-bs.wo, h);
+	auto cos_i_n = glm::dot(bs.wi, bs.normal);
+	if (cos_i_n >= 0)
 		return;
 
-	bs.pdf = Pdf(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+	auto jacobian = std::abs(1.0 / (4.0 * glm::dot(bs.wo, h)));
+	bs.pdf = jacobian * D;
 	if (bs.pdf < kEpsilonL)
 	{
 		bs.pdf = 0;
 		return;
 	}
+	if (!bs.get_attenuation)
+		return;
 
-	if (bs.get_attenuation)
-		bs.attenuation = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+	auto cos_o_n = glm::dot(bs.wo, bs.normal);
+	auto F = mirror_ ? Spectrum(1) : FresnelConductor(bs.wi, h, eta_, k_);
+	auto G = distrib->SmithG1(-bs.wi, h, bs.normal) * distrib->SmithG1(bs.wo, h, bs.normal);
+	auto albedo = F * static_cast<Float>(D * G / std::abs(4.0 * cos_i_n * cos_o_n));
+	if (specular_reflectance_)
+		albedo *= specular_reflectance_->Color(bs.texcoord);
+
+	if (albedo_avg_ > 0)
+		albedo += EvalMultipleScatter(cos_i_n, cos_o_n);
+
+	bs.attenuation = albedo;
 }
 
 ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重

@@ -63,11 +63,11 @@ public:
     {
         auto one_side = glm::dot(wo, normal_) > 0; //光线与交点法线是否同侧
         auto bs = std::make_unique<BsdfSampling>();
-        bs->inside = one_side ? inside_ : !inside_;
+        bs->inside = one_side ? inside_ : !inside_; //法线方向是否指向介质内侧
         bs->get_attenuation = get_attenuation;
         bs->texcoord = texcoord_;
         bs->wo = wo;
-        bs->normal = one_side ? normal_ : -normal_;
+        bs->normal = one_side ? normal_ : -normal_; //处理法线方向，使其与光线出射方向夹角小于90度
 
         material_->Sample(*bs);
 
@@ -80,18 +80,18 @@ public:
     ///\brief 根据光线入射方向和出射方向，计算交点处光线传播的 BSDF 系数
     Spectrum Eval(const Vector3 &wi, const Vector3 &wo) const
     {
-        auto one_side = glm::dot(wi, normal_) < 0; //入射光线与法线是否同侧
-        auto normal = one_side ? normal_ : -normal_;
-        auto inside = one_side ? inside_ : !inside_;
+        auto one_side = glm::dot(wi, normal_) < 0;   //入射光线与法线是否同侧
+        auto normal = one_side ? normal_ : -normal_; //处理法线方向，使其与光线入射方向夹角大于90度
+        auto inside = one_side ? inside_ : !inside_; //法线方向是否指向介质内侧
         return material_->Eval(wi, wo, normal, texcoord_, inside);
     }
 
     ///\brief 根据光线入射方向和出射方向，计算交点处光线传播的概率
     Float Pdf(const Vector3 &wi, const Vector3 &wo) const
     {
-        auto one_side = glm::dot(wi, normal_) < 0; //入射光线与法线是否同侧
-        auto normal = one_side ? normal_ : -normal_;
-        auto inside = one_side ? inside_ : !inside_;
+        auto one_side = glm::dot(wi, normal_) < 0;   //入射光线与法线是否同侧
+        auto normal = one_side ? normal_ : -normal_; //处理法线方向，使其与光线入射方向夹角大于90度
+        auto inside = one_side ? inside_ : !inside_; //法线方向是否指向介质内侧
         return material_->Pdf(wi, wo, normal, texcoord_, inside);
     }
 

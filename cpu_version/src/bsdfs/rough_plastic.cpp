@@ -54,16 +54,18 @@ void RoughPlastic::Sample(BsdfSampling &bs) const
     auto [alpha_u, alpha_v] = GetAlpha(bs.texcoord);
     auto specular_sampling_weight = SpecularSamplingWeight(bs.texcoord);
 
-    auto kr = Fresnel(-bs.wo, bs.normal, eta_inv_);
-    auto pdf_specular = kr * specular_sampling_weight,
-         pdf_diffuse = (1.0 - kr) * (1.0 - specular_sampling_weight);
+    auto kr_o = Fresnel(-bs.wo, bs.normal, eta_inv_);
+    auto pdf_specular = kr_o * specular_sampling_weight,
+         pdf_diffuse = (1.0 - kr_o) * (1.0 - specular_sampling_weight);
     pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
 
+    auto h = Vector3(0);
+    auto D = static_cast<Float>(0);
+    auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_u);
     if (UniformFloat() < pdf_specular)
     {
-        auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_u);
-        auto [normal_micro, pdf] = distrib->Sample(bs.normal, {UniformFloat(), UniformFloat()});
-        bs.wi = -Reflect(-bs.wo, normal_micro);
+        std::tie(h, D) = distrib->Sample(bs.normal, {UniformFloat(), UniformFloat()});
+        bs.wi = -Reflect(-bs.wo, h);
         if (glm::dot(bs.wi, bs.normal) >= 0)
             return;
     }
@@ -71,17 +73,47 @@ void RoughPlastic::Sample(BsdfSampling &bs) const
     {
         auto [wi_local, pdf] = HemisCos();
         bs.wi = -ToWorld(wi_local, bs.normal);
+        h = glm::normalize(-bs.wi + bs.wo);
+        D = distrib->Pdf(h, bs.normal);
     }
 
-    bs.pdf = Pdf(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    auto kr_i = Fresnel(bs.wi, bs.normal, eta_inv_);
+    pdf_specular = kr_i * specular_sampling_weight,
+    pdf_diffuse = (1.0 - kr_i) * (1.0 - specular_sampling_weight);
+    pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
+    pdf_diffuse = 1.0 - pdf_specular;
+
+    bs.pdf = pdf_diffuse * PdfHemisCos(ToLocal(bs.wo, bs.normal));
+    if (D > kEpsilon)
+        bs.pdf += pdf_specular * D * std::abs(1.0 / (4.0 * glm::dot(bs.wo, h)));
     if (bs.pdf < kEpsilonL)
     {
         bs.pdf = 0;
         return;
     }
 
-    if (bs.get_attenuation)
-        bs.attenuation = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    if (!bs.get_attenuation)
+        return;
+
+    auto diffuse_reflectance = diffuse_reflectance_->Color(bs.texcoord);
+    if (nonlinear_)
+        bs.attenuation = diffuse_reflectance / (static_cast<Float>(1) - diffuse_reflectance * fdr_);
+    else
+        bs.attenuation = diffuse_reflectance / (1.0 - fdr_);
+    bs.attenuation *= Sqr(eta_inv_) * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
+    if (D > kEpsilon)
+    {
+        auto cos_i_n = glm::dot(bs.wi, bs.normal);
+        auto cos_o_n = glm::dot(bs.wo, bs.normal);
+        auto G = distrib->SmithG1(-bs.wi, h, bs.normal) *
+                 distrib->SmithG1(bs.wo, h, bs.normal);
+        auto F = Fresnel(bs.wi, h, eta_inv_);
+        auto attenuation = F * D * G / (4.0 * std::abs(cos_i_n * cos_o_n));
+        if (albedo_avg_ > 0)
+            attenuation += EvalMultipleScatter(cos_i_n, cos_o_n);
+        auto specular_reflectance = specular_reflectance_ ? specular_reflectance_->Color(bs.texcoord) : Spectrum(1);
+        bs.attenuation += specular_reflectance * attenuation;
+    }
 }
 
 ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重

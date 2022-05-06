@@ -33,14 +33,14 @@ public:
             auto phi = std::atan(alpha_v_ / alpha_u_ * std::tan(kPi + 2 * kPi * sample.y)) + kPi * std::floor(2 * sample.y + 0.5);
             cos_phi = std::cos(phi);
             sin_phi = std::sin(phi);
-            alpha_2 = 1 / (Sqr(cos_phi / alpha_u_) + Sqr(sin_phi / alpha_v_));
+            alpha_2 = 1.0 / (Sqr(cos_phi / alpha_u_) + Sqr(sin_phi / alpha_v_));
         }
 
-        auto cos_theta = 1 / std::sqrt(1 - alpha_2 * std::log(1 - sample.x)),
-             sin_theta = std::sqrt(1 - cos_theta * cos_theta);
+        auto cos_theta = 1.0 / std::sqrt(1.0 - alpha_2 * std::log(1.0 - sample.x)),
+             sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
 
         auto normal_micro_local = Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
-        auto pdf = (1 - sample.x) / (kPiInv * alpha_u_ * alpha_v_ * std::pow(cos_theta, 3));
+        auto pdf = (1.0 - sample.x) / (kPiInv * alpha_u_ * alpha_v_ * std::pow(cos_theta, 3));
 
         return {ToWorld(normal_micro_local, normal_macro), pdf};
     }

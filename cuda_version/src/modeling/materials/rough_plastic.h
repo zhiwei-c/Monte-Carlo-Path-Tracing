@@ -41,17 +41,17 @@ __device__ void Material::SampleRoughPlastic(BsdfSampling &bs, const vec3 &sampl
 
     auto specular_sampling_weight = SpecularSamplingWeight(bs.texcoord);
 
-    auto kr = Fresnel(-bs.wo, bs.normal, eta_inv_d_);
-    auto pdf_specular = kr * specular_sampling_weight,
-         pdf_diffuse = (1.0 - kr) * (1.0 - specular_sampling_weight);
+    auto kr_o = Fresnel(-bs.wo, bs.normal, eta_inv_d_);
+    auto pdf_specular = kr_o * specular_sampling_weight,
+         pdf_diffuse = (1.0 - kr_o) * (1.0 - specular_sampling_weight);
     pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
 
+    auto h = vec3(0);
+    auto D = static_cast<Float>(0);
     if (sample.z < pdf_specular)
     {
-        auto facet_normal = vec3(0);
-        Float pdf = 0;
-        SampleNormDistrib(distri_, alpha, alpha, bs.normal, sample, facet_normal, pdf);
-        bs.wi = -Reflect(-bs.wo, facet_normal);
+        SampleNormDistrib(distri_, alpha, alpha, bs.normal, sample, h, D);
+        bs.wi = -Reflect(-bs.wo, h);
         if (myvec::dot(bs.wi, bs.normal) >= 0)
             return;
     }
@@ -61,22 +61,47 @@ __device__ void Material::SampleRoughPlastic(BsdfSampling &bs, const vec3 &sampl
         Float pdf = 0;
         HemisCos(sample.x, sample.y, wi_local, pdf);
         bs.wi = -ToWorld(wi_local, bs.normal);
+        h = myvec::normalize(-bs.wi + bs.wo);
+        D = PdfNormDistrib(distri_, alpha, alpha, bs.normal, h);
     }
+    auto kr_i = Fresnel(bs.wi, bs.normal, eta_inv_d_);
+    pdf_specular = kr_i * specular_sampling_weight,
+    pdf_diffuse = (1.0 - kr_i) * (1.0 - specular_sampling_weight);
+    pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
+    pdf_diffuse = 1.0 - pdf_specular;
 
-    bs.pdf = PdfRoughPlastic(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    bs.pdf = pdf_diffuse * PdfHemisCos(ToLocal(bs.wo, bs.normal));
+    if (D > kEpsilon)
+        bs.pdf += pdf_specular * D * abs(1.0 / (4.0 * myvec::dot(bs.wo, h)));
     if (bs.pdf < kEpsilonL)
         return;
 
-    bs.attenuation = EvalRoughPlastic(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    auto diffuse_reflectance = diffuse_reflectance_ ? diffuse_reflectance_->Color(bs.texcoord) : vec3(0.5);
+    if (nonlinear_)
+        bs.attenuation = diffuse_reflectance / (vec3(1) - diffuse_reflectance * fdr_int_);
+    else
+        bs.attenuation = diffuse_reflectance / (1.0 - fdr_int_);
+    bs.attenuation *= eta_inv_d_ * eta_inv_d_ * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
+    if (D > kEpsilon)
+    {
+        auto cos_i_n = myvec::dot(bs.wi, bs.normal);
+        auto cos_o_n = myvec::dot(bs.wo, bs.normal);
+        auto F = Fresnel(bs.wi, h, eta_inv_d_);
+        auto G = SmithG1(distri_, alpha, alpha, -bs.wi, bs.normal, h) *
+                 SmithG1(distri_, alpha, alpha, bs.wo, bs.normal, h);
+        auto value = vec3(F * D * G / (4.0 * abs(cos_i_n * cos_o_n)));
+        if (albedo_avg_ > 0)
+            value += EvalMultipleScatter(cos_i_n, cos_o_n);
+        if (specular_reflectance_)
+            value *= specular_reflectance_->Color(bs.texcoord);
+        bs.attenuation += value;
+    }
     bs.valid = true;
 }
 
 __device__ vec3 Material::EvalRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
     auto alpha = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;
-
-    auto cos_i_n = myvec::dot(wi, normal);
-    auto cos_o_n = myvec::dot(wo, normal);
 
     auto albedo = vec3(0);
 
@@ -91,11 +116,13 @@ __device__ vec3 Material::EvalRoughPlastic(const vec3 &wi, const vec3 &wo, const
     albedo *= eta_inv_d_ * eta_inv_d_ * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
 
     auto h = myvec::normalize(-wi + wo);
-    auto F = Fresnel(wi, h, eta_inv_d_);
     auto D = PdfNormDistrib(distri_, alpha, alpha, normal, h);
 
     if (D > kEpsilon)
     {
+        auto cos_i_n = myvec::dot(wi, normal);
+        auto cos_o_n = myvec::dot(wo, normal);
+        auto F = Fresnel(wi, h, eta_inv_d_);
         auto G = SmithG1(distri_, alpha, alpha, -wi, normal, h) *
                  SmithG1(distri_, alpha, alpha, wo, normal, h);
         auto attenuation = vec3(F * D * G / (4.0 * abs(cos_i_n * cos_o_n)));

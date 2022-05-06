@@ -45,22 +45,34 @@ __device__ void Material::SampleRoughConductor(BsdfSampling &bs, const vec3 &sam
     auto alpha_u = alpha_u_ ? alpha_u_->Color(bs.texcoord).x : 0.1;
     auto alpha_v = alpha_v_ ? alpha_v_->Color(bs.texcoord).x : 0.1;
 
-    auto facet_normal = vec3(0);
-    Float pdf = 0;
-    SampleNormDistrib(distri_, alpha_u, alpha_v, bs.normal, sample, facet_normal, pdf);
+    auto h = vec3(0);
+    auto D = static_cast<Float>(0);
+    SampleNormDistrib(distri_, alpha_u, alpha_v, bs.normal, sample, h, D);
 
-    if (pdf < kEpsilonPdf)
+    if (D < kEpsilonPdf)
         return;
 
-    bs.wi = -Reflect(-bs.wo, facet_normal);
-    if (myvec::dot(bs.wi, bs.normal) >= 0)
+    bs.wi = -Reflect(-bs.wo, h);
+    auto cos_i_n = myvec::dot(bs.wi, bs.normal);
+    if (cos_i_n >= 0)
         return;
 
-    bs.pdf = PdfRoughConductor(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    auto jacobian = abs(1.0 / (4.0 * myvec::dot(bs.wo, h)));
+    bs.pdf = jacobian * D;
     if (bs.pdf < kEpsilonPdf)
         return;
 
-    bs.attenuation = EvalRoughConductor(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    auto F = mirror_ ? vec3(1) : FresnelConductor(bs.wi, h, eta_, k_);
+    auto G = SmithG1(distri_, alpha_u, alpha_v, -bs.wi, bs.normal, h) *
+             SmithG1(distri_, alpha_u, alpha_v, bs.wo, bs.normal, h);
+    auto cos_o_n = myvec::dot(bs.wo, bs.normal);
+    auto albedo = F * static_cast<Float>(D * G / abs(4.0 * -cos_i_n * cos_o_n));
+    if (specular_reflectance_)
+        albedo *= specular_reflectance_->Color(bs.texcoord);
+    if (albedo_avg_ > 0)
+        albedo += EvalMultipleScatter(cos_i_n, cos_o_n);
+    bs.attenuation = albedo;
+
     bs.valid = true;
 }
 
@@ -77,9 +89,7 @@ __device__ vec3 Material::EvalRoughConductor(const vec3 &wi, const vec3 &wo, con
 
     auto h = myvec::normalize(-wi + wo);
 
-    auto F = vec3(1);
-    if (!mirror_)
-        F = FresnelConductor(wi, h, eta_, k_);
+    auto F = mirror_ ? vec3(1) : FresnelConductor(wi, h, eta_, k_);
 
     auto D = PdfNormDistrib(distri_, alpha_u, alpha_v, normal, h);
 

@@ -36,28 +36,52 @@ Plastic::Plastic(Float int_ior,
 ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
 void Plastic::Sample(BsdfSampling &bs) const
 {
-    auto kr = Fresnel(-bs.wo, bs.normal, eta_inv_);
+    auto kr_o = Fresnel(-bs.wo, bs.normal, eta_inv_);
     auto specular_sampling_weight = SpecularSamplingWeight(bs.texcoord);
-    auto pdf_specular = kr * specular_sampling_weight,
-         pdf_diffuse = (1.0 - kr) * (1.0 - specular_sampling_weight);
+    auto pdf_specular = kr_o * specular_sampling_weight,
+         pdf_diffuse = (1.0 - kr_o) * (1.0 - specular_sampling_weight);
     pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
+
+    bs.pdf = 0;
+    auto kr_i = static_cast<Float>(0);
+    auto specular = false;
     if (UniformFloat() < pdf_specular)
+    {
         bs.wi = -Reflect(-bs.wo, bs.normal);
+        kr_i = kr_o;
+        bs.pdf += pdf_specular;
+        specular = true;
+    }
     else
     {
         auto [wi_local, pdf] = HemisCos();
         bs.wi = -ToWorld(wi_local, bs.normal);
+        kr_i = Fresnel(bs.wi, bs.normal, eta_inv_);
+        pdf_specular = kr_i * specular_sampling_weight;
+        pdf_diffuse = (1.0 - kr_i) * (1.0 - specular_sampling_weight);
+        pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
     }
 
-    bs.pdf = Pdf(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    pdf_diffuse = 1.0 - pdf_specular;
+    bs.pdf += pdf_diffuse * PdfHemisCos(ToLocal(bs.wo, bs.normal));
     if (bs.pdf < kEpsilonL)
     {
         bs.pdf = 0;
         return;
     };
 
-    if (bs.get_attenuation)
-        bs.attenuation = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    if (!bs.get_attenuation)
+        return;
+
+    auto diffuse_reflectance = diffuse_reflectance_->Color(bs.texcoord);
+    if (nonlinear_)
+        bs.attenuation = diffuse_reflectance / (static_cast<Float>(1) - diffuse_reflectance * fdr_);
+    else
+        bs.attenuation = diffuse_reflectance / (1.0 - fdr_);
+    bs.attenuation *= Sqr(eta_inv_) * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
+
+    if (specular)
+        bs.attenuation += kr_i * (specular_reflectance_ ? specular_reflectance_->Color(bs.texcoord) : Spectrum(1));
 }
 
 ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重

@@ -54,6 +54,8 @@ void RoughDielectric::Sample(BsdfSampling &bs) const
 {
 	auto eta = bs.inside ? eta_inv_ : eta_;		//相对折射率，即光线透射侧介质折射率与入射侧介质折射率之比
 	auto eta_inv = bs.inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+	auto ratio_t = bs.inside ? ratio_t_inv_ : ratio_t_;
+	auto ratio_t_inv = bs.inside ? ratio_t_ : ratio_t_inv_;
 
 	auto [alpha_u, alpha_v] = GetAlpha(bs.texcoord);
 
@@ -62,42 +64,86 @@ void RoughDielectric::Sample(BsdfSampling &bs) const
 	// Walter 等人在《Microfacet Models for Refraction through Rough Surfaces》中提到的技巧，略微缩放粗糙度，以减少重要性采样权重。
 	distrib->ScaleAlpha(1.2 - 0.2 * std::sqrt(std::fabs(glm::dot(-bs.wo, bs.normal))));
 
-	auto [normal_micro, D] = distrib->Sample(bs.normal, {UniformFloat(), UniformFloat()});
-
+	auto [h, D] = distrib->Sample(bs.normal, {UniformFloat(), UniformFloat()});
 	if (D < kEpsilon)
 		return;
 
-	auto F = Fresnel(-bs.wo, normal_micro, eta_inv);
+	auto F = Fresnel(-bs.wo, h, eta_inv);
 	if (UniformFloat() < F)
 	{
-		bs.wi = -Reflect(-bs.wo, normal_micro);
-		if (glm::dot(bs.wi, bs.normal) >= 0)
+		bs.wi = -Reflect(-bs.wo, h);
+		auto cos_i_n = glm::dot(bs.wi, bs.normal);
+		if (cos_i_n >= 0)
 			return;
+		auto jacobian = std::abs(1.0 / (4.0 * glm::dot(bs.wo, h)));
+		bs.pdf = F * D * jacobian;
+		if (bs.pdf < kEpsilonPdf || albedo_avg_ > -1 && bs.pdf < kEpsilonL)
+		{
+			bs.pdf = 0;
+			return;
+		}
+
+		if (!bs.get_attenuation)
+			return;
+		auto G = distrib->SmithG1(-bs.wi, h, bs.normal) *
+				 distrib->SmithG1(bs.wo, h, bs.normal);
+		auto cos_o_n = glm::dot(bs.wo, bs.normal);
+		auto albedo = Spectrum(F * D * G / (4.0 * std::abs(cos_i_n * cos_o_n)));
+		if (specular_reflectance_)
+			albedo *= specular_reflectance_->Color(bs.texcoord);
+		if (albedo_avg_ > 0)
+		{
+			auto weight_loss = (1.0 - ratio_t) * EvalMultipleScatter(cos_i_n, cos_o_n, bs.inside);
+			albedo += Spectrum(weight_loss);
+		}
+		bs.attenuation = albedo;
 	}
 	else
 	{
-		bs.wi = -Refract(-bs.wo, normal_micro, eta_inv);
-		if (glm::dot(bs.wi, bs.normal) <= 0)
+		bs.wi = -Refract(-bs.wo, h, eta_inv);
+		auto cos_i_n = glm::dot(bs.wi, bs.normal);
+		if (cos_i_n <= 0)
 			return;
+
 		bs.normal = -bs.normal;
 		bs.inside = !bs.inside;
-	}
+		h = -h;
+		eta_inv = eta;
+		ratio_t = ratio_t_inv;
 
-	bs.pdf = Pdf(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
-	if (bs.pdf < kEpsilonPdf)
-	{
-		bs.pdf = 0;
-		return;
-	}
+		F = Fresnel(bs.wi, h, eta_inv);
+		auto cos_i_h = glm::dot(-bs.wi, h),
+			 cos_o_h = glm::dot(bs.wo, h);
+		auto jacobian = std::abs(cos_o_h / Sqr(eta_inv * cos_i_h + cos_o_h));
 
-	if (albedo_avg_ > -1 && bs.pdf < kEpsilonL)
-	{
-		bs.pdf = 0;
-		return;
-	}
+		bs.pdf = (1.0 - F) * D * jacobian;
+		if (bs.pdf < kEpsilonPdf || albedo_avg_ > -1 && bs.pdf < kEpsilonL)
+		{
+			bs.pdf = 0;
+			return;
+		}
 
-	if (bs.get_attenuation)
-		bs.attenuation = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+		if (!bs.get_attenuation)
+			return;
+		auto G = distrib->SmithG1(-bs.wi, h, bs.normal) *
+				 distrib->SmithG1(bs.wo, h, bs.normal);
+		auto cos_o_n = glm::dot(bs.wo, bs.normal);
+		auto attenuation = Spectrum(std::abs(cos_i_h * cos_o_h * (1.0 - F) * G * D /
+											 (cos_i_n * cos_o_n * Sqr(eta_inv * cos_i_h + cos_o_h))));
+
+		if (specular_transmittance_)
+			attenuation *= specular_transmittance_->Color(bs.texcoord);
+
+		if (albedo_avg_ > 0)
+		{
+			auto weight_loss = ratio_t * EvalMultipleScatter(cos_i_n, cos_o_n, bs.inside);
+			attenuation += Spectrum(weight_loss);
+		}
+
+		//光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
+		attenuation *= Sqr(eta_inv);
+		bs.attenuation = attenuation;
+	}
 }
 
 ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重

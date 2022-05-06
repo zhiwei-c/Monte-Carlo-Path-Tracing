@@ -25,26 +25,52 @@ __device__ void Material::SamplePlastic(BsdfSampling &bs, const vec3 &sample) co
 {
     auto specular_sampling_weight = SpecularSamplingWeight(bs.texcoord);
 
-    auto kr = Fresnel(-bs.wo, bs.normal, eta_inv_d_);
-    auto pdf_specular = kr * specular_sampling_weight,
-         pdf_diffuse = (1.0 - kr) * (1.0 - specular_sampling_weight);
+    auto kr_o = Fresnel(-bs.wo, bs.normal, eta_inv_d_);
+    auto pdf_specular = kr_o * specular_sampling_weight,
+         pdf_diffuse = (1.0 - kr_o) * (1.0 - specular_sampling_weight);
     pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
 
+    bs.pdf = 0;
+    auto kr_i = static_cast<Float>(0);
+    auto specular = false;
     if (sample.x < pdf_specular)
+    {
         bs.wi = -Reflect(-bs.wo, bs.normal);
+        kr_i = kr_o;
+        bs.pdf += pdf_specular;
+        specular = true;
+    }
     else
     {
         auto wi_local = vec3(0);
         auto pdf = static_cast<Float>(0);
         HemisCos(sample.y, sample.z, wi_local, pdf);
         bs.wi = -ToWorld(wi_local, bs.normal);
+        kr_i = Fresnel(bs.wi, bs.normal, eta_inv_d_);
+        pdf_specular = kr_i * specular_sampling_weight;
+        pdf_diffuse = (1.0 - kr_i) * (1.0 - specular_sampling_weight);
+        pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
     }
-
-    bs.pdf = PdfPlastic(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    pdf_diffuse = 1.0 - pdf_specular;
+    bs.pdf += pdf_diffuse * PdfHemisCos(ToLocal(bs.wo, bs.normal));
     if (bs.pdf < kEpsilonPdf)
         return;
 
-    bs.attenuation = EvalPlastic(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
+    auto diffuse_reflectance = diffuse_reflectance_ ? diffuse_reflectance_->Color(bs.texcoord) : vec3(0.5);
+    if (nonlinear_)
+        bs.attenuation = diffuse_reflectance / (vec3(1) - diffuse_reflectance * fdr_int_);
+    else
+        bs.attenuation = diffuse_reflectance / (1.0 - fdr_int_);
+    bs.attenuation *= eta_inv_d_ * eta_inv_d_ * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
+
+    if (specular)
+    {
+        auto attenuation = vec3(kr_i);
+        if (specular_reflectance_)
+            attenuation *= specular_reflectance_->Color(bs.texcoord);
+        bs.attenuation += attenuation;
+    }
+
     bs.valid = true;
 }
 
@@ -99,10 +125,10 @@ __device__ Float Material::PdfPlastic(const vec3 &wi, const vec3 &wo, const vec3
     return pdf;
 }
 
-__device__ inline  void InitPlastic(uint m_idx,
-                            MaterialInfo *material_info_list,
-                            Texture *texture_list,
-                            Material *material_list)
+__device__ inline void InitPlastic(uint m_idx,
+                                   MaterialInfo *material_info_list,
+                                   Texture *texture_list,
+                                   Material *material_list)
 {
     auto bump_map = static_cast<Texture *>(nullptr);
     if (material_info_list[m_idx].bump_map_idx != kUintMax)
