@@ -51,14 +51,15 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
     auto b = 2 * glm::dot(ray_d, ray_o);
     auto c = glm::dot(ray_o, ray_o) - radius_ * radius_;
 
-    Float t_near, t_far;
+    auto t_near = static_cast<Float>(0),
+         t_far = static_cast<Float>(0);
     if (!SolveQuadratic<Float>(a, b, c, t_near, t_far))
         return;
 
     if (t_far < kEpsilon)
         return;
 
-    Float t_result;
+    auto t_result = static_cast<Float>(0);
 
     if (t_near < kEpsilon)
         t_result = t_far;
@@ -71,7 +72,8 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
     auto texcoord = Vector2(-1);
     if (material_->TextureMapping())
     {
-        Float theta, phi;
+        auto theta = static_cast<Float>(0),
+             phi = static_cast<Float>(0);
         CartesianToSpherical(normal, theta, phi);
 
         texcoord.x = phi * 0.5 * kPiInv;

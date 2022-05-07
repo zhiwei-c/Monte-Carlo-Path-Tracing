@@ -18,7 +18,7 @@ public:
 	 */
 	Ray(const Vector3 &origin, const Vector3 &dir) : origin_(origin), dir_(glm::normalize(dir))
 	{
-		dir_inv_ = Vector3(1 / dir_.x, 1 / dir_.y, 1 / dir_.z);
+		dir_inv_ = Vector3(1.0 / dir_.x, 1.0 / dir_.y, 1.0 / dir_.z);
 	}
 
 	///\return 光线方向
@@ -71,18 +71,16 @@ inline Vector3 Refract(const Vector3 &wi, const Vector3 &normal, Float eta_inv)
 inline Float Fresnel(const Vector3 &wi, const Vector3 &normal, Float eta_inv)
 {
 	auto cos_theta_i = std::fabs(glm::dot(wi, normal));
-	auto cos_theta_t_2 = 1 - Sqr(eta_inv) * (1 - Sqr(cos_theta_i));
+	auto cos_theta_t_2 = 1.0 - Sqr(eta_inv) * (1.0 - Sqr(cos_theta_i));
 
 	if (cos_theta_t_2 <= 0)
-	{
 		return 1;
-	}
 	else
 	{
 		auto cos_theta_t = std::sqrt(cos_theta_t_2);
 		auto Rs_sqrt = (eta_inv * cos_theta_i - cos_theta_t) / (eta_inv * cos_theta_i + cos_theta_t),
 			 Rp_sqrt = (cos_theta_i - eta_inv * cos_theta_t) / (cos_theta_i + eta_inv * cos_theta_t);
-		return (Rs_sqrt * Rs_sqrt + Rp_sqrt * Rp_sqrt) / 2;
+		return (Rs_sqrt * Rs_sqrt + Rp_sqrt * Rp_sqrt) / 2.0;
 	}
 }
 
@@ -98,7 +96,7 @@ inline Spectrum FresnelConductor(const Vector3 &wi, const Vector3 &normal, const
 {
 	auto cos_theta_i = glm::dot(-wi, normal);
 	auto cos_theta_i_2 = cos_theta_i * cos_theta_i,
-		 sin_theta_i_2 = 1 - cos_theta_i_2,
+		 sin_theta_i_2 = 1.0 - cos_theta_i_2,
 		 sin_theta_i_4 = sin_theta_i_2 * sin_theta_i_2;
 
 	auto temp_1 = eta_r * eta_r - eta_i * eta_i - sin_theta_i_2;
@@ -116,7 +114,7 @@ inline Spectrum FresnelConductor(const Vector3 &wi, const Vector3 &normal, const
 	}
 
 	auto term_1 = a_2_pb_2 + cos_theta_i_2,
-		 term_2 = 2 * cos_theta_i * a;
+		 term_2 = 2.0 * cos_theta_i * a;
 
 	auto r_s = (term_1 - term_2) / (term_1 + term_2);
 
@@ -125,7 +123,7 @@ inline Spectrum FresnelConductor(const Vector3 &wi, const Vector3 &normal, const
 
 	auto r_p = r_s * (term_3 - term_4) / (term_3 + term_4);
 
-	return static_cast<Float>(.5) * (r_s + r_p);
+	return static_cast<Float>(0.5) * (r_s + r_p);
 }
 
 /**
@@ -141,23 +139,23 @@ inline Float AverageFresnel(Float eta)
 	if (eta < 1)
 	{
 		/* Fit by Egan and Hilgeman (1973). Works reasonably well for
-       		"normal" IOR values (<2).
-       		Max rel. error in 1.0 - 1.5 : 0.1%
-       		Max rel. error in 1.5 - 2   : 0.6%
-       		Max rel. error in 2.0 - 5   : 9.5%
-    	*/
+			"normal" IOR values (<2).
+			Max rel. error in 1.0 - 1.5 : 0.1%
+			Max rel. error in 1.5 - 2   : 0.6%
+			Max rel. error in 2.0 - 5   : 9.5%
+		*/
 		return -1.4399 * (eta * eta) + 0.7099 * eta + 0.6681 + 0.0636 / eta;
 	}
 	else
 	{
 		/* Fit by d'Eon and Irving (2011)
 
-       		Maintains a good accuracy even for unrealistic IOR values.
+			Maintains a good accuracy even for unrealistic IOR values.
 
-       		Max rel. error in 1.0 - 2.0   : 0.1%
-       		Max rel. error in 2.0 - 10.0  : 0.2%  
+			Max rel. error in 1.0 - 2.0   : 0.1%
+			Max rel. error in 2.0 - 10.0  : 0.2%
 		*/
-		auto inv_eta = 1 / eta,
+		auto inv_eta = 1.0 / eta,
 			 inv_eta_2 = inv_eta * inv_eta,
 			 inv_eta_3 = inv_eta_2 * inv_eta,
 			 inv_eta_4 = inv_eta_3 * inv_eta,
@@ -176,16 +174,18 @@ inline Float AverageFresnel(Float eta)
  */
 inline std::pair<Spectrum, Spectrum> IorToReflectivityEdgetint(const Spectrum &eta, const Spectrum &k)
 {
-	Spectrum reflectivity,
-		edgetint;
-	Float temp1, temp2, temp3;
+	auto reflectivity = Spectrum(0),
+		 edgetint = Spectrum(0);
+	auto temp1 = static_cast<Float>(0),
+		 temp2 = static_cast<Float>(0),
+		 temp3 = static_cast<Float>(0);
 	for (int i = 0; i < 3; i++)
 	{
-		reflectivity[i] = (Sqr(eta[i] - 1) + Sqr(k[i])) / (Sqr(eta[i] + 1) + Sqr(k[i]));
+		reflectivity[i] = (Sqr(eta[i] - 1) + Sqr(k[i])) / (Sqr(eta[i] + 1.0) + Sqr(k[i]));
 
-		temp1 = 1 + std::sqrt(reflectivity[i]);
-		temp2 = 1 - std::sqrt(reflectivity[i]);
-		temp3 = (1 - reflectivity[i]) / (1 + reflectivity[i]);
+		temp1 = 1.0 + std::sqrt(reflectivity[i]);
+		temp2 = 1.0 - std::sqrt(reflectivity[i]);
+		temp3 = (1.0 - reflectivity[i]) / (1.0 + reflectivity[i]);
 		edgetint[i] = (temp1 - eta[i] * temp2) / (temp1 - temp3 * temp2);
 	}
 	return {reflectivity, edgetint};
@@ -229,7 +229,7 @@ const std::map<std::string, Float> IOR{
 	{"polypropylene", 1.49f},
 	//丙酮
 	{"acetone", 1.36f},
-	//BK7玻璃
+	// BK7玻璃
 	{"bk7", 1.5046f},
 	//乙醇
 	{"ethanol", 1.361f},

@@ -100,10 +100,8 @@ __device__ vec3 Material::EvalPlastic(const vec3 &wi, const vec3 &wo, const vec3
 
 __device__ Float Material::PdfPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    if (NotSameHemis(wo, normal))
-        return 0;
-
-    if (myvec::dot(wi, normal) * myvec::dot(wo, normal) >= 0)
+    // 入射、出射光线需在同侧
+    if (NotSameHemis(wo, -wi))
         return 0;
 
     auto kr = Fresnel(wi, normal, eta_inv_d_);

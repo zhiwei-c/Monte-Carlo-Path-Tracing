@@ -89,11 +89,9 @@ Spectrum RoughConductor::Eval(const Vector3 &wi, const Vector3 &wo, const Vector
 		 cos_o_n = glm::dot(wo, normal);
 
 	auto h = glm::normalize(-wi + wo);
-
 	auto F = mirror_ ? Spectrum(1) : FresnelConductor(wi, h, eta_, k_);
 
 	auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);
-
 	auto D = distrib->Pdf(h, normal);
 	auto G = distrib->SmithG1(-wi, h, normal) * distrib->SmithG1(wo, h, normal);
 
@@ -111,10 +109,8 @@ Spectrum RoughConductor::Eval(const Vector3 &wi, const Vector3 &wo, const Vector
 ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
 Float RoughConductor::Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
-	if (NotSameHemis(wo, normal))
-		return 0;
-
-	if (glm::dot(wi, normal) * glm::dot(wo, normal) >= 0)
+    // 入射、出射光线需在同侧
+	if (NotSameHemis(wo, -wi))
 		return 0;
 
 	auto [alpha_u, alpha_v] = GetAlpha(texcoord);

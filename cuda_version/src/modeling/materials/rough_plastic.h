@@ -139,10 +139,8 @@ __device__ vec3 Material::EvalRoughPlastic(const vec3 &wi, const vec3 &wo, const
 }
 __device__ Float Material::PdfRoughPlastic(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    if (NotSameHemis(wo, normal))
-        return 0;
-
-    if (myvec::dot(wi, normal) * myvec::dot(wo, normal) >= 0)
+    // 入射、出射光线需在同侧
+    if (NotSameHemis(wo, -wi))
         return 0;
 
     auto alpha = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;

@@ -22,7 +22,11 @@ __device__ inline void SampleNormDistrib(MicrofacetDistribType type,
                                          Float &pdf)
 {
     auto isotropic = (alpha_u == alpha_v);
-    Float sin_phi, cos_phi, sin_theta, cos_theta, alpha_2;
+    auto sin_phi = static_cast<Float>(0),
+         cos_phi = static_cast<Float>(0),
+         sin_theta = static_cast<Float>(0),
+         cos_theta = static_cast<Float>(0),
+         alpha_2 = static_cast<Float>(0);
     switch (type)
     {
     case kGgx:
@@ -97,7 +101,7 @@ __device__ inline Float PdfNormDistrib(MicrofacetDistribType type,
     auto alpha_2 = alpha_u * alpha_v;
 
     auto isotropic = (alpha_u == alpha_v);
-    Float pdf = 0;
+    auto pdf = static_cast<Float>(0);
     switch (type)
     {
     case kGgx:
@@ -147,7 +151,7 @@ __device__ inline Float SmithG1(MicrofacetDistribType type,
         return 1;
 
     auto isotropic = (alpha_u == alpha_v);
-    Float result = 0;
+    auto result = static_cast<Float>(0);
     switch (type)
     {
     case kGgx:
@@ -170,7 +174,7 @@ __device__ inline Float SmithG1(MicrofacetDistribType type,
     }
     default:
     {
-        Float a = 0;
+        auto a = static_cast<Float>(0);
         if (isotropic)
         {
             auto tan_theta_v_n = sqrt(1.0 - pow(cos_v_n, 2)) / cos_v_n;

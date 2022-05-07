@@ -29,8 +29,10 @@ public:
      */
     __device__ bool Intersect(const Ray &ray) const
     {
-        Float t_min = 0, t_max = 0;
-        Float t_enter = -INFINITY, t_exit = INFINITY;
+		auto t_min = static_cast<Float>(0),
+			 t_max = static_cast<Float>(0),
+			 t_enter = static_cast<Float>(-INFINITY),
+			 t_exit = static_cast<Float>(INFINITY);
         for (int i = 0; i < 3; i += 1)
         {
             //检查光线是否与包围盒某一对平面平行
@@ -55,7 +57,7 @@ public:
                 t_exit = glm::min(t_max, t_exit);
             }
         }
-        t_exit *= 1 + 2 * GammaError(3);
+        t_exit *= 1.0 + 2.0 * GammaError(3);
         return t_exit > 0 && t_enter < t_exit;
     }
 

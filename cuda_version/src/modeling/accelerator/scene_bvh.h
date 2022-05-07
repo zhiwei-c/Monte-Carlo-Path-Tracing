@@ -48,7 +48,7 @@ inline void BuildSceneBvhInfo(uint bvhnode_idx,
     }
 
     auto aabb_now = AABB();
-    Float area_now = 0;
+    auto area_now = static_cast<Float>(0);
     MergeShapesInfo(begin, end, shape_idx_list, shape_info_list, aabb_now, area_now);
 
     auto length_x = aabb_now.max().x - aabb_now.min().x;

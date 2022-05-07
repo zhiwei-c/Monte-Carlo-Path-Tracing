@@ -98,7 +98,7 @@ __device__ vec3 Material::Eval(const vec3 &wi, const vec3 &wo, const vec3 &norma
 
 __device__ Float Material::Pdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    Float pdf = 0;
+    auto pdf = static_cast<Float>(0);
     switch (type_)
     {
     case kDiffuse:
@@ -135,13 +135,12 @@ __global__ void SetMaterialOtherInfo(uint m_idx,
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {
-        Material *pre = nullptr;
+        auto pre = static_cast<Material *>(nullptr);
         if (m_idx > 0)
             pre = material_list + m_idx - 1;
-        Material *next = nullptr;
+        auto next = static_cast<Material *>(nullptr);
         if (m_idx + 1 < material_num)
             pre = material_list + m_idx + 1;
-
         material_list[m_idx].SetOtherInfo(m_idx, pre, next);
     }
 }

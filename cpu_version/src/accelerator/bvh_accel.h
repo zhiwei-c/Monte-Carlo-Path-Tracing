@@ -49,7 +49,7 @@ private:
 		if (shapes.size() == 1)
 			return std::make_unique<BvhNode>(shapes[0]);
 
-		AABB bound_now;
+		auto bound_now = AABB();
 		for (auto object : shapes)
 		{
 			bound_now += object->aabb();

@@ -26,17 +26,16 @@ void Diffuse::Sample(BsdfSampling &bs) const
 ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
 Spectrum Diffuse::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
-    if (NotSameHemis(wo, normal))
-        return Spectrum(0);
-    else
-        return reflectance_->Color(texcoord) * kPiInv;
+    return reflectance_->Color(texcoord) * kPiInv;
 }
 
 ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
 Float Diffuse::Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
-    if (NotSameHemis(wo, normal))
+    // 入射、出射光线需在同侧
+    if (NotSameHemis(wo, -wi))
         return 0;
+        
     auto wo_local = ToLocal(wo, normal);
     return PdfHemisCos(wo_local);
 }

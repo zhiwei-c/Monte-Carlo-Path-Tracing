@@ -23,8 +23,10 @@ public:
 	///\brief 判断光线与轴对齐包围盒是否相交
 	bool Intersect(const Ray &ray) const
 	{
-		Float t_min = 0, t_max = 0;
-		Float t_enter = -INFINITY, t_exit = INFINITY;
+		auto t_min = static_cast<Float>(0),
+			 t_max = static_cast<Float>(0),
+			 t_enter = static_cast<Float>(-INFINITY),
+			 t_exit = static_cast<Float>(INFINITY);
 		for (int i = 0; i < 3; i += 1)
 		{
 			//检查光线是否与轴对齐包围盒某一对边界面平行

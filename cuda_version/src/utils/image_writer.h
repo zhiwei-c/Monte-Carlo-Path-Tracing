@@ -92,7 +92,7 @@ inline int WriteOpenexr(Frame &frame, const std::string &path)
 
 inline void WriteImage(Frame &frame, const std::string &path)
 {
-    int ret = 0;
+    auto ret = static_cast<int>(0);
 
     auto suffix = GetSuffix(path);
 

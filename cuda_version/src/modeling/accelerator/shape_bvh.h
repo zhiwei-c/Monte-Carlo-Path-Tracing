@@ -64,7 +64,7 @@ inline void BuildShapeBvhInfo(uint bvhnode_idx,
     }
 
     auto aabb_now = AABB();
-    Float area_now = 0;
+    auto area_now = static_cast<Float>(0);
     MergeMeshesInfo(begin,
                     end,
                     scene_mesh_idx_list,

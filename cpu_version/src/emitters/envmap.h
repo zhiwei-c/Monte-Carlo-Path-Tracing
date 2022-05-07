@@ -41,18 +41,18 @@ public:
         if (to_local_)
             look_dir = TransfromDir(*to_local_, look_dir);
 
-        Float phi = 0, theta = 0;
+        auto phi = static_cast<Float>(0),
+             theta = static_cast<Float>(0);
         CartesianToSpherical(look_dir, theta, phi);
 
-        phi = 2 * kPi - phi;
-        while (phi > 2 * kPi)
-            phi -= 2 * kPi;
+        phi = 2.0 * kPi - phi;
+        while (phi > 2.0 * kPi)
+            phi -= 2.0 * kPi;
 
-        Vector2 coord;
-        coord.x = static_cast<Float>(phi * 0.5 * kPiInv); // width
-        coord.y = static_cast<Float>(theta * kPiInv);     // height
-
-        return radiance_->Color(coord);
+        auto texcoord = Vector2(0);
+        texcoord.x = phi * 0.5 * kPiInv; // width
+        texcoord.y = theta * kPiInv;     // height
+        return radiance_->Color(texcoord);
     }
 
 private:

@@ -127,8 +127,8 @@ struct TextureInfo
         }
         else if (suffix == "exr")
         {
-            float *data; // width * height * RGBA
-            const char *err = nullptr;
+            auto data = static_cast<float *>(nullptr);
+            auto err = static_cast<const char *>(nullptr);
             int ret = LoadEXR(&data, &width, &height, filename.c_str(), &err);
             channel = 4;
             if (ret != TINYEXR_SUCCESS)

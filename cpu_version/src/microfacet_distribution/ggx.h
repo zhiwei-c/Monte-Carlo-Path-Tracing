@@ -19,7 +19,9 @@ public:
     ///\brief 抽样微表面法线
     std::pair<Vector3, Float> Sample(const Vector3 &normal_macro, const Vector2 &sample) const
     {
-        Float sin_phi, cos_phi, alpha_2;
+        auto sin_phi = static_cast<Float>(0),
+             cos_phi = static_cast<Float>(0),
+             alpha_2 = static_cast<Float>(0);
         if (isotropic_)
         {
             auto phi = 2 * kPi * sample.y;
@@ -29,14 +31,14 @@ public:
         }
         else
         {
-            auto phi = std::atan(alpha_v_ / alpha_u_ * std::tan(kPi + 2 * kPi * sample.y)) + kPi * std::floor(2 * sample.y + 0.5);
+            auto phi = std::atan(alpha_v_ / alpha_u_ * std::tan(kPi + 2 * kPi * sample.y)) + kPi * std::floor(2.0 * sample.y + 0.5);
             cos_phi = std::cos(phi);
             sin_phi = std::sin(phi);
-            alpha_2 = 1 / (Sqr(cos_phi / alpha_u_) + Sqr(sin_phi / alpha_v_));
+            alpha_2 = 1.0 / (Sqr(cos_phi / alpha_u_) + Sqr(sin_phi / alpha_v_));
         }
-        auto tan_theta_2 = alpha_2 * sample.x / (1 - sample.x);
-        auto cos_theta = 1 / std::sqrt(1 + tan_theta_2),
-             sin_theta = std::sqrt(1 - cos_theta * cos_theta);
+        auto tan_theta_2 = alpha_2 * sample.x / (1.0 - sample.x);
+        auto cos_theta = 1.0 / std::sqrt(1.0 + tan_theta_2),
+             sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
 
         auto normal_micro_local = Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
         auto pdf = 1 / (kPi * alpha_u_ * alpha_v_ * std::pow(cos_theta, 3) * Sqr(1 + tan_theta_2 / alpha_2));
@@ -51,12 +53,12 @@ public:
         if (cos_theta <= 0)
             return 0;
 
-        auto sin_theta = std::sqrt(1 - std::pow(cos_theta, 2)),
+        auto sin_theta = std::sqrt(1.0 - std::pow(cos_theta, 2)),
              tan_theta_2 = std::pow(sin_theta / cos_theta, 2),
              cos_theta_3 = std::pow(cos_theta, 3);
         auto alpha_2 = alpha_u_ * alpha_v_;
 
-        Float result = 0;
+        auto result = static_cast<Float>(0);
         if (isotropic_)
             result = alpha_2 / (kPi * cos_theta_3 * std::pow(alpha_2 + tan_theta_2, 2));
         else
@@ -78,23 +80,23 @@ public:
         if (cos_v_n * cos_v_m <= 0)
             return 0;
 
-        if (std::fabs(cos_v_n - 1) < kEpsilon)
+        if (std::abs(cos_v_n - 1) < kEpsilon)
             return 1;
 
-        Float result = 0;
+        auto result = static_cast<Float>(0);
         if (isotropic_)
         {
             auto cos_v_n_2 = std::pow(cos_v_n, 2);
             auto tan_v_n_2 = (1 - cos_v_n_2) / cos_v_n_2;
             auto alpha_2 = alpha_u_ * alpha_u_;
-            result = 2 / (1 + std::sqrt(1 + alpha_2 * tan_v_n_2));
+            result = 2.0 / (1.0 + std::sqrt(1 + alpha_2 * tan_v_n_2));
         }
         else
         {
             auto dir = ToLocal(v, normal_macro);
-            Float xy_alpha_2 = std::pow(alpha_u_ * dir.x, 2) + std::pow(alpha_v_ * dir.y, 2),
+            auto xy_alpha_2 = std::pow(alpha_u_ * dir.x, 2) + std::pow(alpha_v_ * dir.y, 2),
                   tan_v_n_alpha_2 = xy_alpha_2 / std::pow(dir.z, 2);
-            result = 2 / (1 + std::sqrt(1 + tan_v_n_alpha_2));
+            result = 2.0 / (1.0 + std::sqrt(1 + tan_v_n_alpha_2));
         }
 
         return result;

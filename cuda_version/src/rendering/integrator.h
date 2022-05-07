@@ -86,17 +86,16 @@ __device__ vec3 Integrator::Shade(const vec3 &eye_pos,
     if (its.HasEmission())
         return its.radiance();
 
-
-    uint depth = 1;            //光线溯源深度
-    auto L = vec3(0),          //着色结果
-        attenuation = vec3(1); //光能因被物体吸收而衰减的系数
+    auto depth = static_cast<uint>(1); //光线溯源深度
+    auto L = vec3(0),                  //着色结果
+        attenuation = vec3(1);         //光能因被物体吸收而衰减的系数
     auto wo = -look_dir;
     auto its_pre = Intersection();
     //迭代地溯源光线
     while (depth < max_depth_ && (depth <= rr_depth_ || curand_uniform(local_rand_state) < pdf_rr_))
     {
         //按发光物体表面积采样来自面光源的直接光照
-        if(!its.HashLobe())
+        if (!its.HashLobe())
             EmitterDirectArea(its, wo, attenuation, local_rand_state, L);
 
         auto b_rec = BsdfSampling();
@@ -124,7 +123,7 @@ __device__ vec3 Integrator::Shade(const vec3 &eye_pos,
         {
             if (its.HashLobe())
                 L += attenuation * its_pre.radiance() * b_rec.attenuation * cos_theta / b_rec.pdf;
-            else 
+            else
             {
                 auto pdf_direct = PdfEmitterDirect(its_pre, b_rec.wi);
                 auto weight_bsdf = MisWeight(b_rec.pdf, pdf_direct);
@@ -182,7 +181,7 @@ __device__ bool Integrator::EmitterDirectArea(const Intersection &its,
     if (its_test.distance() + kEpsilonDistance < d_vec.length())
         return false;
 
-    Float distance_sqr = d_vec.squared_length();
+    auto distance_sqr = d_vec.squared_length();
 
     auto wi = myvec::normalize(its.pos() - its_pre.pos());
     auto cos_theta_prime = myvec::dot(wi, its_pre.normal());

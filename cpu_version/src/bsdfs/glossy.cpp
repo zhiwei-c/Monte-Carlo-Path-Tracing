@@ -60,10 +60,6 @@ void Glossy::Sample(BsdfSampling &bs) const
 ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
 Spectrum Glossy::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
-    // 入射、出射光线需在同侧
-    if (NotSameHemis(wo, normal))
-        return Spectrum(0);
-
     Spectrum albedo(0);
     // 计算漫反射分量的贡献
     albedo += diffuse_reflectance_->Color(texcoord) * kPiInv;
@@ -80,7 +76,8 @@ Spectrum Glossy::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &norma
 ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
 Float Glossy::Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
-    if (NotSameHemis(wo, normal))
+    // 入射、出射光线需在同侧
+    if (NotSameHemis(wo, -wi))
         return 0;
 
     auto pdf_diffuse = DiffuseSamplingWeight(texcoord);

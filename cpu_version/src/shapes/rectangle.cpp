@@ -15,26 +15,29 @@ Rectangle::Rectangle(Material *material,
                      bool flip_normals)
     : Shape(ShapeType::kRectangle, material, flip_normals)
 {
-    Mat4 to_world_p, to_world_n;
+    auto to_world_p = Mat4(1),
+         to_world_n = Mat4(1);
     if (to_world != nullptr)
     {
         to_world_p = Mat4(*to_world);
         to_world_n = Mat4(glm::inverse(glm::transpose(*to_world)));
     }
 
-    Vector3 vector;
-    Vector2 vec;
+    auto vector = Vector3(0);
+    auto vec = Vector2(0);
+    auto indices = std::vector<unsigned int>();
+    auto vertices = std::vector<Vector3>();
+    auto normals = std::vector<Vector3>();
+    auto texcoords = std::vector<Vector2>();
     for (auto i = 0; i < 2; ++i)
     {
-        std::vector<unsigned int> indices = {
-            RectangleTriangles[i][0],
-            RectangleTriangles[i][1],
-            RectangleTriangles[i][2],
-        };
+        indices = {RectangleTriangles[i][0],
+                   RectangleTriangles[i][1],
+                   RectangleTriangles[i][2]};
 
-        std::vector<Vector3> vertices;
-        std::vector<Vector3> normals;
-        std::vector<Vector2> texcoords;
+        vertices.clear();
+        normals.clear();
+        texcoords.clear();
 
         for (int v = 0; v < 3; v++)
         {

@@ -51,7 +51,7 @@ public:
     ///\return 生成的一束光线方向
     std::vector<Vector3> GetDirections(int i, int j) const
     {
-        std::vector<Vector3> dirs;
+        auto dirs = std::vector<Vector3>();
         for (int k_x = 0; k_x < spp_x_; k_x++)
         {
             for (int k_y = 0; k_y < spp_y_; k_y++)
@@ -81,13 +81,7 @@ public:
 
         auto frame = new Bitmap(film_.width, film_.height, 3, film_.gamma);
 
-        std::vector<Vector3> look_dirs_now = GetDirections(250, 183);
-        for (auto look_dir_now : look_dirs_now)
-        {
-            integrator->Shade(eye_pos_, look_dir_now);
-        }
-
-        std::vector<std::pair<int, int>> pixels;
+        auto pixels = std::vector<std::pair<int, int>>();
         for (int j = 0; j < film_.height; j++)
         {
             for (int i = 0; i < film_.width; i++)
@@ -97,9 +91,9 @@ public:
         std::mt19937 g(rd());
         std::shuffle(pixels.begin(), pixels.end(), g);
 
-        int count = 0;
-        auto total_inv = static_cast<Float>(1) / (film_.height * film_.width);
-        auto spp_inv = static_cast<Float>(1) / spp_;
+        auto count = static_cast<int>(0);
+        auto total_inv = static_cast<Float>(1.0 / (film_.height * film_.width));
+        auto spp_inv = static_cast<Float>(1.0 / spp_);
 #pragma omp parallel for shared(count)
         for (int line = 0; line < film_.height; line++)
         {
@@ -108,9 +102,9 @@ public:
             auto pixels_now = std::vector<std::pair<int, int>>(beginning, ending);
             for (auto pixel : pixels_now)
             {
-                Spectrum color(0);
+                auto color = Spectrum(0);
                 auto [i, j] = pixel;
-                std::vector<Vector3> look_dirs_now = GetDirections(i, j);
+                auto look_dirs_now = GetDirections(i, j);
                 for (auto look_dir_now : look_dirs_now)
                 {
                     color += integrator->Shade(eye_pos_, look_dir_now) * spp_inv;

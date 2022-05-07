@@ -7,7 +7,7 @@
 NAMESPACE_BEGIN(simple_renderer)
 
 constexpr auto kPi = glm::pi<Float>();
-constexpr auto kPiInv = static_cast<Float>(1 / glm::pi<Float>());
+constexpr auto kPiInv = static_cast<Float>(1.0 / glm::pi<Float>());
 
 inline bool FloatEqual(Float a, Float b, Float epsilon = kEpsilon)
 {
@@ -112,6 +112,22 @@ bool SolveQuadratic(T a, T b, T c, Float &x0, Float &x1)
         std::swap(x0, x1);
 
     return true;
+}
+inline size_t BinarySearch(const std::vector<Float> &data, Float target)
+{
+    auto begin = static_cast<size_t>(0),
+         end = static_cast<size_t>(data.size());
+    while (begin + 1 < end)
+    {
+        auto mid = static_cast<size_t>((begin + end) * 0.5);
+        if (data[mid] < target)
+            begin = mid;
+        else if (data[mid] > target)
+            end = mid;
+        else
+            return mid;
+    }
+    return begin;
 }
 
 NAMESPACE_END(simple_renderer)

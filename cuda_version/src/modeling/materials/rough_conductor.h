@@ -78,9 +78,6 @@ __device__ void Material::SampleRoughConductor(BsdfSampling &bs, const vec3 &sam
 
 __device__ vec3 Material::EvalRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    if (NotSameHemis(wo, normal))
-        return vec3(0);
-
     auto alpha_u = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;
     auto alpha_v = alpha_v_ ? alpha_v_->Color(texcoord).x : 0.1;
 
@@ -108,10 +105,8 @@ __device__ vec3 Material::EvalRoughConductor(const vec3 &wi, const vec3 &wo, con
 
 __device__ Float Material::PdfRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    if (NotSameHemis(wo, normal))
-        return 0;
-
-    if (myvec::dot(wi, normal) * myvec::dot(wo, normal) >= 0)
+    // 入射、出射光线需在同侧
+    if (NotSameHemis(wo, -wi))
         return 0;
 
     auto alpha_u = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;

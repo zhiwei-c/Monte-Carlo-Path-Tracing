@@ -17,7 +17,7 @@ __device__ void Material::InitDiffuse(bool twosided,
 __device__ void Material::SampleDiffuse(BsdfSampling &bs, const vec3 &sample) const
 {
     auto wi_local = vec3(0);
-    Float pdf = 0;
+    auto pdf = static_cast<Float>(0);
     HemisCos(sample.x, sample.y, wi_local, pdf);
     if (pdf < kEpsilonPdf)
         return;
@@ -34,20 +34,16 @@ __device__ void Material::SampleDiffuse(BsdfSampling &bs, const vec3 &sample) co
 
 __device__ vec3 Material::EvalDiffuse(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    if (NotSameHemis(wo, normal))
-        return vec3(0);
+    if (diffuse_reflectance_ != nullptr)
+        return diffuse_reflectance_->Color(texcoord) * kPiInv;
     else
-    {
-        if (diffuse_reflectance_ != nullptr)
-            return diffuse_reflectance_->Color(texcoord) * kPiInv;
-        else
-            return vec3(0.5 * kPiInv);
-    }
+        return vec3(0.5 * kPiInv);
 }
 
 __device__ Float Material::PdfDiffuse(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    if (NotSameHemis(wo, normal))
+    // 入射、出射光线需在同侧
+    if (NotSameHemis(wo, -wi))
         return 0;
 
     auto wo_local = ToLocal(wo, normal);
@@ -55,10 +51,10 @@ __device__ Float Material::PdfDiffuse(const vec3 &wi, const vec3 &wo, const vec3
     return pdf;
 }
 
-__device__ inline  void InitDiffuse(uint m_idx,
-                            MaterialInfo *material_info_list,
-                            Texture *texture_list,
-                            Material *material_list)
+__device__ inline void InitDiffuse(uint m_idx,
+                                   MaterialInfo *material_info_list,
+                                   Texture *texture_list,
+                                   Material *material_list)
 {
     auto bump_map = static_cast<Texture *>(nullptr);
     if (material_info_list[m_idx].bump_map_idx != kUintMax)

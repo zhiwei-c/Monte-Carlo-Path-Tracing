@@ -124,7 +124,7 @@ Vector2 Bitmap::Gradient(const Vector2 &coord) const
             return glm::length(Vector3(r, g, b));
         }
     };
-    Float kh = 0.2, kn = 0.1;
+    auto kh = 0.2, kn = 0.1;
     auto value = GetNorm(coord, 0, 0),
          value_u = GetNorm(coord, 1, 0),
          value_v = GetNorm(coord, 0, 1);
@@ -217,9 +217,9 @@ Float ApplyGamma(Float value, Float gamma_inv)
 ///\brief 通过 tinyexr 加载 HDR 图像
 void LoadByTinyExr(const std::string &filename, Float gamma, std::vector<Float> &data, int &width, int &height, int &channels)
 {
-    float *raw_data; // width * height * RGBA
-    const char *err = nullptr;
-    int ret = LoadEXR(&raw_data, &width, &height, filename.c_str(), &err);
+    auto raw_data = static_cast<float *>(nullptr); // width * height * RGBA
+    auto err = static_cast<const char *>(nullptr);
+    auto ret = LoadEXR(&raw_data, &width, &height, filename.c_str(), &err);
     if (ret != TINYEXR_SUCCESS)
     {
         std::cerr << "[error] load image \"" << filename << "\" failed." << std::endl;

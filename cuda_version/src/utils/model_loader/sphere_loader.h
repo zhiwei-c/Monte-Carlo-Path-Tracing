@@ -27,7 +27,8 @@ static const std::vector<Float> sin_phi = PrecomputeSine();
 
 inline void LoadSphere(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
 {
-    gmat4 *to_world_pos = nullptr, *to_world_norm = nullptr;
+    auto to_world_pos = static_cast<gmat4 *>(nullptr),
+         to_world_norm = static_cast<gmat4 *>(nullptr);
     auto to_world = shape_info->to_world;
     if (to_world != nullptr)
     {
@@ -41,7 +42,7 @@ inline void LoadSphere(ShapeInfo *shape_info, bool bump_mapping, std::vector<Ver
     auto old_v_num = vertex_list.size();
     auto vertex_num = theta_steps * phi_steps;
     vertex_list.resize(old_v_num + vertex_num);
-    uint vertex_idx = 0;
+    auto vertex_idx = static_cast<uint>(0);
     for (uint i_theta = 0; i_theta < theta_steps; i_theta++)
     {
         auto sin_theta = std::sin(i_theta * d_theta);
@@ -79,7 +80,7 @@ inline void LoadSphere(ShapeInfo *shape_info, bool bump_mapping, std::vector<Ver
     auto old_i_num = idx_list.size();
     auto mesh_num = 2 * (phi_steps - 1) * (theta_steps - 1);
     idx_list.resize(old_i_num + mesh_num);
-    uint mesh_idx = 0;
+    auto mesh_idx = static_cast<uint>(0);
     for (uint i_theta = 1; i_theta < theta_steps; i_theta++)
     {
 

@@ -23,7 +23,7 @@ Plastic::Plastic(Float int_ior,
 
     auto kd = diffuse_reflectance_->Color(Vector2(0));
     auto d_sum = kd.r + kd.g + kd.b;
-    Float s_sum = 3;
+    auto s_sum = static_cast<Float>(3);
     if (specular_reflectance_)
     {
         auto ks = specular_reflectance_->Color(Vector2(0));
@@ -107,10 +107,8 @@ Spectrum Plastic::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &norm
 ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
 Float Plastic::Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
-    if (NotSameHemis(wo, normal))
-        return 0;
-
-    if (glm::dot(wi, normal) * glm::dot(wo, normal) >= 0)
+    // 入射、出射光线需在同侧
+    if (NotSameHemis(wo, -wi))
         return 0;
 
     auto kr = Fresnel(wi, normal, eta_inv_);

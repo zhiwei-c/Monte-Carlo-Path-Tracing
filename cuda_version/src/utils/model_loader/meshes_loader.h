@@ -93,7 +93,7 @@ inline void ProcessMesh(const aiScene *scene,
                         std::vector<uvec3> &idx_list)
 {
     auto num_thread = std::thread::hardware_concurrency();
-    std::vector<std::thread> wokers;
+    auto wokers = std::vector<std::thread>();
     //
     auto blcok_num = mesh->mNumVertices < num_thread ? 1 : num_thread;
     auto block_length = mesh->mNumVertices / blcok_num;
@@ -152,7 +152,8 @@ inline void LoadMeshes(ShapeInfo *shape_info, bool bump_mapping, std::vector<Ver
 {
     std::cout << "[info] begin load " << shape_info->filename << "\r";
 
-    gmat4 *to_world_pos = nullptr, *to_world_norm = nullptr;
+    auto to_world_pos = static_cast<gmat4 *>(nullptr),
+         to_world_norm = static_cast<gmat4 *>(nullptr);
     auto to_world = shape_info->to_world;
     if (to_world != nullptr)
     {

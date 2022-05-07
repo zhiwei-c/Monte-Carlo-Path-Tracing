@@ -37,8 +37,8 @@ Spectrum BdptIntegrator::ProcessBdpt(const Intersection &its, const Vector3 &wo)
         auto L_direct = EmitterEnv2OneV(c, !emitter_path.empty() ? &emitter_path[0].its : nullptr);
 
         //来自光源路径的间接光照
-        std::vector<Spectrum> L_indirects;
-        std::vector<Float> pdfs;
+        auto L_indirects = std::vector<Spectrum>();
+        auto pdfs = std::vector<Float>();
         for (int e_idx = 1; e_idx < emitter_path.size(); e_idx++)
         {
             if (max_depth_ > 0 && c_idx + e_idx + 2 > max_depth_)
@@ -79,7 +79,7 @@ Spectrum BdptIntegrator::ProcessBdpt(const Intersection &its, const Vector3 &wo)
 ///\brief 创建光源路径
 std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
 {
-    std::vector<PathVertex> emitter_path;
+    auto emitter_path = std::vector<PathVertex>();
 
     //从发光物体上直接采样，生成第一个光源路径点
     auto its_first = Intersection();
@@ -152,7 +152,7 @@ std::vector<PathVertex> BdptIntegrator::CreateEmitterPath() const
 ///\brief 创建照相机路径
 std::vector<PathVertex> BdptIntegrator::CreateCameraPath(const Intersection &its_first, const Vector3 &wo_first) const
 {
-    std::vector<PathVertex> camera_path;
+    auto camera_path = std::vector<PathVertex>();
     camera_path.push_back({its_first, Vector3(0), wo_first});
     int depth = 1;
     auto its_pre = Intersection();
@@ -201,8 +201,8 @@ Spectrum BdptIntegrator::EmitterEnv2OneV(const PathVertex &v, const Intersection
     if (!b_rec)
         return L_emitter;
 
-    auto cos_theta = std::fabs(glm::dot(b_rec->wi, v.its.normal()));
-    Intersection its_pre;
+    auto cos_theta = std::abs(glm::dot(b_rec->wi, v.its.normal()));
+    auto its_pre = Intersection();
     if (!this->bvh_->Intersect(Ray(v.its.pos(), -b_rec->wi), its_pre))
     {
         //按 BSDF 采样环境光

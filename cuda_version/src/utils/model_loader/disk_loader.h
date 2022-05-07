@@ -4,7 +4,8 @@
 
 inline void LoadDisk(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
 {
-    gmat4 *to_world_pos = nullptr, *to_world_norm = nullptr;
+    auto to_world_pos = static_cast<gmat4 *>(nullptr),
+         to_world_norm = static_cast<gmat4 *>(nullptr);
     auto to_world = shape_info->to_world;
     if (to_world != nullptr)
     {

@@ -42,9 +42,9 @@ bool Integrator::EmitterDirectArea(const Intersection &its, const Vector3 &wo, S
         its_pre = this->emitters_[index]->SampleP();
     }
 
-    Float pdf_area = its_pre.pdf_area() / this->emitters_.size();
+    auto pdf_area = its_pre.pdf_area() / this->emitters_.size();
 
-    Float distance_sqr = 0;
+    auto distance_sqr = static_cast<Float>(0);
     if (!Visible(its_pre, its, &distance_sqr))
         return false;
 
@@ -56,14 +56,13 @@ bool Integrator::EmitterDirectArea(const Intersection &its, const Vector3 &wo, S
     if (Perpendicular(-wi, its.normal()))
         return false;
 
-    auto pdf_direct = pdf_area * distance_sqr / cos_theta_prime;
-
-    auto bsdf = its.Eval(wi, wo);
-    if (bsdf.r + bsdf.g + bsdf.b < kEpsilon)
+    auto pdf_bsdf = its.Pdf(wi, wo);
+    if (pdf_bsdf < kEpsilonPdf)
         return false;
 
-    auto pdf_bsdf = its.Pdf(wi, wo);
+    auto pdf_direct = pdf_area * distance_sqr / cos_theta_prime;
     auto weight_direct = MisWeight(pdf_direct, pdf_bsdf);
+    auto bsdf = its.Eval(wi, wo);
     auto cos_theta = std::abs(glm::dot(wi, its.normal()));
 
     if (attenuation)
@@ -90,7 +89,7 @@ bool Integrator::Visible(const Intersection &its1, const Intersection &its2, Flo
 {
     auto d_vec = its2.pos() - its1.pos();
     auto ray = Ray(its1.pos(), d_vec);
-    Intersection its;
+    auto its = Intersection();
     this->bvh_->Intersect(ray, its);
     if (its.distance() + kEpsilonDistance < glm::length(d_vec))
         return false;

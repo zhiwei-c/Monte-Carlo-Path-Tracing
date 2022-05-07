@@ -19,11 +19,13 @@ public:
     ///\brief 抽样微表面法线
     std::pair<Vector3, Float> Sample(const Vector3 &normal_macro, const Vector2 &sample) const override
     {
-        Float sin_phi, cos_phi, alpha_2;
+        auto sin_phi = static_cast<Float>(0),
+             cos_phi = static_cast<Float>(0),
+             alpha_2 = static_cast<Float>(0);
 
         if (isotropic_)
         {
-            auto phi = 2 * kPi * sample.y;
+            auto phi = 2.0 * kPi * sample.y;
             cos_phi = std::cos(phi);
             sin_phi = std::sin(phi);
             alpha_2 = alpha_u_ * alpha_u_;
@@ -54,11 +56,11 @@ public:
             return 0;
 
         auto cos_theta_2 = std::pow(cos_theta, 2),
-             tan_theta_2 = (1 - cos_theta_2) / cos_theta_2,
+             tan_theta_2 = (1.0 - cos_theta_2) / cos_theta_2,
              cos_theta_3 = std::pow(cos_theta, 3);
         auto alpha_2 = alpha_u_ * alpha_v_;
 
-        Float result = 0;
+        auto result = static_cast<Float>(0);
         if (isotropic_)
             result = std::exp(-tan_theta_2 / alpha_2) / (kPi * alpha_2 * cos_theta_3);
         else
@@ -77,21 +79,21 @@ public:
         if (cos_theta_v_n * cos_theta_v_m <= 0)
             return 0;
 
-        if (std::fabs(cos_theta_v_n - 1) < kEpsilon)
+        if (std::abs(cos_theta_v_n - 1) < kEpsilon)
             return 1;
 
-        Float a = 0;
+        auto a = static_cast<Float>(0);
         if (isotropic_)
         {
             auto tan_theta_v_n = std::sqrt(1 - std::pow(cos_theta_v_n, 2)) / cos_theta_v_n;
-            a = 1 / (alpha_u_ * tan_theta_v_n);
+            a = 1.0 / (alpha_u_ * tan_theta_v_n);
         }
         else
         {
             auto dir = ToLocal(v, normal_macro);
-            Float xy_alpha_2 = std::pow(alpha_u_ * dir.x, 2) + std::pow(alpha_v_ * dir.y, 2),
-                  tan_theta_alpha_2 = xy_alpha_2 / std::pow(dir.z, 2);
-            a = 1 / std::sqrt(tan_theta_alpha_2);
+            auto xy_alpha_2 = std::pow(alpha_u_ * dir.x, 2) + std::pow(alpha_v_ * dir.y, 2),
+                 tan_theta_alpha_2 = xy_alpha_2 / std::pow(dir.z, 2);
+            a = 1.0 / std::sqrt(tan_theta_alpha_2);
         }
 
         if (a < 1.6)

@@ -19,9 +19,9 @@ Spectrum PathIntegrator::Shade(const Vector3 &eye_pos, const Vector3 &look_dir) 
 	if (its.HasEmission())
 		return its.radiance();
 
-	size_t depth = 1;			   //光线溯源深度
-	auto L = Spectrum(0),		   //着色结果
-		attenuation = Spectrum(1); //光能因被物体吸收而衰减的系数
+	auto depth = static_cast<size_t>(1); //光线溯源深度
+	auto L = Spectrum(0),				 //着色结果
+		attenuation = Spectrum(1);		 //光能因被物体吸收而衰减的系数
 	auto wo = -look_dir;
 	auto its_pre = Intersection();
 	//迭代地溯源光线

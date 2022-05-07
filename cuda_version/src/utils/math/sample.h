@@ -11,9 +11,9 @@ __device__ inline Float MisWeight(Float pdf1, Float pdf2)
 
 __device__ inline void HemisCos(Float x_1, Float x_2, vec3 &dir, Float &pdf)
 {
-    Float cos_theta = sqrt(x_1),
+    auto cos_theta = sqrt(x_1),
           phi = 2.0 * kPi * x_2;
-    Float sin_theta = sqrt(1.0 - cos_theta * cos_theta),
+    auto sin_theta = sqrt(1.0 - cos_theta * cos_theta),
           cos_phi = cos(phi),
           sin_phi = sin(phi);
     dir = vec3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);

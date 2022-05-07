@@ -5,7 +5,7 @@
 
 NAMESPACE_BEGIN(simple_renderer)
 
-Renderer* ParseJsonCfg(const std::string &file_path)
+Renderer *ParseJsonCfg(const std::string &file_path)
 {
 	std::ifstream in(file_path);
 	std::string dir_path = GetDirectory(file_path);
@@ -60,7 +60,7 @@ Integrator *InitIntegrator(nlohmann::json &data)
 		rr_depth = GetInt(data["integrator"], "rr_depth", true).value_or(5);
 	}
 
-	Integrator *integrator = nullptr;
+	auto integrator = static_cast<Integrator *>(nullptr);
 	switch (Hash(type.c_str()))
 	{
 	case "path"_hash:
@@ -103,7 +103,7 @@ Camera *InitCamera(nlohmann::json &data)
 
 Film InitFilm(nlohmann::json &data)
 {
-	Film film;
+	auto film = Film();
 
 	film.width = GetInt(data["camera"], "width", false).value();
 	film.height = GetInt(data["camera"], "height", false).value();
@@ -152,7 +152,7 @@ std::optional<Vector3> GetVec3(const nlohmann::json &data, const std::string &na
 		exit(1);
 	}
 
-	Vector3 res(0);
+	auto res = Vector3(0);
 	for (int i = 0; i < 3; i++)
 	{
 		if (!data[name][i].is_number())

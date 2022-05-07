@@ -15,26 +15,29 @@ Cube::Cube(Material *material,
            bool flip_normals)
     : Shape(ShapeType::kCube, material, flip_normals)
 {
-    Mat4 to_world_p, to_world_n;
+    auto to_world_p = Mat4(1),
+         to_world_n = Mat4(1);
     if (to_world != nullptr)
     {
         to_world_p = Mat4(*to_world);
         to_world_n = Mat4(glm::inverse(glm::transpose(*to_world)));
     }
 
-    Vector3 vector;
-    Vector2 vec;
+    auto vector = Vector3(0);
+    auto vec = Vector2(0);
+    auto indices = std::vector<unsigned int>();
+    auto vertices = std::vector<Vector3>();
+    auto normals = std::vector<Vector3>();
+    auto texcoords = std::vector<Vector2>();
     for (auto i = 0; i < 12; ++i)
     {
-        std::vector<unsigned int> indices = {
-            CubeTriangles[i][0],
-            CubeTriangles[i][1],
-            CubeTriangles[i][2],
-        };
+        indices = {CubeTriangles[i][0],
+                   CubeTriangles[i][1],
+                   CubeTriangles[i][2]};
 
-        std::vector<Vector3> vertices;
-        std::vector<Vector3> normals;
-        std::vector<Vector2> texcoords;
+        vertices.clear();
+        normals.clear();
+        texcoords.clear();
 
         for (int v = 0; v < 3; v++)
         {
@@ -68,7 +71,6 @@ Cube::Cube(Material *material,
     pdf_area_ = 1.0 / area_;
     for (auto &mesh : meshes_)
         mesh->SetPdfArea(this->pdf_area_);
-    
 }
 
 Cube::~Cube()

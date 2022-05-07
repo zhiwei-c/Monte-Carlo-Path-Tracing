@@ -58,9 +58,11 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
     auto texcoord = Vector2(-1);
     if (material_->TextureMapping())
     {
-        Float theta, phi, r;
+        auto theta = static_cast<Float>(0),
+             phi = static_cast<Float>(0),
+             r = static_cast<Float>(0);
         CartesianToSpherical(pos, theta, phi, r);
-        Vector2 texcoord;
+        auto texcoord = Vector2(0);
         texcoord.x = std::min((Float)1, r);
         texcoord.y = phi * 0.5 * kPiInv;
 

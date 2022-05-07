@@ -340,10 +340,10 @@ void Renderer::InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list,
                                 std::vector<Float> &mesh_area_list)
 {
     std::cerr << "[info] create mesh ..." << std::endl;
-    Vertex *vertex_list = nullptr;
-    uvec3 *mesh_idx_list = nullptr;
-    uint *mesh_material_idx_list = nullptr;
-    uint mesh_num = 0;
+    auto vertex_list = static_cast<Vertex *>(nullptr);
+    auto mesh_idx_list = static_cast<uvec3 *>(nullptr);
+    auto mesh_material_idx_list = static_cast<uint *>(nullptr);
+    auto mesh_num = static_cast<uint>(0);
     mesh_idx_range_list = std::vector<uvec2>();
     InitVertexIndexBuffer(vertex_list,
                           mesh_idx_list,
@@ -356,9 +356,9 @@ void Renderer::InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list,
     //
     mesh_list_ = nullptr;
     CheckCudaErrors(cudaMallocManaged(&mesh_list_, mesh_num * sizeof(Mesh)));
-    AABB *local_mesh_aabbs = nullptr;
+    auto local_mesh_aabbs = static_cast<AABB *>(nullptr);
     CheckCudaErrors(cudaMallocManaged(&local_mesh_aabbs, mesh_num * sizeof(Mesh)));
-    Float *local_mesh_areas = nullptr;
+    auto local_mesh_areas = static_cast<Float *>(nullptr);
     CheckCudaErrors(cudaMallocManaged(&local_mesh_areas, mesh_num * sizeof(Float)));
     auto nx = static_cast<uint>(sqrt(mesh_num) + 1);
     auto ny = static_cast<uint>(mesh_num / nx + 1);
@@ -447,11 +447,11 @@ void Renderer::InitShapeBvh(std::vector<BvhNodeInfo> &shape_info_list)
         CheckCudaErrors(cudaGetLastError());
         CheckCudaErrors(cudaDeviceSynchronize());
         //
-        BvhNodeInfo *local_bvhnodes_info_list = nullptr;
+        auto local_bvhnodes_info_list = static_cast<BvhNodeInfo *>(nullptr);
         CheckCudaErrors(cudaMallocManaged(&local_bvhnodes_info_list, bvhnode_num * sizeof(BvhNodeInfo)));
         cudaMemcpy(local_bvhnodes_info_list, bvhnode_info_list.data(), bvhnode_num * sizeof(BvhNodeInfo), cudaMemcpyHostToDevice);
         //
-        BvhNode *bvhnode_list = nullptr;
+        auto bvhnode_list = static_cast<BvhNode *>(nullptr);
         CheckCudaErrors(cudaMallocManaged(&bvhnode_list, bvhnode_num * sizeof(BvhNode)));
         auto nx = static_cast<uint>(sqrt(bvhnode_num) + 1);
         auto ny = static_cast<uint>(bvhnode_num / nx + 1);
@@ -495,7 +495,7 @@ void Renderer::InitSceneBvh(AABB &scene_aabb)
     BuildSceneBvhInfo(0, 0, shape_num, shape_idx_list, shape_info_list, node_info_list);
     scene_aabb = node_info_list[0].aabb;
 
-    BvhNodeInfo *node_info_list_gpu = nullptr;
+    auto node_info_list_gpu = static_cast<BvhNodeInfo *>(nullptr);
     CheckCudaErrors(cudaMallocManaged(&node_info_list_gpu, node_num * sizeof(BvhNodeInfo)));
     cudaMemcpy(node_info_list_gpu, node_info_list.data(), node_num * sizeof(BvhNodeInfo), cudaMemcpyHostToDevice);
 
@@ -593,7 +593,7 @@ void Renderer::Render(const std::string &output_filename)
     timer_.PrintTimePassed("prepare work");
 
     auto resolution = camera_info_.height * camera_info_.width;
-    float *frame_data = nullptr;
+    auto frame_data = static_cast<float *>(nullptr);
     CheckCudaErrors(cudaMallocManaged((void **)&frame_data, 3 * resolution * sizeof(float)));
     auto tx = camera_info_.width > 8 ? 8 : camera_info_.width;
     auto ty = camera_info_.height > 8 ? 8 : camera_info_.height;

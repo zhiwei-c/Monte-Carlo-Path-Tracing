@@ -54,7 +54,7 @@ __device__ inline void CreateCosinAlbedoTexture(MicrofacetDistribType type,
         for (int i = 0; i < sample_count; i++)
         {
             auto facet_normal = vec3(0);
-            Float pdf = 0;
+            auto pdf = static_cast<Float>(0);
             SampleNormDistrib(type, alpha_u, alpha_v,
                               macro_normal, HammersleyVec2(i + 1, sample_count + 1),
                               facet_normal, pdf);
@@ -84,7 +84,7 @@ __device__ inline void CreateCosinAlbedoTexture(MicrofacetDistribType type,
         for (int i = 0; i < sample_count; i++)
         {
             auto facet_normal = vec3(0);
-            Float pdf = 0;
+            auto pdf = static_cast<Float>(0);
             SampleNormDistrib(type, alpha_u, alpha_v,
                               macro_normal, HammersleyVec2(i + 1, sample_count + 1),
                               facet_normal, pdf);

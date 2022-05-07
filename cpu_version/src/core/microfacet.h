@@ -46,7 +46,8 @@ protected:
     ///\brief 给定表面纹理坐标，获取该点粗糙程度
     std::pair<Float, Float> GetAlpha(const Vector2 &texcoord) const
     {
-        Float alpha_u = 0, alpha_v = 0;
+        auto alpha_u = static_cast<Float>(0),
+             alpha_v = static_cast<Float>(0);
         alpha_u = alpha_u_->Color(texcoord).x;
         alpha_v = alpha_v_ ? alpha_v_->Color(texcoord).x : alpha_u;
         return {alpha_u, alpha_v};
@@ -101,7 +102,7 @@ protected:
         {
             auto cos_n_o = step * (static_cast<Float>(j) + 0.5);
             auto wo = Vector3(std::sqrt(1 - Sqr(cos_n_o)), 0, cos_n_o);
-            Float avg_tmp = 0;
+            auto avg_tmp = static_cast<Float>(0);
             for (int i = 0; i < sample_count; i++)
             {
                 auto [normal_micro, pdf] = distrib->Sample(normal, Hammersley(i + 1, sample_count + 1));
