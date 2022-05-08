@@ -21,12 +21,12 @@ endif()
 
 project(${PROJECT_NAME} LANGUAGES CUDA CXX)
 
-file(GLOB ACCELERATOR_FILE "${PROJECT_SOURCE_DIR}/src/modeling/accelerator/*.*")
-file(GLOB MATERIALS_FILE "${PROJECT_SOURCE_DIR}/src/modeling/materials/*.*")
-file(GLOB SHAPES_FILE "${PROJECT_SOURCE_DIR}/src/modeling/shapes/*.*")
-file(GLOB TEXTURES_FILE "${PROJECT_SOURCE_DIR}/src/modeling/textures/*.*")
-file(GLOB MODELING_FILE "${PROJECT_SOURCE_DIR}/src/modeling/*.*")
-file(GLOB RENDERING_FILE "${PROJECT_SOURCE_DIR}/src/rendering/*.*")
+file(GLOB ACCELERATOR_FILE "${PROJECT_SOURCE_DIR}/src/accelerator/*.*")
+file(GLOB BSDFS_FILE "${PROJECT_SOURCE_DIR}/src/bsdfs/*.*")
+file(GLOB EMITTERS_FILE "${PROJECT_SOURCE_DIR}/src/emitters/*.*")
+file(GLOB SHAPES_FILE "${PROJECT_SOURCE_DIR}/src/shapes/*.*")
+file(GLOB TEXTURES_FILE "${PROJECT_SOURCE_DIR}/src/textures/*.*")
+file(GLOB CORE_FILE "${PROJECT_SOURCE_DIR}/src/core/*.*")
 file(GLOB MATH_FILE "${PROJECT_SOURCE_DIR}/src/utils/math/*.*")
 file(GLOB MODEL_LOADER_FILE "${PROJECT_SOURCE_DIR}/src/utils/model_loader/*.*")
 file(GLOB UTILS_FILE "${PROJECT_SOURCE_DIR}/src/utils/*.*")
@@ -34,21 +34,21 @@ file(GLOB UTILS_FILE "${PROJECT_SOURCE_DIR}/src/utils/*.*")
 add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/main.cu"
                                "${PROJECT_SOURCE_DIR}/src/renderer.h"
                                ${ACCELERATOR_FILE}
-                               ${MATERIALS_FILE}
+                               ${BSDFS_FILE}
+                               ${EMITTERS_FILE}
                                ${SHAPES_FILE}
                                ${TEXTURES_FILE}
-                               ${MODELING_FILE}
-                               ${RENDERING_FILE}
+                               ${CORE_FILE}
                                ${MATH_FILE}
                                ${MODEL_LOADER_FILE}
                                ${UTILS_FILE})
 
-source_group("Files\\modeling\\accelerator" FILES ${ACCELERATOR_FILE})
-source_group("Files\\modeling\\materials" FILES ${MATERIALS_FILE})
-source_group("Files\\modeling\\shapes" FILES ${SHAPES_FILE})
-source_group("Files\\modeling\\textures" FILES ${TEXTURES_FILE})
-source_group("Files\\modeling" FILES ${MODELING_FILE})
-source_group("Files\\rendering" FILES ${RENDERING_FILE})
+source_group("Files\\accelerator" FILES ${ACCELERATOR_FILE})
+source_group("Files\\bsdfs" FILES ${BSDFS_FILE})
+source_group("Files\\emitters" FILES ${EMITTERS_FILE})
+source_group("Files\\shapes" FILES ${SHAPES_FILE})
+source_group("Files\\textures" FILES ${TEXTURES_FILE})
+source_group("Files\\core" FILES ${CORE_FILE})
 source_group("Files\\utils\\math" FILES ${MATH_FILE})
 source_group("Files\\utils\\model_loader" FILES ${MODEL_LOADER_FILE})
 source_group("Files\\utils" FILES ${UTILS_FILE})
