@@ -2,20 +2,20 @@
 
 <scene version="0.5.0" >
 	<integrator type="path" >
-		<integer name="maxDepth" value="10" />
+		<integer name="maxDepth" value="8" />
 		<boolean name="strictNormals" value="true" />
 	</integrator>
 	<sensor type="perspective" >
-		<float name="fov" value="27" />
+		<float name="fov" value="37" />
 		<transform name="toWorld" >
 			<lookat origin="-0.300000012, 0.5, -0.5" target="0, 0.075, 0" up="0, 1, 0"/>
 		</transform>
 		<sampler type="sobol" >
-			<integer name="sampleCount" value="4" />
+			<integer name="sampleCount" value="4096" />
 		</sampler>
 		<film type="ldrfilm" >
-			<integer name="width" value="1024" />
-			<integer name="height" value="1024" />
+			<integer name="width" value="800" />
+			<integer name="height" value="800" />
 			<string name="fileFormat" value="exr" />
 			<string name="pixelFormat" value="rgb" />
 			<float name="gamma" value="2.2" />
@@ -103,7 +103,7 @@
 			</bsdf>
 		</bsdf>
 		<emitter type="area" >
-			<rgb name="radiance" value="50, 50, 50"/>
+			<rgb name="radiance" value="20, 20, 20"/>
 		</emitter>
 	</shape>
 </scene>

@@ -10,14 +10,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 ## 1 Features
 
-### 1.1 路径跟踪算法（Path Tracing）和双向路径跟踪算法（Bidirectional Path Tracing）
-
-| 绘制参数                       | 路径追踪算法（Path Tracing）                           | 双向路径追踪算法（Bidirectional Path Tracing）         |
-| ------------------------------ | ------------------------------------------------------ | ------------------------------------------------------ |
-| 3840*2160 分辨率，<br />4 spp  | ![ajar, path tracing, 4 spp](resources/rendering_results/ajar-path-4_spp.png)   | ![ajar, Bidirectional Path Tracing, 4 spp](resources/rendering_results/ajar-bdpt-4_spp.png)   |
-| 960*960 分辨率，<br />64 spp | ![bidir, path tracing, 64 spp](resources/rendering_results/bidir-path-64_spp.png) | ![bidir, Bidirectional Path Tracing, 64 spp](resources/rendering_results/bidir-bdpt-64_spp.png) |
-
-### 1.2 CUDA 加速计算
+### 1.1 CUDA 加速计算
 
 测试设备信息：
 
@@ -45,11 +38,12 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 | 耗时  | 47 min 10s   | 33 min 42 s   |
 | 相对速度 | 1   | 1.4   |
 
-### 1.3 多重重要抽样（Multiple Importance Sampling）
+### 1.2 路径跟踪（Path Tracing）和双向路径跟踪（Bidirectional Path Tracing）
 
-- [1280*720 分辨率，64 spp](resources/rendering_resources/veach-mis/scene.xml)
-
-![multiple importance sampling](resources/rendering_results/cpu_mis_2min2s.png)
+| 绘制参数                       | 路径追踪（Path Tracing）                           | 双向路径追踪（Bidirectional Path Tracing）         |
+| ------------------------------ | ------------------------------------------------------ | ------------------------------------------------------ |
+| 3840*2160 分辨率，<br />4 spp  | ![ajar, path tracing, 4 spp](resources/rendering_results/ajar-path-4_spp.png)   | ![ajar, Bidirectional Path Tracing, 4 spp](resources/rendering_results/ajar-bdpt-4_spp.png)   |
+| 960*960 分辨率，<br />64 spp | ![bidir, path tracing, 64 spp](resources/rendering_results/bidir-path-64_spp.png) | ![bidir, Bidirectional Path Tracing, 64 spp](resources/rendering_results/bidir-bdpt-64_spp.png) |
 
 ## 2 实现的功能
 
@@ -95,6 +89,14 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 - [粗糙的塑料材质（rough plastic material）](cpu_version/src/bsdfs/rough_plastic.h)，模仿 [mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#rough-plastic-material-roughplastic)；
 
   ![rough_plastic](resources/rendering_results/rough_plastic.png)
+
+- [粗糙的漫反射材质（rough diffuse material）](cpu_version/src/bsdfs/rough_diffuse.h)，模仿 [mitsuba 相应的材质](https://github.com/mitsuba-renderer/mitsuba/blob/master/src/bsdfs/roughdiffuse.cpp)；
+
+  ![rough_plastic](resources/rendering_results/mercury_smooth_rough.jpg)
+
+  左图使用朗伯模型描述的平滑的漫反射材质，右图使用 Oren–Nayar reflectance model 描述的粗糙的漫反射材质。可以发现，在接近球体边缘的地方，右图比左图更亮一些。
+
+  [左图配置](resources/rendering_resources/mercury/scene_smooth.xml)，[右图配置](resources/rendering_resources/mercury/scene_rough.xml)。
 
 ### 2.3 其它
 

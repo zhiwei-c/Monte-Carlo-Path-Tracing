@@ -45,6 +45,7 @@ private:
 	bool ParseCoating(const std::string &id, rapidxml::xml_node<> *&node_bsdf, std::string &bsdf_type);
 
 	Material *ParseDiffuse(rapidxml::xml_node<> *node_diffuse);
+	Material *ParseRoughDiffuse(rapidxml::xml_node<> *node_rough_diffuse);
 	Material *ParseDielectric(rapidxml::xml_node<> *node_dielectric, bool thin = false);
 	Material *ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric);
 	Material *ParseConductor(rapidxml::xml_node<> *node_conductor);

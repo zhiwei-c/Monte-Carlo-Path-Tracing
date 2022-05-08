@@ -15,8 +15,9 @@ NAMESPACE_BEGIN(simple_renderer)
 enum class MaterialType
 {
     kAreaLight,       //面光源
-    kDiffuse,         //漫反射
-    kGlossy,          //冯模型描述的有光泽表面，含有漫反射和镜面反射
+    kDiffuse,         //平滑的理想漫反射的表面，由朗伯模型描述
+    kRoughDiffuse,    //粗糙的理想漫反射的表面，由 Oren–Nayar Reflectance Model 描述
+    kGlossy,          //有光泽的表面，由冯模型描述，含有漫反射和镜面反射
     kDielectric,      //平滑的电介质
     kRoughDielectric, //粗糙的电介质
     kThinDielectric,  //薄的电介质

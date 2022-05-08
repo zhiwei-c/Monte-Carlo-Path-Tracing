@@ -3,6 +3,7 @@
 #include "../emitters/area_light.h"
 
 #include "../bsdfs/diffuse.h"
+#include "../bsdfs/rough_diffuse.h"
 #include "../bsdfs/glossy.h"
 
 #include "../bsdfs/dielectric.h"

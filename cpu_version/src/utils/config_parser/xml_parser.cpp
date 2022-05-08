@@ -250,8 +250,7 @@ void XmlParser::ParseMaterial(rapidxml::xml_node<> *node_bsdf, Renderer *rendere
 		material = ParseDiffuse(node_bsdf);
 		break;
 	case "roughdiffuse"_hash:
-		std::cout << "[warning] unsupported rough diffuse bsdf, treat as diffuse." << std::endl;
-		material = ParseDiffuse(node_bsdf);
+		material = ParseRoughDiffuse(node_bsdf);
 		break;
 	case "dielectric"_hash:
 		twsided = true;
@@ -297,6 +296,19 @@ Material *XmlParser::ParseDiffuse(rapidxml::xml_node<> *node_diffuse)
 		reflectance.reset(new ConstantTexture(Spectrum(0.5)));
 
 	return new Diffuse(std::move(reflectance));
+}
+
+Material *XmlParser::ParseRoughDiffuse(rapidxml::xml_node<> *node_rough_diffuse)
+{
+	auto reflectance = ParseTextureOrOther(node_rough_diffuse, "reflectance");
+	if (!reflectance)
+		reflectance.reset(new ConstantTexture(Spectrum(0.5)));
+	auto alpha = ParseTextureOrOther(node_rough_diffuse, "alpha");
+	if (!alpha)
+		alpha.reset(new ConstantTexture(Spectrum(0.2)));
+
+	auto use_fast_approx = GetBoolean(node_rough_diffuse, "useFastApprox").value_or(false);
+	return new RoughDiffuse(std::move(reflectance), std::move(alpha), use_fast_approx);
 }
 
 Material *XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, bool thin)
