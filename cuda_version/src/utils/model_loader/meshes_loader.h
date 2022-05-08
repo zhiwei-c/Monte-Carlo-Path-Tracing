@@ -8,7 +8,7 @@
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
 
-#include "../../modeling/shape.h"
+#include "../../core/shape.h"
 
 inline void VertexBufferThread(aiMesh *mesh,
                                uint begin,

@@ -3,7 +3,7 @@
 #include <vector>
 #include <unordered_set>
 
-#include "rendering/camera.h"
+#include "core/camera.h"
 #include "utils/timer.h"
 #include "utils/model_loader.h"
 

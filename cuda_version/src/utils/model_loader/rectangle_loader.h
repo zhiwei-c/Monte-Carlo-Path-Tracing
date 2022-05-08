@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../modeling/shape.h"
+#include "../../core/shape.h"
 
 static constexpr float RectanglePositions[][3] = {{-1, -1, 0}, {1, -1, 0}, {1, 1, 0}, {-1, 1, 0}};
 

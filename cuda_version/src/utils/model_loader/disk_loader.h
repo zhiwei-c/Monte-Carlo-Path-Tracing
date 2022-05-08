@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../modeling/shape.h"
+#include "../../core/shape.h"
 
 inline void LoadDisk(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
 {

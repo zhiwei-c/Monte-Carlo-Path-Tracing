@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../modeling/shape.h"
+#include "../../core/shape.h"
 
 static constexpr uint theta_steps = 20;
 static constexpr uint phi_steps = theta_steps * 2;
