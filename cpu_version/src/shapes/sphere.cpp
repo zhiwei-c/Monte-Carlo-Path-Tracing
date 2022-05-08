@@ -59,6 +59,8 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
     if (t_far < kEpsilon)
         return;
 
+    ray_o += center_;
+
     auto t_result = static_cast<Float>(0);
 
     if (t_near < kEpsilon)
@@ -69,7 +71,7 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
     auto pos = ray_o + t_result * ray_d;
     auto normal = glm::normalize(pos - center_);
 
-    auto texcoord = Vector2(-1);
+    auto texcoord = Vector2(0);
     if (material_->TextureMapping())
     {
         auto theta = static_cast<Float>(0),

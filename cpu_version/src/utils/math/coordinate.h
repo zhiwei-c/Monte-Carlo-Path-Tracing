@@ -94,8 +94,8 @@ inline Vector3 ToLocal(const Vector3 &dir, const Vector3 &up)
 
 ///\brief 将单位向量坐标从笛卡尔坐标系转换到球坐标系
 ///\param dir - 待转换的单位向量
-///\param phi - 向量与 Front 方向的夹角（方位角）
 ///\param theta - 向量与 Up 方向的夹角（天顶角）
+///\param phi - 向量与 Front 方向的夹角（方位角）
 inline void CartesianToSpherical(const Vector3 &dir, Float &theta, Float &phi)
 {
     auto cos_theta = dir[UP_DIM_WORLD];

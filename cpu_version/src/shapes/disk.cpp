@@ -52,7 +52,7 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
 
     auto pos = ray_o + t_z * ray_d;
 
-    if (glm::dot(pos, pos) > 1 - kEpsilon)
+    if (glm::length(pos) > 0.5)
         return;
 
     auto texcoord = Vector2(-1);
@@ -127,7 +127,7 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
 Intersection Disk::SampleP() const
 {
     auto pos_xy = DiskUnifrom();
-    auto pos = Vector3(pos_xy.x, pos_xy.y, 0);
+    auto pos = Vector3(pos_xy.x * 0.5, pos_xy.y * 0.5, 0);
     auto normal = Vector3(0, 0, 1);
 
     if (to_world_)

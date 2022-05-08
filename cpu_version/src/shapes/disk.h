@@ -26,7 +26,6 @@ private:
     std::unique_ptr<Mat4> to_world_; //从局部坐标系到世界坐标系的变换矩阵
     std::unique_ptr<Mat4> to_world_norm_;
     std::unique_ptr<Mat4> to_local_;
-    Material *material_; //材质
 };
 
 NAMESPACE_END(simple_renderer)

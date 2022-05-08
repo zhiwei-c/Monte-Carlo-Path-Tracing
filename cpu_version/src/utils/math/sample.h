@@ -54,7 +54,7 @@ inline Vector3 SphereUniform()
     return Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
 }
 
-///\brief 均匀抽样单位圆盘
+///\brief 均匀抽样半径 1 的圆盘
 inline Vector2 DiskUnifrom()
 {
 

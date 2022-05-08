@@ -300,7 +300,7 @@ void Renderer::InitVertexIndexBuffer(Vertex *&vertex_list,
             material_info_list_[shape_info->material_idx].twosided = true;
             break;
         case kDisk:
-            LoadSphere(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
+            LoadDisk(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
             break;
         case kMeshes:
             LoadMeshes(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
