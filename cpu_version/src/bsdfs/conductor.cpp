@@ -16,7 +16,7 @@ Conductor::Conductor(bool mirror,
 {
 }
 
-///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
+///\brief 根据光线出射方向和表面法线方向抽样光线入射方向，法线方向已被处理至与光线出射方向夹角大于90度
 void Conductor::Sample(BsdfSampling &bs) const
 {
     bs.wi = -Reflect(-bs.wo, bs.normal);
@@ -30,7 +30,7 @@ void Conductor::Sample(BsdfSampling &bs) const
         bs.attenuation *= specular_reflectance_->Color(bs.texcoord);
 }
 
-///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
+///\brief 根据光线入射方向、出射方向和表面法线方向，计算 BSDF 权重，法线方向已被处理至与光线入射方向夹角大于90度
 Spectrum Conductor::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
     if (!SameDirection(wo, Reflect(wi, normal)))
@@ -41,7 +41,7 @@ Spectrum Conductor::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &no
     return albedo;
 }
 
-///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
+///\brief 根据光线入射方向和表面法线方向，计算光线从给定出射方向射出的概率，法线方向已被处理至与光线入射方向夹角大于90度
 Float Conductor::Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
     return SameDirection(wo, Reflect(wi, normal)) ? 1 : 0;

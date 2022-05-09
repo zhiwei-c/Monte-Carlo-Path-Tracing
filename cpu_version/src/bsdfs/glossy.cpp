@@ -28,7 +28,7 @@ Glossy::Glossy(std::unique_ptr<Texture> diffuse_reflectance,
         diffuse_sampling_weight_ = diffuse_reflectance_sum_ / (diffuse_reflectance_sum_ + specular_reflectance_sum_);
 }
 
-///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
+///\brief 根据光线出射方向和表面法线方向抽样光线入射方向，法线方向已被处理至与光线出射方向夹角大于90度
 void Glossy::Sample(BsdfSampling &bs) const
 {
     auto pdf_diffuse = DiffuseSamplingWeight(bs.texcoord);
@@ -57,7 +57,7 @@ void Glossy::Sample(BsdfSampling &bs) const
         bs.attenuation = Eval(bs.wi, bs.wo, bs.normal, bs.texcoord, bs.inside);
 }
 
-///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
+///\brief 根据光线入射方向、出射方向和表面法线方向，计算 BSDF 权重，法线方向已被处理至与光线入射方向夹角大于90度
 Spectrum Glossy::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
     Spectrum albedo(0);
@@ -73,11 +73,11 @@ Spectrum Glossy::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &norma
     return albedo;
 }
 
-///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
+///\brief 根据光线入射方向和表面法线方向，计算光线从给定出射方向射出的概率，法线方向已被处理至与光线入射方向夹角大于90度
 Float Glossy::Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
-    // 入射、出射光线需在同侧
-    if (NotSameHemis(wo, -wi))
+    // 表面法线方向，光线入射和出射需在介质同侧
+    if (NotSameHemis(wo, normal))
         return 0;
 
     auto pdf_diffuse = DiffuseSamplingWeight(texcoord);

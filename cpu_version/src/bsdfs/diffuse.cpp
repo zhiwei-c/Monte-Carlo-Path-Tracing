@@ -7,7 +7,7 @@ Diffuse::Diffuse(std::unique_ptr<Texture> reflectance)
     : Material(MaterialType::kDiffuse),
       reflectance_(std::move(reflectance)) {}
 
-///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
+///\brief 根据光线出射方向和表面法线方向抽样光线入射方向，法线方向已被处理至与光线出射方向夹角大于90度
 void Diffuse::Sample(BsdfSampling &bs) const
 {
     auto [wi_local, pdf] = HemisCos();
@@ -23,17 +23,17 @@ void Diffuse::Sample(BsdfSampling &bs) const
     bs.attenuation = reflectance_->Color(bs.texcoord) * kPiInv;
 }
 
-///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
+///\brief 根据光线入射方向、出射方向和表面法线方向，计算 BSDF 权重，法线方向已被处理至与光线入射方向夹角大于90度
 Spectrum Diffuse::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
     return reflectance_->Color(texcoord) * kPiInv;
 }
 
-///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
+///\brief 根据光线入射方向和表面法线方向，计算光线从给定出射方向射出的概率，法线方向已被处理至与光线入射方向夹角大于90度
 Float Diffuse::Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
-    // 入射、出射光线需在同侧
-    if (NotSameHemis(wo, -wi))
+    // 表面法线方向，光线入射和出射需在介质同侧
+    if (NotSameHemis(wo, normal))
         return 0;
         
     auto wo_local = ToLocal(wo, normal);

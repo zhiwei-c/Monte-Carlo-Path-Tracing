@@ -34,6 +34,9 @@ __global__ void RenderProcess(int width,
     if (i >= width || j >= height)
         return;
 
+    // if (i != 994 || j != 304)
+    //     return;
+
     auto pixel_index = j * width + i;
 
     auto local_rand_state = rand_state[pixel_index];

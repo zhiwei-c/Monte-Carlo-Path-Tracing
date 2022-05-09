@@ -37,13 +37,13 @@ inline bool SameDirection(const Vector3 &a, const Vector3 &b)
 ///\brief 两个向量是否不在同一个半球之中（夹角大于90度）
 inline bool NotSameHemis(const Vector3 &a, const Vector3 &b)
 {
-    return glm::dot(a, b) < kEpsilon;
+    return glm::dot(a, b) < 0;
 }
 
 ///\brief 两个向量是否在同一个半球之中（夹角小于90度）
 inline bool SameHemis(const Vector3 &a, const Vector3 &b)
 {
-    return glm::dot(a, b) > kEpsilon;
+    return glm::dot(a, b) > 0;
 }
 
 ///\brief 两个向量是否垂直

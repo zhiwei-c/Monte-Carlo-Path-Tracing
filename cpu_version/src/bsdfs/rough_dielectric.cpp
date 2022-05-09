@@ -47,7 +47,7 @@ RoughDielectric::RoughDielectric(Float int_ior,
 				   ((1.0 - F_avg_inv) + (1.0 - F_avg) * Sqr(eta_inv_));
 }
 
-///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
+///\brief 根据光线出射方向和表面法线方向抽样光线入射方向，法线方向已被处理至与光线出射方向夹角大于90度
 void RoughDielectric::Sample(BsdfSampling &bs) const
 {
 	auto eta = bs.inside ? eta_inv_ : eta_;		//相对折射率，即光线透射侧介质折射率与入射侧介质折射率之比
@@ -144,7 +144,7 @@ void RoughDielectric::Sample(BsdfSampling &bs) const
 	}
 }
 
-///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
+///\brief 根据光线入射方向、出射方向和表面法线方向，计算 BSDF 权重，法线方向已被处理至与光线入射方向夹角大于90度
 Spectrum RoughDielectric::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
 	auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
@@ -210,7 +210,7 @@ Spectrum RoughDielectric::Eval(const Vector3 &wi, const Vector3 &wo, const Vecto
 	}
 }
 
-///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
+///\brief 根据光线入射方向和表面法线方向，计算光线从给定出射方向射出的概率，法线方向已被处理至与光线入射方向夹角大于90度
 Float RoughDielectric::Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
 	auto eta_inv = inside ? eta_ : eta_inv_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比

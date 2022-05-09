@@ -4,12 +4,12 @@
 
 __device__ inline bool NotSameHemis(const vec3 &a, const vec3 &b)
 {
-    return myvec::dot(a, b) < kEpsilon;
+    return myvec::dot(a, b) < 0;
 }
 
 __device__ inline bool SameHemis(const vec3 &a, const vec3 &b)
 {
-    return myvec::dot(a, b) > -kEpsilon;
+    return myvec::dot(a, b) > 0;
 }
 
 __device__ inline bool SameDirection(const vec3 &a, const vec3 &b)

@@ -42,7 +42,7 @@ RoughConductor::RoughConductor(bool mirror,
 	f_add_ = Sqr(F_avg) * albedo_avg_ / (Spectrum(1) - F_avg * (1 - albedo_avg_));
 }
 
-///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
+///\brief 根据光线出射方向和表面法线方向抽样光线入射方向，法线方向已被处理至与光线出射方向夹角大于90度
 void RoughConductor::Sample(BsdfSampling &bs) const
 {
 	auto [alpha_u, alpha_v] = GetAlpha(bs.texcoord);
@@ -81,7 +81,7 @@ void RoughConductor::Sample(BsdfSampling &bs) const
 	bs.attenuation = albedo;
 }
 
-///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
+///\brief 根据光线入射方向、出射方向和表面法线方向，计算 BSDF 权重，法线方向已被处理至与光线入射方向夹角大于90度
 Spectrum RoughConductor::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
 	auto [alpha_u, alpha_v] = GetAlpha(texcoord);
@@ -106,12 +106,12 @@ Spectrum RoughConductor::Eval(const Vector3 &wi, const Vector3 &wo, const Vector
 	return albedo;
 }
 
-///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
+///\brief 根据光线入射方向和表面法线方向，计算光线从给定出射方向射出的概率，法线方向已被处理至与光线入射方向夹角大于90度
 Float RoughConductor::Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
-    // 入射、出射光线需在同侧
-	if (NotSameHemis(wo, -wi))
-		return 0;
+    // 表面法线方向，光线入射和出射需在介质同侧
+    if (NotSameHemis(wo, normal))
+        return 0;
 
 	auto [alpha_u, alpha_v] = GetAlpha(texcoord);
 	auto h = glm::normalize(-wi + wo);

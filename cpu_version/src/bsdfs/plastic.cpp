@@ -33,7 +33,7 @@ Plastic::Plastic(Float int_ior,
     specular_sampling_weight_ = s_sum / (d_sum + s_sum);
 }
 
-///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
+///\brief 根据光线出射方向和表面法线方向抽样光线入射方向，法线方向已被处理至与光线出射方向夹角大于90度
 void Plastic::Sample(BsdfSampling &bs) const
 {
     auto kr_o = Fresnel(-bs.wo, bs.normal, eta_inv_);
@@ -84,7 +84,7 @@ void Plastic::Sample(BsdfSampling &bs) const
         bs.attenuation += kr_i * (specular_reflectance_ ? specular_reflectance_->Color(bs.texcoord) : Spectrum(1));
 }
 
-///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
+///\brief 根据光线入射方向、出射方向和表面法线方向，计算 BSDF 权重，法线方向已被处理至与光线入射方向夹角大于90度
 Spectrum Plastic::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
     auto albedo = Spectrum(0);
@@ -104,11 +104,11 @@ Spectrum Plastic::Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &norm
     return albedo;
 }
 
-///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
+///\brief 根据光线入射方向和表面法线方向，计算光线从给定出射方向射出的概率，法线方向已被处理至与光线入射方向夹角大于90度
 Float Plastic::Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const
 {
-    // 入射、出射光线需在同侧
-    if (NotSameHemis(wo, -wi))
+    // 表面法线方向，光线入射和出射需在介质同侧
+    if (NotSameHemis(wo, normal))
         return 0;
 
     auto kr = Fresnel(wi, normal, eta_inv_);

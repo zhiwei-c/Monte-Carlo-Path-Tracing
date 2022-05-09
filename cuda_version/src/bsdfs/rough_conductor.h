@@ -105,8 +105,8 @@ __device__ vec3 Material::EvalRoughConductor(const vec3 &wi, const vec3 &wo, con
 
 __device__ Float Material::PdfRoughConductor(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const
 {
-    // 入射、出射光线需在同侧
-    if (NotSameHemis(wo, -wi))
+    // 表面法线方向，光线入射和出射需在介质同侧
+    if (NotSameHemis(wo, normal))
         return 0;
 
     auto alpha_u = alpha_u_ ? alpha_u_->Color(texcoord).x : 0.1;
