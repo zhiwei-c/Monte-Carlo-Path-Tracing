@@ -902,56 +902,9 @@ TextureInfo *ParseTexture(rapidxml::xml_node<> *node_texture)
         return new TextureInfo(filename, gamma);
         break;
     }
-    case "checkerboard"_hash:
-    {
-        auto node_color0 = GetChild(node_texture, "color0");
-        auto color0 = node_color0 ? GetVec3(node_color0) : vec3(0.4);
-
-        auto node_color1 = GetChild(node_texture, "color1");
-        auto color1 = node_color1 ? GetVec3(node_color1) : vec3(0.2);
-
-        auto uv_offset = static_cast<vec2 *>(nullptr);
-        auto u_offset = GetFloat(node_texture, "uoffset", false).value(),
-             v_offset = GetFloat(node_texture, "voffset", false).value();
-        if (u_offset != 0 || v_offset != 0)
-            uv_offset = new vec2(u_offset, v_offset);
-
-        auto uv_scale = static_cast<vec2 *>(nullptr);
-        auto u_scale = GetFloat(node_texture, "uscale", false).value(),
-             v_scale = GetFloat(node_texture, "vscale", false).value();
-        if (u_offset != 1 || v_offset != 1)
-            uv_scale = new vec2(u_scale, v_scale);
-        return new TextureInfo(color0, color1, uv_offset, uv_scale);
-        break;
-    }
-    case "gridtexture"_hash:
-    {
-        auto line_width = GetFloat(node_texture, "lineWidth").value_or(0.01);
-
-        auto node_color0 = GetChild(node_texture, "color0");
-        auto color0 = node_color0 ? GetVec3(node_color0) : vec3(0.4);
-
-        auto node_color1 = GetChild(node_texture, "color1");
-        auto color1 = node_color1 ? GetVec3(node_color1) : vec3(0.2);
-
-        auto uv_offset = static_cast<vec2 *>(nullptr);
-        auto u_offset = GetFloat(node_texture, "uoffset", false).value(),
-             v_offset = GetFloat(node_texture, "voffset", false).value();
-        if (u_offset != 0 || v_offset != 0)
-            uv_offset = new vec2(u_offset, v_offset);
-
-        auto uv_scale = static_cast<vec2 *>(nullptr);
-        auto u_scale = GetFloat(node_texture, "uscale", false).value(),
-             v_scale = GetFloat(node_texture, "vscale", false).value();
-        if (u_offset != 1 || v_offset != 1)
-            uv_scale = new vec2(u_scale, v_scale);
-        return new TextureInfo(color0, color1, line_width, uv_offset, uv_scale);
-        break;
-    }
     default:
         std::cerr << "[error] " << GetTreeName(node_texture) << std::endl
-                  << "\tcannot handle texture type except from bitmap" << std::endl;
-        exit(1);
+                  << "\tcannot handle texture type except from bitmap, ignore it" << std::endl;
         break;
     }
     return nullptr;

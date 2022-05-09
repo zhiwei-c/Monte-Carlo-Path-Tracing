@@ -35,7 +35,7 @@ public:
                             const vec2 &texcoord,
                             int inside,
                             Float distance,
-                            Material *material,
+                            Material **material,
                             Float pdf_area)
         : valid_(true),
           absorb_(false),
@@ -62,12 +62,12 @@ public:
     __device__ Float distance() const { return distance_; }
 
     ///\return 交点处的物体表面是否发光
-    __device__ bool HasEmission() const { return material_->HasEmission(); }
+    __device__ bool HasEmission() const { return (*material_)->HasEmission(); }
 
     ///\return 交点处的物体表面的辐射亮度
-    __device__ vec3 radiance() const { return material_->radiance(); }
+    __device__ vec3 radiance() const { return (*material_)->radiance(); }
 
-    __device__ bool HashLobe() const { return material_->HarshLobe(); }
+    __device__ bool HashLobe() const { return (*material_)->HarshLobe(); }
 
     ///\brief 面元概率
     __device__ Float pdf_area() const { return pdf_area_; }
@@ -88,7 +88,7 @@ public:
         bs.normal = one_side ? normal_ : -normal_;
         bs.texcoord = texcoord_;
 
-        material_->Sample(bs, sample);
+        (*material_)->Sample(bs, sample);
 
         if (bs.pdf < kEpsilonPdf)
             bs.valid = false;
@@ -111,7 +111,7 @@ public:
 
         auto normal = one_side ? normal_ : -normal_;
 
-        return material_->Eval(wi, wo, normal, texcoord_, local_inside);
+        return (*material_)->Eval(wi, wo, normal, texcoord_, local_inside);
     }
 
     /**
@@ -130,7 +130,7 @@ public:
 
         auto normal = one_side ? normal_ : -normal_;
 
-        return material_->Pdf(wi, wo, normal, texcoord_, local_inside);
+        return (*material_)->Pdf(wi, wo, normal, texcoord_, local_inside);
     }
 
 private:
@@ -142,5 +142,5 @@ private:
     vec2 texcoord_;      //交点纹理坐标
     vec3 pos_;           //交点空间坐标
     vec3 normal_;        //交点法线
-    Material *material_; //交点面片对应的材质
+    Material **material_; //交点面片对应的材质
 };

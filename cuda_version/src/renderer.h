@@ -126,9 +126,13 @@ public:
         for (auto &bvhnode : bvhnode_list_)
             CheckCudaErrors(cudaFree(bvhnode));
 
+        FreeMaterials<<<1, 1>>>(material_info_list_.size(), material_list_);
+        CheckCudaErrors(cudaGetLastError());
+        CheckCudaErrors(cudaDeviceSynchronize());
+
         CheckCudaErrors(cudaFree(texture_list_));
-        CheckCudaErrors(cudaFree(material_list_));
         CheckCudaErrors(cudaFree(mesh_list_));
+        CheckCudaErrors(cudaFree(material_list_));
         CheckCudaErrors(cudaFree(shapebvh_list_));
         CheckCudaErrors(cudaFree(scenebvh_node_list_));
         CheckCudaErrors(cudaFree(scenebvh_));
@@ -178,7 +182,7 @@ public:
 private:
     Timer timer_;
     Texture *texture_list_;
-    Material *material_list_;
+    Material **material_list_;
     Mesh *mesh_list_;
     ShapeBvh *shapebvh_list_;
     ShapeBvh *scenebvh_node_list_;
@@ -227,7 +231,7 @@ void Renderer::InitTextureList()
         {
         case kConstant:
         {
-            auto color = texture_info_list_[texture_idx]->color0;
+            auto color = texture_info_list_[texture_idx]->color;
             InitConstantTexture<<<1, 1>>>(texture_idx, color, texture_list_);
             CheckCudaErrors(cudaGetLastError());
             CheckCudaErrors(cudaDeviceSynchronize());
@@ -250,12 +254,6 @@ void Renderer::InitTextureList()
             CheckCudaErrors(cudaDeviceSynchronize());
             break;
         }
-        case kCheckerboard:
-            CreateCheckerboard(texture_idx, texture_info_list_, texture_list_);
-            break;
-        case kGridTexture:
-            CreateGridTexture(texture_idx, texture_info_list_, texture_list_);
-            break;
         default:
             PrintExcuError();
             break;
@@ -267,7 +265,7 @@ void Renderer::InitMaterialList()
 {
     auto material_num = material_info_list_.size();
     material_list_ = nullptr;
-    CheckCudaErrors(cudaMalloc(&material_list_, material_num * sizeof(Material)));
+    CheckCudaErrors(cudaMalloc(&material_list_, material_num * sizeof(Material *)));
     MaterialInfo *local_material_info_list = nullptr;
     CheckCudaErrors(cudaMallocManaged(&local_material_info_list, material_num * sizeof(MaterialInfo)));
     cudaMemcpy(local_material_info_list, material_info_list_.data(), material_num * sizeof(MaterialInfo), cudaMemcpyHostToDevice);

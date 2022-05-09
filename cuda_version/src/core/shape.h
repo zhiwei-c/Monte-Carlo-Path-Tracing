@@ -8,7 +8,7 @@ __global__ void CreateMeshes(uint max_x,
                              Vertex *v_buffer,
                              uvec3 *i_buffer,
                              uint *m_idx,
-                             Material *materials,
+                             Material **materials,
                              AABB *mesh_aabbs,
                              Float *mesh_areas,
                              Mesh *mesh_list)

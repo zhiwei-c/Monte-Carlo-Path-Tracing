@@ -2,8 +2,6 @@
 
 #include "../textures/constant_texture.h"
 #include "../textures/bitmap.h"
-#include "../textures/checkerboard.h"
-#include "../textures/grid_texture.h"
 
 __device__ vec3 Texture::Color(const vec2 &texcoord) const
 {
@@ -14,12 +12,6 @@ __device__ vec3 Texture::Color(const vec2 &texcoord) const
         break;
     case kBitmap:
         return ColorBitmap(texcoord);
-        break;
-    case kCheckerboard:
-        return ColorCheckerboard(texcoord);
-        break;
-    case kGridTexture:
-        return ColorGridTexture(texcoord);
         break;
     default:
         break;
@@ -33,12 +25,6 @@ __device__ vec2 Texture::Gradient(const vec2 &texcoord) const
     {
     case kBitmap:
         return GradientBitmap(texcoord);
-        break;
-    case kCheckerboard:
-        return GradientCheckerboard(texcoord);
-        break;
-    case kGridTexture:
-        return GradientGridTexture(texcoord);
         break;
     default:
         break;

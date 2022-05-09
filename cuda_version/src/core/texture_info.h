@@ -12,9 +12,7 @@ enum TextureType
 {
     kNoneTexture, //空纹理
     kConstant,    //恒定颜色
-    kBitmap,
-    kCheckerboard,
-    kGridTexture
+    kBitmap,      //位图
 };
 
 static const std::set<std::string> kStbInputFormat = {"jpg", "jpeg", "JPG", "JPEG",
@@ -56,12 +54,9 @@ struct TextureInfo
     int width;
     int height;
     int channel;
-    vec2 *uv_offset;
-    vec2 *uv_scale;
     Float line_width;
-    vec3 color0;
-    vec3 color1;
     std::vector<float> colors;
+    vec3 color;
     std::string filename;
 
     TextureInfo(Float color)
@@ -69,37 +64,14 @@ struct TextureInfo
           width(1),
           height(1),
           channel(3),
-          color0(vec3(color)) {}
+          color(vec3(color)) {}
 
     TextureInfo(const vec3 &color)
         : type(kConstant),
           width(1),
           height(1),
           channel(3),
-          color0(color) {}
-
-    TextureInfo(const vec3 &color0,
-                const vec3 &color1,
-                vec2 *uv_offset,
-                vec2 *uv_scale)
-        : type(kCheckerboard),
-          line_width(line_width),
-          uv_offset(uv_offset),
-          uv_scale(uv_scale),
-          color0(color0),
-          color1(color1) {}
-
-    TextureInfo(const vec3 &color0,
-                const vec3 &color1,
-                Float line_width,
-                vec2 *uv_offset,
-                vec2 *uv_scale)
-        : type(kCheckerboard),
-          line_width(line_width),
-          uv_offset(uv_offset),
-          uv_scale(uv_scale),
-          color0(color0),
-          color1(color1) {}
+          color(color) {}
 
     TextureInfo(const std::string &filename, Float gamma)
         : type(kBitmap), filename(filename)

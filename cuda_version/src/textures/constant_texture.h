@@ -5,9 +5,6 @@
 __device__ void Texture::InitConstant(const vec3 &color)
 {
     type_ = kConstant;
-    width_ = 1;
-    height_ = 1;
-    channel_ = 3;
     color_ = color;
 }
 

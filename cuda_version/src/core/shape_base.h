@@ -26,7 +26,7 @@ public:
                         pre_(nullptr),
                         next_(nullptr) {}
 
-    __device__ void InitTriangle(Vertex *v, Material *material, Float area, Mesh *pre, Mesh *next);
+    __device__ void InitTriangle(Vertex *v, Material **material, Float area, Mesh *pre, Mesh *next);
 
     __device__ void SetOtherInfo(uint mesh_idx_in_shape, uint shape_idx, bool flip_normals, Float pdf_area)
     {
@@ -45,7 +45,7 @@ private:
     uint mesh_idx_in_shape_;
     uint shape_idx_;
     Vertex v_[3];
-    Material *material_;
+    Material **material_;
     Float area_;
     Float pdf_area_;
     Mesh *pre_;

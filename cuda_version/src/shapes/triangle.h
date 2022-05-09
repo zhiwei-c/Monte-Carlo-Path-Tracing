@@ -3,7 +3,7 @@
 #include "../core/shape_base.h"
 
 __device__ void Mesh::InitTriangle(Vertex *v,
-                                   Material *material,
+                                   Material **material,
                                    Float area,
                                    Mesh *pre,
                                    Mesh *next)
@@ -54,7 +54,7 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
     if (distance < kEpsilon || distance > its.distance())
         return;
 
-    if (!material_->twosided())
+    if (!(*material_)->twosided())
     {
         if (flip_normals_)
         {
@@ -81,13 +81,13 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
     auto texcoord = alpha * v_[0].texcoord +
                     beta * v_[1].texcoord +
                     gamma * v_[2].texcoord;
-    if (material_->Transparent(texcoord, sample))
+    if ((*material_)->Transparent(texcoord, sample))
         return;
 
     auto normal = alpha * v_[0].normal +
                   beta * v_[1].normal +
                   gamma * v_[2].normal;
-    if (material_->BumpMapping())
+    if ((*material_)->BumpMapping())
     {
         auto tangent = myvec::normalize(alpha * v_[0].tangent +
                                         beta * v_[1].tangent +
@@ -95,7 +95,7 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
         auto bitangent = myvec::normalize(alpha * v_[0].bitangent +
                                           beta * v_[1].bitangent +
                                           gamma * v_[2].bitangent);
-        normal = material_->PerturbNormal(normal, tangent, bitangent, texcoord);
+        normal = (*material_)->PerturbNormal(normal, tangent, bitangent, texcoord);
     }
 
     auto pos = alpha * v_[0].position +
