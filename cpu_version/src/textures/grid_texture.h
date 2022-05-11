@@ -4,7 +4,7 @@
 
 #include "../core/texture_base.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 ///\brief 过程式网格纹理派生类
 class GridTexture : public Texture
@@ -27,4 +27,4 @@ private:
     std::unique_ptr<Vector2> uv_scale_;  //纹理坐标偏比例
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

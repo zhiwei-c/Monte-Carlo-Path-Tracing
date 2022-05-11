@@ -8,7 +8,7 @@
 #include "utils/file_path.h"
 #include "utils/model_parser.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 ///\brief 渲染器类
 class Renderer
@@ -105,4 +105,4 @@ private:
 	std::vector<Material *> materials_; //场景包含的材质
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

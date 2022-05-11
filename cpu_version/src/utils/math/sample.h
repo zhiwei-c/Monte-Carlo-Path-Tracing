@@ -3,9 +3,9 @@
 #include <utility>
 #include <random>
 
-#include "math_base.h"
+#include "coordinate.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 ///\brief 获取一个在 [0,1] 之间的随机数
 inline Float UniformFloat()
@@ -13,8 +13,7 @@ inline Float UniformFloat()
     std::random_device dev;
     std::default_random_engine e(dev());
     std::uniform_real_distribution<Float> dist;
-
-    return std::fabs(1 - dist(e) * 2);
+    return std::abs(1.0 - dist(e) * 2.0);
 }
 
 ///\brief 获取一个在 [0,1) 之间的随机数
@@ -41,107 +40,77 @@ inline Vector2 Hammersley(uint32_t i, uint32_t N)
 ///\brief 均匀抽样单位球
 inline Vector3 SphereUniform()
 {
-    auto x_1 = UniformFloat();
-    auto x_2 = UniformFloat();
-
-    auto cos_theta = 1.0 - 2.0 * x_2;
-    auto sin_theta = std::sqrt(std::max((decltype(cos_theta))0, 1 - cos_theta * cos_theta));
-
-    auto phi = 2.0 * kPi * x_1;
-    auto cos_phi = std::cos(phi),
-         sin_phi = std::sin(phi);
-
-    return Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
+    Float x_1 = UniformFloat(), x_2 = UniformFloat();
+    Float cos_theta = 1.0 - 2.0 * x_2, phi = 2.0 * kPi * x_1;
+    auto sin_theta = std::sqrt(std::max(0.0, 1.0 - cos_theta * cos_theta));
+    return Vector3(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta);
 }
 
 ///\brief 均匀抽样半径 1 的圆盘
 inline Vector2 DiskUnifrom()
 {
-
-    auto x_1 = UniformFloat();
-    auto x_2 = UniformFloat();
-    Float r1 = 2. * x_1 - 1;
-    Float r2 = 2. * x_2 - 1;
+    Float r1 = 2.0 * UniformFloat() - 1.0, r2 = 2.0 * UniformFloat() - 1.0;
 
     /* Modified concencric map code with less branching (by Dave Cline), see
        http://psgraphics.blogspot.ch/2011/01/improved-code-for-concentric-map.html */
-    Float phi, r;
+    Float phi = 0, radius = 0;
     if (r1 == 0 && r2 == 0)
-        r = phi = 0;
+        radius = phi = 0;
     else if (r1 * r1 > r2 * r2)
     {
-        r = r1;
+        radius = r1;
         phi = (kPi / 4) * (r2 / r1);
     }
     else
     {
-        r = r2;
+        radius = r2;
         phi = (kPi / 2) - (r1 / r2) * (kPi / 4);
     }
-    auto cos_phi = std::cos(phi),
-         sin_phi = std::sin(phi);
-
-    return Vector2(r * cos_phi, r * sin_phi);
+    return Vector2(radius * std::cos(phi), radius * std::sin(phi));
 }
 
-///\brief 均匀抽样单位半球
-inline std::pair<Vector3, Float> HemisUniform()
+///\brief 均匀抽样单位半球，得到的方向指向原点
+inline void SampleHemisUniform(const Vector3 &up, Vector3 &dir, Float &pdf)
 {
-    auto x_1 = UniformFloat();
-    auto x_2 = UniformFloat();
-    auto cos_theta = x_1,
-         phi = 2.f * kPi * x_2;
-    auto sin_theta = std::sqrt(1.f - cos_theta * cos_theta),
-         cos_phi = std::cos(phi),
-         sin_phi = std::sin(phi);
-    auto dir = Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
-    auto pdf = kPiInv * 0.5;
-    return {dir, pdf};
+    Float x_1 = UniformFloat(), x_2 = UniformFloat();
+    Float cos_theta = x_1, phi = 2.0 * kPi * x_2;
+    Float sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
+    dir = -ToWorld(Vector3(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta), up);
+    pdf = kPiInv * 0.5;
 }
 
-///\brief 余弦加权抽样单位半球
-inline std::pair<Vector3, Float> HemisCos()
+///\brief 余弦加权抽样单位半球，得到的方向指向原点
+inline void SampleHemisCos(const Vector3 &up, Vector3 &dir, Float *pdf = nullptr)
 {
-    auto x_1 = UniformFloat();
-    auto x_2 = UniformFloat();
-    auto cos_theta = std::sqrt(x_1),
-         phi = 2.f * kPi * x_2;
-    auto sin_theta = std::sqrt(1.f - cos_theta * cos_theta),
-         cos_phi = std::cos(phi),
-         sin_phi = std::sin(phi);
-    auto dir = Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
-    auto pdf = kPiInv * cos_theta;
-    return {dir, pdf};
+    Float x_1 = UniformFloat(), x_2 = UniformFloat();
+    Float cos_theta = std::sqrt(x_1), phi = 2.0 * kPi * x_2;
+    Float sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
+    dir = -ToWorld(Vector3(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta), up);
+    if(pdf)
+        *pdf = kPiInv * cos_theta;
 }
 
 ///\brief 计算余弦加权抽样单位半球的概率
-inline Float PdfHemisCos(const Vector3 &dir_local)
+inline Float PdfHemisCos(const Vector3 &dir, const Vector3 &up)
 {
-    auto cos_theta = dir_local.z;
-    auto pdf = kPiInv * cos_theta;
-    return pdf;
+    Float cos_theta = ToLocal(dir, up).z;
+    return kPiInv * cos_theta;
 }
 
-///\brief n 次方余弦加权抽样单位半球
-inline Vector3 HemisCosN(const Float n)
+///\brief n 次方余弦加权抽样单位半球，得到的方向指向原点
+inline Vector3 SampleHemisCosN(const Float n, const Vector3 &up)
 {
-    auto x_1 = UniformFloat();
-    auto x_2 = UniformFloat();
-    auto cos_theta = std::pow(x_1, 1.f / (n + 1)),
-         phi = 2.f * kPi * x_2;
-    auto sin_theta = std::sqrt(1.f - cos_theta * cos_theta),
-         cos_phi = std::cos(phi),
-         sin_phi = std::sin(phi);
-    auto dir = Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
-    return dir;
+    Float x_1 = UniformFloat(), x_2 = UniformFloat();
+    Float cos_theta = std::pow(x_1, 1.0 / (n + 1)), phi = 2.0 * kPi * x_2;
+    Float sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
+    return -ToWorld(Vector3(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta), up);
 }
 
 ///\brief n 次方余弦加权抽样单位半球的概率
-inline Float PdfHemisCosN(const Vector3 &dir_local, const Float n)
+inline Float PdfHemisCosN(const Vector3 &dir, const Vector3 &up, const Float n)
 {
-    auto cos_theta = dir_local.z;
-    auto pdf = (n + 1) * 0.5 * kPiInv * std::pow(cos_theta, n);
-    return pdf;
+    Float cos_theta = ToLocal(dir, up).z;
+    return (n + 1) * 0.5 * kPiInv * std::pow(cos_theta, n);
 }
 
 ///\brief 计算多重重要性抽样的权重
@@ -162,12 +131,11 @@ inline Spectrum WeightPowerHeuristic(const std::vector<Spectrum> &values, std::v
         weight_sum += pdf;
     }
 
-    Spectrum result(0);
+    auto result = Spectrum(0);
     for (int i = 0; i < values.size(); i++)
-    {
         result += values[i] * (pdfs[i] / weight_sum);
-    }
+
     return result;
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

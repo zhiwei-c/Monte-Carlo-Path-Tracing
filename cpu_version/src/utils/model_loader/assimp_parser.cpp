@@ -6,7 +6,7 @@
 #include "assimp/scene.h"
 #include "assimp/postprocess.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 static void ProcessNode(aiNode *node,
                         const aiScene *scene,
@@ -158,4 +158,4 @@ void ProcessMesh(aiMesh *mesh,
     }
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

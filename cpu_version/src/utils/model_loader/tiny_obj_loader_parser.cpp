@@ -7,8 +7,9 @@
 
 #include "obj_loader.h"
 #include "../../utils/file_path.h"
+#include "../../core/ior.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 static std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &materials, const std::string &mtl_path);
 
@@ -24,7 +25,7 @@ static std::optional<bool> GetBoolean(const std::map<std::string, std::string> &
 
 static std::optional<MicrofacetDistribType> GetDistrbType(const std::map<std::string, std::string> &params, const std::string &name);
 
-static std::tuple<bool, Vector3, Vector3> GetEtaK(const std::map<std::string, std::string> &params, const std::string &id);
+static std::tuple<Vector3, Vector3> GetEtaK(const std::map<std::string, std::string> &params, const std::string &id);
 
 void ModelParser::Parse(const std::string &obj_path, std::vector<Shape *> &shapes, std::vector<Material *> &materials)
 {
@@ -162,8 +163,8 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             case "smooth_dielectric"_hash:
             case "smooth-dielectric"_hash:
             {
-                auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
-                auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("bk7"));
+                auto ext_ior = GetIor(other_params, "extIOR").value_or(1.000277);
+                auto int_ior = GetIor(other_params, "intIOR").value_or(1.5046);
                 result.push_back(new Dielectric(int_ior, ext_ior, nullptr, nullptr));
                 result.back()->SetTwosided(true);
                 flag_parsed = true;
@@ -174,8 +175,8 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             case "thin_dielectric"_hash:
             case "thin-dielectric"_hash:
             {
-                auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
-                auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("bk7"));
+                auto ext_ior = GetIor(other_params, "extIOR").value_or(1.000277);
+                auto int_ior = GetIor(other_params, "intIOR").value_or(1.5046);
                 result.push_back(new ThinDielectric(int_ior,
                                                     ext_ior,
                                                     nullptr,
@@ -195,8 +196,8 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
                 auto alpha_u_tex = std::make_unique<ConstantTexture>(Spectrum(alpha_u));
                 auto alpha_v = GetFloat(other_params, "alphaV").value_or(alpha);
                 auto alpha_v_tex = std::make_unique<ConstantTexture>(Spectrum(alpha_v));
-                auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
-                auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("bk7"));
+                auto ext_ior = GetIor(other_params, "extIOR").value_or(1.000277);
+                auto int_ior = GetIor(other_params, "intIOR").value_or(1.5046);
                 result.push_back(new RoughDielectric(int_ior,
                                                      ext_ior,
                                                      nullptr,
@@ -214,11 +215,10 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             case "smooth_conductor"_hash:
             case "smooth-conductor"_hash:
             {
-                auto [mirror, eta, k] = GetEtaK(other_params, id);
-                result.push_back(new Conductor(mirror,
-                                               eta,
+                auto [eta, k] = GetEtaK(other_params, id);
+                result.push_back(new Conductor(eta,
                                                k,
-                                               IOR.at("air"),
+                                               1.000277,
                                                nullptr));
                 flag_parsed = true;
                 break;
@@ -234,11 +234,10 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
                 auto alpha_u_tex = std::make_unique<ConstantTexture>(Spectrum(alpha_u));
                 auto alpha_v = GetFloat(other_params, "alphaV").value_or(alpha);
                 auto alpha_v_tex = std::make_unique<ConstantTexture>(Spectrum(alpha_v));
-                auto [mirror, eta, k] = GetEtaK(other_params, id);
-                result.push_back(new RoughConductor(mirror,
-                                                    eta,
+                auto [eta, k] = GetEtaK(other_params, id);
+                result.push_back(new RoughConductor(eta,
                                                     k,
-                                                    IOR.at("air"),
+                                                    1.000277,
                                                     nullptr,
                                                     distrib_type,
                                                     std::move(alpha_u_tex),
@@ -257,8 +256,8 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
                     auto diffuse_reflectance = GetVec3(other_params, "diffuseReflectance").value_or(Vector3(0.5f));
                     diffuse_map.reset(new ConstantTexture(Spectrum(diffuse_reflectance)));
                 }
-                auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
-                auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("polypropylene"));
+                auto ext_ior = GetIor(other_params, "extIOR").value_or(1.000277);
+                auto int_ior = GetIor(other_params, "intIOR").value_or(1.49);
                 auto nolinear = GetBoolean(other_params, "nonlinear").value_or(false);
                 result.push_back(new Plastic(int_ior,
                                              ext_ior,
@@ -278,8 +277,8 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
                 auto alpha = GetFloat(other_params, "alpha").value_or(0.1f);
                 auto alpha_tex = std::make_unique<ConstantTexture>(Spectrum(alpha));
 
-                auto ext_ior = GetIor(other_params, "extIOR").value_or(IOR.at("air"));
-                auto int_ior = GetIor(other_params, "intIOR").value_or(IOR.at("polypropylene"));
+                auto ext_ior = GetIor(other_params, "extIOR").value_or(1.000277);
+                auto int_ior = GetIor(other_params, "intIOR").value_or(1.49);
 
                 if (!diffuse_map)
                 {
@@ -346,13 +345,17 @@ std::optional<Float> GetIor(const std::map<std::string, std::string> &params, co
     auto it = params.find(name);
     if (it == params.end())
         return std::nullopt;
-    else if (IOR.find(it->second) != IOR.end())
-        return IOR.at(it->second);
     else
-        return std::stof(it->second);
+    {
+        Float ior = 0;
+        if (LookupDielectricIor(it->second, ior))
+            return ior;
+        else
+            return std::stof(it->second);
+    }
 }
 
-std::tuple<bool, Spectrum, Spectrum> GetEtaK(const std::map<std::string, std::string> &params, const std::string &id)
+std::tuple<Spectrum, Spectrum> GetEtaK(const std::map<std::string, std::string> &params, const std::string &id)
 {
     auto material_name = GetString(params, "material").value_or("");
     if (material_name.empty())
@@ -372,19 +375,23 @@ std::tuple<bool, Spectrum, Spectrum> GetEtaK(const std::map<std::string, std::st
                 exit(1);
             }
             else
-                return {true, Spectrum(0), Spectrum(1)};
+                return {Spectrum(0), Spectrum(1)};
         }
         else
-            return {false, eta.value(), k.value()};
+            return {eta.value(), k.value()};
     }
-    else if (material_name == "none")
-        return {true, Spectrum(0), Spectrum(1)};
-    else if (IOR_eta.find(material_name) != IOR_eta.end())
-        return {false, IOR_eta.at(material_name), IOR_k.at(material_name)};
     else
     {
-        std::cerr << "[error] unsupported material name \"" << material_name << "\" for material \"" << id << "\"" << std::endl;
-        exit(1);
+        auto eta = Spectrum(0), k = Spectrum(1);
+        if (LookupConductorIor(material_name, eta, k))
+        {
+            return {eta, k};
+        }
+        else
+        {
+            std::cerr << "[error] unsupported material name \"" << material_name << "\" for material \"" << id << "\"" << std::endl;
+            exit(1);
+        }
     }
 }
 
@@ -428,4 +435,4 @@ std::optional<MicrofacetDistribType> GetDistrbType(const std::map<std::string, s
     }
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

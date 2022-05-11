@@ -9,6 +9,7 @@
 
 #include "file_path.h"
 #include "../renderer.h"
+#include "../core/ior.h"
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -546,12 +547,7 @@ MaterialInfo ParseConductor(rapidxml::xml_node<> *node_conductor)
         auto material_name = GetAttri(node_material, "value").value();
         if (material_name == "none")
             mirror = true;
-        else if (IOR_eta.find(material_name) != IOR_eta.end())
-        {
-            eta = IOR_eta.at(material_name),
-            k = IOR_k.at(material_name);
-        }
-        else
+        else if (!LookupConductorIor(material_name, eta, k))
         {
             std::cerr << "[error] " << GetTreeName(node_material) << std::endl
                       << " unsupported material :" << material_name << ", "
@@ -599,12 +595,7 @@ MaterialInfo ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor)
         auto material_name = GetAttri(node_material, "value").value();
         if (material_name == "none")
             mirror = true;
-        else if (IOR_eta.find(material_name) != IOR_eta.end())
-        {
-            eta = IOR_eta.at(material_name),
-            k = IOR_k.at(material_name);
-        }
-        else
+        else if (!LookupConductorIor(material_name, eta, k))
         {
             std::cerr << "[error] " << GetTreeName(node_material) << std::endl
                       << " unsupported material :" << material_name << ", "
@@ -912,24 +903,23 @@ TextureInfo *ParseTexture(rapidxml::xml_node<> *node_texture)
 
 Float GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::string default_material_name)
 {
+    Float ior = 0;
     auto node_ior = GetChild(node_parent, ior_type);
     if (!node_ior)
-        return IOR.at(default_material_name);
-
-    if (strcmp(node_ior->name(), "float") == 0)
+        LookupDielectricIor(default_material_name, ior);
+    else if (strcmp(node_ior->name(), "float") == 0)
         return std::stof(GetAttri(node_ior, "value").value());
     else
     {
         auto int_ior_name = GetAttri(node_ior, "value").value();
-        if (IOR.find(int_ior_name) != IOR.end())
-            return IOR.at(int_ior_name);
-        else
+        if (!LookupDielectricIor(int_ior_name, ior))
         {
             std::cerr << "[error] " << GetTreeName(node_ior) << std::endl
                       << "\tunsupported ior material " << int_ior_name << std::endl;
             exit(1);
         }
     }
+    return ior;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

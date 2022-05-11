@@ -1,6 +1,6 @@
 #include "triangle.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 Triangle::Triangle(const std::vector<Vector3> &vertices,
                    const std::vector<Vector3> &normals,
@@ -67,43 +67,31 @@ void Triangle::Setup(const std::vector<Vector3> &vertices, const std::vector<Vec
 
 void Triangle::Intersect(const Ray &ray, Intersection &its) const
 {
-
-    auto P = glm::cross(ray.dir(), v0v2_);
-    auto det = glm::dot(v0v1_, P);
-    //丢弃与三角面片平行的光线
-    if (std::fabs(det) < kEpsilon)
-        return;
-
-    auto det_inv = 1 / det;
-    auto T = ray.origin() - vertices_[0];
-
-    auto Q = glm::cross(T, v0v1_);
-
-    auto u = glm::dot(T, P) * det_inv;
+    Vector3 P = glm::cross(ray.dir(), v0v2_);
+    Float det = glm::dot(v0v1_, P);
+    if (std::abs(det) < kEpsilon)
+        return; //丢弃与三角面片平行的光线
+    Vector3 T = ray.origin() - vertices_[0],
+            Q = glm::cross(T, v0v1_);
+    Float det_inv = 1.0 / det,
+          u = glm::dot(T, P) * det_inv;
     if (u < kEpsilon || u > 1 - kEpsilon)
         return;
-
-    auto v = glm::dot(ray.dir(), Q) * det_inv;
+    Float v = glm::dot(ray.dir(), Q) * det_inv;
     if (v < kEpsilon || (u + v) > 1 - kEpsilon)
         return;
-
-    auto distance = glm::dot(v0v2_, Q) * det_inv;
+    Float distance = glm::dot(v0v2_, Q) * det_inv;
     if (distance < kEpsilon || distance > its.distance())
         return;
-
     if (!material_->Twosided() &&
         (flip_normals_ && det > -kEpsilon ||
          !flip_normals_ && det < kEpsilon))
-    {
+    { //丢弃与单面材质的三角面片交于背面的光线
         its = Intersection(distance);
         return;
     }
-
-    auto alpha = static_cast<Float>(1 - u - v),
-         beta = static_cast<Float>(u),
-         gamma = static_cast<Float>(v);
-
-    auto normal = alpha * normals_[0] + beta * normals_[1] + gamma * normals_[2];
+    Float alpha = 1.0 - u - v, beta = u, gamma = v;
+    Vector3 normal = alpha * normals_[0] + beta * normals_[1] + gamma * normals_[2];
     auto texcoord = Vector2(-1);
     if (material_->TextureMapping())
     {
@@ -113,17 +101,12 @@ void Triangle::Intersect(const Ray &ray, Intersection &its) const
 
         if (material_->NormalPerturbing())
         {
-            auto tangent = glm::normalize(alpha * tangents_[0] +
-                                          beta * tangents_[1] +
-                                          gamma * tangents_[2]);
-            auto bitangent = glm::normalize(alpha * bitangents_[0] +
-                                            beta * bitangents_[1] +
-                                            gamma * bitangents_[2]);
+            Vector3 tangent = glm::normalize(alpha * tangents_[0] + beta * tangents_[1] + gamma * tangents_[2]),
+                    bitangent = glm::normalize(alpha * bitangents_[0] + beta * bitangents_[1] + gamma * bitangents_[2]);
             normal = material_->PerturbNormal(normal, tangent, bitangent, texcoord);
         }
     }
-
-    auto pos = alpha * vertices_[0] + beta * vertices_[1] + gamma * vertices_[2];
+    Vector3 pos = alpha * vertices_[0] + beta * vertices_[1] + gamma * vertices_[2];
     auto inside = false;
     if (det < 0)
     {
@@ -140,17 +123,11 @@ void Triangle::Intersect(const Ray &ray, Intersection &its) const
 
 Intersection Triangle::SampleP() const
 {
-    auto u = UniformFloat();
-    auto v = UniformFloat();
-
-    auto alpha = static_cast<Float>(1 - u - v),
-         beta = static_cast<Float>(u),
-         gamma = static_cast<Float>(v);
-
-    auto pos = alpha * vertices_[0] + beta * vertices_[1] + gamma * vertices_[2];
-    auto normal = alpha * normals_[0] + beta * normals_[1] + gamma * normals_[2];
-
+    Float u = UniformFloat(), v = UniformFloat();
+    Float alpha = 1.0 - u - v, beta = u, gamma = v;
+    Vector3 pos = alpha * vertices_[0] + beta * vertices_[1] + gamma * vertices_[2],
+            normal = alpha * normals_[0] + beta * normals_[1] + gamma * normals_[2];
     return Intersection(pos, normal, Vector2(-1), false, INFINITY, material_, pdf_area_);
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

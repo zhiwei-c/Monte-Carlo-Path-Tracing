@@ -1,6 +1,6 @@
 #include "rectangle.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 constexpr float RectanglePositions[][3] = {{-1, -1, 0}, {1, -1, 0}, {1, 1, 0}, {-1, 1, 0}};
 
@@ -84,4 +84,4 @@ Rectangle::~Rectangle()
     }
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

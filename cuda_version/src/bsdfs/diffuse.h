@@ -5,10 +5,7 @@
 class Diffuse : public Material
 {
 public:
-    __device__ Diffuse(uint idx,
-                       bool twosided,
-                       Texture *bump_map,
-                       Texture *opacity_map,
+    __device__ Diffuse(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
                        Texture *diffuse_reflectance)
         : Material(idx, kDiffuse, twosided, bump_map, opacity_map),
           diffuse_reflectance_(diffuse_reflectance) {}
@@ -20,10 +17,8 @@ public:
         HemisCos(sample.x, sample.y, wi_local, pdf);
         if (pdf < kEpsilonPdf)
             return;
-
         bs.pdf = pdf;
         bs.wi = -ToWorld(wi_local, bs.normal);
-
         if (diffuse_reflectance_ != nullptr)
             bs.attenuation = diffuse_reflectance_->Color(bs.texcoord) * kPiInv;
         else
@@ -44,7 +39,6 @@ public:
         // 表面法线方向，光线入射和出射需在介质同侧
         if (NotSameHemis(wo, normal))
             return 0;
-
         auto wo_local = ToLocal(wo, normal);
         auto pdf = PdfHemisCos(wo_local);
         return pdf;
@@ -54,7 +48,6 @@ public:
     {
         if (Material::Transparent(texcoord, sample))
             return true;
-
         if (diffuse_reflectance_)
         {
             if (diffuse_reflectance_->type() == kBitmap &&
@@ -73,15 +66,15 @@ __device__ inline void InitDiffuse(uint m_idx,
                                    Texture *texture_list,
                                    Material **&material_list)
 {
-    auto bump_map = static_cast<Texture *>(nullptr);
+    Texture * bump_map = nullptr;
     if (material_info_list[m_idx].bump_map_idx != kUintMax)
         bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
 
-    auto opacity_map = static_cast<Texture *>(nullptr);
+    Texture * opacity_map = nullptr;
     if (material_info_list[m_idx].opacity_idx != kUintMax)
         opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
 
-    auto diffuse_reflectance = static_cast<Texture *>(nullptr);
+    Texture * diffuse_reflectance = nullptr;
     if (material_info_list[m_idx].diffuse_reflectance_idx != kUintMax)
         diffuse_reflectance = texture_list + material_info_list[m_idx].diffuse_reflectance_idx;
 

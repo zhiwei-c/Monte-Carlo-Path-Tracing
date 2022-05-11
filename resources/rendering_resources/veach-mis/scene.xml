@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<scene version="0.5.0" >
+	<integrator type="path" >
+		<integer name="maxDepth" value="3" />
+		<boolean name="strictNormals" value="true" />
+	</integrator>
+	<sensor type="perspective" >
+		<float name="fov" value="35" />
+		<transform name="toWorld" >
+			<matrix value="-4.37113e-008 0 -1 28.2792 0 1 0 3.5 1 0 -4.37113e-008 1.23612e-006 0 0 0 1"/>
+		</transform>
+		<sampler type="sobol" >
+			<integer name="sampleCount" value="64" />
+		</sampler>
+		<film type="ldrfilm" >
+			<integer name="width" value="1280" />
+			<integer name="height" value="720" />
+			<string name="fileFormat" value="png" />
+			<string name="pixelFormat" value="rgb" />
+			<float name="gamma" value="2.2" />
+			<boolean name="banner" value="false" />
+			<rfilter type="tent" />
+		</film>
+	</sensor>
+	<bsdf type="twosided" id="Diffuse" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0.5, 0.5, 0.5"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Smooth" >
+		<bsdf type="roughconductor" >
+			<float name="alpha" value="0.01" />
+			<string name="distribution" value="beckmann" />
+			<float name="extEta" value="1" />
+			<rgb name="specularReflectance" value="0.3, 0.3, 0.3"/>
+			<rgb name="eta" value="0.200438, 0.924033, 1.10221"/>
+			<rgb name="k" value="3.91295, 2.45285, 2.14219"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Glossy" >
+		<bsdf type="roughconductor" >
+			<float name="alpha" value="0.05" />
+			<string name="distribution" value="beckmann" />
+			<float name="extEta" value="1" />
+			<rgb name="specularReflectance" value="0.3, 0.3, 0.3"/>
+			<rgb name="eta" value="0.200438, 0.924033, 1.10221"/>
+			<rgb name="k" value="3.91295, 2.45285, 2.14219"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Rough" >
+		<bsdf type="roughconductor" >
+			<float name="alpha" value="0.1" />
+			<string name="distribution" value="beckmann" />
+			<float name="extEta" value="1" />
+			<rgb name="specularReflectance" value="0.3, 0.3, 0.3"/>
+			<rgb name="eta" value="0.200438, 0.924033, 1.10221"/>
+			<rgb name="k" value="3.91295, 2.45285, 2.14219"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Null" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0, 0, 0"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="SuperRough" >
+		<bsdf type="roughconductor" >
+			<float name="alpha" value="0.25" />
+			<string name="distribution" value="beckmann" />
+			<float name="extEta" value="1" />
+			<rgb name="specularReflectance" value="0.3, 0.3, 0.3"/>
+			<rgb name="eta" value="0.200438, 0.924033, 1.10221"/>
+			<rgb name="k" value="3.91295, 2.45285, 2.14219"/>
+		</bsdf>
+	</bsdf>
+	<shape type="cube" >
+		<transform name="toWorld" >
+			<matrix value="0.805757 0.0961775 0 0.264069 -0.673242 0.115108 0 4.09801 0 0 4 0 0 0 0 1"/>
+		</transform>
+		<ref id="Smooth" />
+	</shape>
+	<shape type="cube" >
+		<transform name="toWorld" >
+			<matrix value="0.972057 0.0567134 0 3.06163 -0.396994 0.138865 0 2.71702 0 0 4 0 0 0 0 1"/>
+		</transform>
+		<ref id="Glossy" />
+	</shape>
+	<shape type="cube" >
+		<transform name="toWorld" >
+			<matrix value="1.03191 0.0277252 0 7.09981 -0.194077 0.147415 0 1.81891 0 0 4 0 0 0 0 1"/>
+		</transform>
+		<ref id="Rough" />
+	</shape>
+	<shape type="rectangle" >
+		<transform name="toWorld" >
+			<matrix value="9.9 0 0 4.9 0 -4.32743e-007 9.9 0 0 -23.76 -1.03858e-006 0 0 0 0 1"/>
+		</transform>
+		<ref id="Diffuse" />
+	</shape>
+	<shape type="rectangle" >
+		<transform name="toWorld" >
+			<matrix value="-4.32743e-007 -4.32743e-007 9.9 -5 -9.9 1.89158e-014 -4.32743e-007 9.9 0 -23.76 -1.03858e-006 0 0 0 0 1"/>
+		</transform>
+		<ref id="Diffuse" />
+	</shape>
+	<shape type="sphere" >
+		<float name="radius" value="1" />
+		<point name="center" x="0" y="6.5" z="-2.8" />
+		<ref id="Null" />
+		<emitter type="area" >
+			<rgb name="radiance" value="7.59909, 7.59909, 7.59909"/>
+		</emitter>
+	</shape>
+	<shape type="sphere" >
+		<float name="radius" value="0.5" />
+		<point name="center" x="0" y="6.5" z="0" />
+		<ref id="Null" />
+		<emitter type="area" >
+			<rgb name="radiance" value="30.3964, 30.3964, 30.3964"/>
+		</emitter>
+	</shape>
+	<shape type="sphere" >
+		<float name="radius" value="0.05" />
+		<point name="center" x="0" y="6.5" z="2.7" />
+		<ref id="Null" />
+		<emitter type="area" >
+			<rgb name="radiance" value="3039.64, 3039.64, 3039.64"/>
+		</emitter>
+	</shape>
+	<shape type="cube" >
+		<transform name="toWorld" >
+			<matrix value="1.04217 0.0182831 0 10.6769 -0.127982 0.148882 0 1.23376 0 0 4 0 0 0 0 1"/>
+		</transform>
+		<ref id="SuperRough" />
+	</shape>
+</scene>

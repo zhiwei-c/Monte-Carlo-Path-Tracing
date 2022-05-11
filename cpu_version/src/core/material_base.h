@@ -9,7 +9,7 @@
 #include "texture.h"
 #include "ray.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 // 材质类型（表面散射模型类型）
 enum class MaterialType
@@ -115,20 +115,15 @@ public:
         if (bump_map_ == nullptr)
             return normal;
         auto TBN = Mat3(tangent, bitangent, normal);
-        auto gradient = bump_map_->Gradient(texcoord);
-        auto normal_pertubed_local = glm::normalize(Vector3(-gradient.x, -gradient.y, 1));
-        auto normal_pertubed = glm::normalize(TBN * normal_pertubed_local);
-        return normal_pertubed;
+        Vector2 gradient = bump_map_->Gradient(texcoord);
+        Vector3 normal_pertubed_local = glm::normalize(Vector3(-gradient.x, -gradient.y, 1));
+        return glm::normalize(TBN * normal_pertubed_local);
     }
 
 protected:
     ///\brief 材质基类
     ///\param type 材质类型
-    Material(MaterialType type)
-        : type_(type),
-          twosided_(false),
-          opacity_(nullptr),
-          bump_map_(nullptr){};
+    Material(MaterialType type) : type_(type), twosided_(false), opacity_(nullptr), bump_map_(nullptr){};
 
 private:
     MaterialType type_;                 // 材质类型（表面散射模型类型）
@@ -137,4 +132,4 @@ private:
     std::unique_ptr<Texture> bump_map_; // 透明度纹理映射
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

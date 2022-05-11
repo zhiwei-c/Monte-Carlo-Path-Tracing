@@ -2,7 +2,7 @@
 
 #include "../core/shape_base.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 class Sphere : public Shape
 {
@@ -33,4 +33,4 @@ private:
     std::unique_ptr<Mat4> to_local_;      //从世界坐标系到局部坐标系位置的变换矩阵
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

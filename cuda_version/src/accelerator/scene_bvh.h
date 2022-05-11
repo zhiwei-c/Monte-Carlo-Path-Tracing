@@ -16,8 +16,8 @@ public:
     {
         ShapeBvh *node_stack[64] = {nullptr};
         node_stack[0] = bvh_root_;
-        auto ptr = static_cast<int>(0);
-        auto now = static_cast<ShapeBvh *>(nullptr);
+        int ptr = 0;
+        ShapeBvh* now = nullptr;
         while (ptr >= 0)
         {
             now = node_stack[ptr];

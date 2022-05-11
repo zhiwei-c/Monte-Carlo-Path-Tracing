@@ -11,7 +11,7 @@
 
 #include "../../renderer.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 class XmlParser
 {
@@ -72,4 +72,4 @@ private:
 	static std::string GetTreeName(rapidxml::xml_node<> *node);
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

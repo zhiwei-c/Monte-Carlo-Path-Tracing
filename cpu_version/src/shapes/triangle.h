@@ -2,7 +2,7 @@
 
 #include "../core/shape_base.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 //三角形面片类
 class Triangle : public Shape
@@ -58,4 +58,4 @@ private:
 	void Setup(const std::vector<Vector3> &vertices, const std::vector<Vector3> &normals);
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

@@ -4,7 +4,7 @@
 
 #include "../core/texture.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 //环境光映射类（实际上是“天空球”）
 class Envmap
@@ -13,8 +13,9 @@ public:
     ///\brief 恒定的环境光照
     ///\param radiance 指定单位立体角单位面积的辐射亮度
     Envmap(const Spectrum &radiance = Spectrum(0.3))
-        : to_local_(nullptr),
-          radiance_(std::make_unique<ConstantTexture>(radiance)) {}
+        : to_local_(nullptr), radiance_(std::make_unique<ConstantTexture>(radiance))
+    {
+    }
 
     ///\brief 从图像加载捕获的环境光照信息，将其作为为无限远的光源。
     ///\param file_path 待加载的辐射亮度输入图像的文件名
@@ -40,15 +41,11 @@ public:
 
         if (to_local_)
             look_dir = TransfromDir(*to_local_, look_dir);
-
-        auto phi = static_cast<Float>(0),
-             theta = static_cast<Float>(0);
+        Float phi = 0, theta = 0;
         CartesianToSpherical(look_dir, theta, phi);
-
         phi = 2.0 * kPi - phi;
         while (phi > 2.0 * kPi)
             phi -= 2.0 * kPi;
-
         auto texcoord = Vector2(0);
         texcoord.x = phi * 0.5 * kPiInv; // width
         texcoord.y = theta * kPiInv;     // height
@@ -60,4 +57,4 @@ private:
     std::unique_ptr<Mat4> to_local_;    // 从世界坐标到环境光映射局部坐标的变换矩阵
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

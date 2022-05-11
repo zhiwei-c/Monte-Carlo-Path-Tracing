@@ -29,7 +29,7 @@ struct BsdfSampling
     vec3 attenuation; // BSDF 光能衰减系数
 
     __device__ BsdfSampling()
-        : valid(kFalse), inside(0), pdf(0), texcoord(vec2(0)), wi(vec3(0)), wo(vec3(0)), normal(vec3(0)), attenuation(vec3(0)) {}
+        : valid(false), inside(0), pdf(0), texcoord(vec2(0)), wi(vec3(0)), wo(vec3(0)), normal(vec3(0)), attenuation(vec3(0)) {}
 };
 
 struct MaterialInfo

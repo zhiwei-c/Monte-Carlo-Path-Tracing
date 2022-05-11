@@ -3,7 +3,7 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 static bool LoadObjEdited(tinyobj::attrib_t *attrib,
                           std::vector<tinyobj::shape_t> *shapes,
@@ -687,4 +687,4 @@ bool LoadObjEdited(tinyobj::attrib_t *attrib,
     return true;
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

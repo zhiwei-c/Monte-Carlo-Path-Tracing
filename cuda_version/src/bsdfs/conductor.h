@@ -5,31 +5,22 @@
 class Conductor : public Material
 {
 public:
-    __device__ Conductor(uint idx,
-                         bool twosided,
-                         Texture *bump_map,
-                         Texture *opacity_map,
-                         bool mirror,
-                         vec3 eta,
-                         vec3 k,
-                         Texture *specular_reflectance)
+    __device__ Conductor(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
+                         bool mirror, vec3 eta, vec3 k, Texture *specular_reflectance)
         : Material(idx, kConductor, twosided, bump_map, opacity_map),
-          mirror_(mirror),
-          eta_(eta),
-          k_(k),
-          specular_reflectance_(specular_reflectance) {}
+          mirror_(mirror), eta_(eta), k_(k), specular_reflectance_(specular_reflectance)
+    {
+    }
 
     __device__ void Sample(BsdfSampling &bs, const vec3 &sample) const override
     {
         bs.pdf = 1;
         bs.wi = -Reflect(-bs.wo, bs.normal);
-
         bs.attenuation = vec3(1);
         if (specular_reflectance_)
             bs.attenuation = specular_reflectance_->Color(bs.texcoord);
         if (!mirror_)
             bs.attenuation *= FresnelConductor(bs.wi, bs.normal, eta_, k_);
-
         bs.valid = true;
     }
 
@@ -37,13 +28,11 @@ public:
     {
         if (!SameDirection(wo, Reflect(wi, normal)))
             return vec3(0);
-
         auto albedo = vec3(1);
         if (specular_reflectance_)
             albedo = specular_reflectance_->Color(texcoord);
         if (!mirror_)
             albedo *= FresnelConductor(wi, normal, eta_, k_);
-
         return albedo;
     }
 
@@ -67,15 +56,15 @@ __device__ inline void InitConductor(size_t m_idx,
                                      Texture *texture_list,
                                      Material **&material_list)
 {
-    auto bump_map = static_cast<Texture *>(nullptr);
+    Texture *bump_map = nullptr;
     if (material_info_list[m_idx].bump_map_idx != kUintMax)
         bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
 
-    auto opacity_map = static_cast<Texture *>(nullptr);
+    Texture *opacity_map = nullptr;
     if (material_info_list[m_idx].opacity_idx != kUintMax)
         opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
 
-    auto specular_reflectance = static_cast<Texture *>(nullptr);
+    Texture *specular_reflectance = nullptr;
     if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
         specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
 

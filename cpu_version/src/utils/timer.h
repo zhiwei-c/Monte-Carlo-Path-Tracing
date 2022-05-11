@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <iostream>
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 //计时器类
 class Timer
@@ -57,4 +57,4 @@ private:
 	time_t start_; //开始计时的时刻
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

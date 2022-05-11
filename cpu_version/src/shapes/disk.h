@@ -2,7 +2,7 @@
 
 #include "../core/shape_base.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 class Disk : public Shape
 {
@@ -28,4 +28,4 @@ private:
     std::unique_ptr<Mat4> to_local_;
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

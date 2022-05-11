@@ -12,8 +12,8 @@ static constexpr uint32_t CubeTriangles[][3] = {{0, 1, 2}, {3, 0, 2}, {4, 5, 6},
 
 inline void LoadCube(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
 {
-    auto to_world_pos = static_cast<gmat4 *>(nullptr),
-         to_world_norm = static_cast<gmat4 *>(nullptr);
+    gmat4* to_world_pos = nullptr,
+        * to_world_norm = nullptr;
     auto to_world = shape_info->to_world;
     if (to_world != nullptr)
     {

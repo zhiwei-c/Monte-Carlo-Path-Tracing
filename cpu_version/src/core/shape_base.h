@@ -2,7 +2,7 @@
 
 #include "intersection.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 //物体类型
 enum class ShapeType
@@ -40,27 +40,23 @@ public:
     void SetPdfArea(Float pdf_area) { pdf_area_ = pdf_area; }
 
 protected:
+    ///\brief 物体基类
+    ///\param type 物体类型
+    ///\param material 材质
+    ///\param flip_normals 默认法线方向是否翻转
+    Shape(ShapeType type, Material *material, bool flip_normals)
+        : type_(type), material_(material), flip_normals_(flip_normals), aabb_(AABB()), area_(0)
+    {
+    }
+
     bool flip_normals_;  //默认法线方向是否翻转
     Float area_;         //物体的表面积
     Float pdf_area_;     //面元概率
     AABB aabb_;          //物体的轴对齐包围盒
     Material *material_; //材质
 
-    ///\brief 物体基类
-    ///\param type 物体类型
-    ///\param material 材质
-    ///\param flip_normals 默认法线方向是否翻转
-    Shape(ShapeType type,
-          Material *material,
-          bool flip_normals)
-        : type_(type),
-          material_(material),
-          flip_normals_(flip_normals),
-          aabb_(AABB()),
-          area_(0) {}
-
 private:
     ShapeType type_; //物体类型
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

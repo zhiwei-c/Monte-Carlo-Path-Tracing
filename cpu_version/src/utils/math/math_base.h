@@ -4,10 +4,8 @@
 
 #include "../global.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
-constexpr auto kPi = glm::pi<Float>();
-constexpr auto kPiInv = static_cast<Float>(1.0 / glm::pi<Float>());
 
 inline bool FloatEqual(Float a, Float b, Float epsilon = kEpsilon)
 {
@@ -24,7 +22,6 @@ inline T Clamp(T bottom, T top, T num)
 {
     return std::max(bottom, std::min(top, num));
 }
-
 
 inline Float CyclicClamp(Float num)
 {
@@ -83,15 +80,11 @@ bool SolveQuadratic(T a, T b, T c, Float &x0, Float &x1)
         }
         return false;
     }
-
     Float discrim = b * b - 4 * a * c;
-
     /* Leave if there is no solution */
     if (discrim < 0)
         return false;
-
     Float temp, sqrtDiscrim = std::sqrt(discrim);
-
     /* Numerically stable version of (-b (+/-) sqrtDiscrim) / (2 * a)
      *
      * Based on the observation that one solution is always
@@ -103,20 +96,16 @@ bool SolveQuadratic(T a, T b, T c, Float &x0, Float &x1)
         temp = -0.5 * (b - sqrtDiscrim);
     else
         temp = -0.5 * (b + sqrtDiscrim);
-
     x0 = temp / a;
     x1 = c / temp;
-
     /* Return the results so that x0 < x1 */
     if (x0 > x1)
         std::swap(x0, x1);
-
     return true;
 }
 inline size_t BinarySearch(const std::vector<Float> &data, Float target)
 {
-    auto begin = static_cast<size_t>(0),
-         end = static_cast<size_t>(data.size());
+    size_t begin = 0, end = data.size();
     while (begin + 1 < end)
     {
         auto mid = static_cast<size_t>((begin + end) * 0.5);
@@ -130,4 +119,4 @@ inline size_t BinarySearch(const std::vector<Float> &data, Float target)
     return begin;
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

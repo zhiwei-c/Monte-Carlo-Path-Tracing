@@ -14,8 +14,7 @@ constexpr auto kPiInv = static_cast<Float>(1.0 / 3.141592653589793);
 
 constexpr auto kEpsilon = static_cast<Float>(1e-10);
 constexpr auto kEpsilonL = static_cast<Float>(1e-2);
-constexpr auto kEpsilonPdf = static_cast<Float>(1e-5);
-constexpr auto kEpsilonPdfL = static_cast<Float>(1e-3);
+constexpr auto kEpsilonPdf = static_cast<Float>(1e-3);
 constexpr auto kEpsilonDistance = static_cast<Float>(1e-6);
 
 constexpr auto kUintMax = static_cast<uint>(-1);

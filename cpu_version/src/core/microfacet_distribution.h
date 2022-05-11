@@ -6,7 +6,7 @@
 #include "../microfacet_distribution/ggx.h"
 #include "../microfacet_distribution/beckmann.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 ///\brief 创建给定参数的微表面分布函数
 inline std::unique_ptr<MicrofacetDistribution> InitDistrib(MicrofacetDistribType type, Float alpha_u, Float alpha_v)
@@ -25,4 +25,4 @@ inline std::unique_ptr<MicrofacetDistribution> InitDistrib(MicrofacetDistribType
     }
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

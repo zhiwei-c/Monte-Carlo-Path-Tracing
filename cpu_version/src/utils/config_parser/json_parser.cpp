@@ -3,7 +3,7 @@
 #include <fstream>
 #include <iostream>
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 Renderer *ParseJsonCfg(const std::string &file_path)
 {
@@ -60,7 +60,7 @@ Integrator *InitIntegrator(nlohmann::json &data)
 		rr_depth = GetInt(data["integrator"], "rr_depth", true).value_or(5);
 	}
 
-	auto integrator = static_cast<Integrator *>(nullptr);
+	Integrator *integrator = nullptr;
 	switch (Hash(type.c_str()))
 	{
 	case "path"_hash:
@@ -235,4 +235,4 @@ std::optional<Float> GetFloat(const nlohmann::json &data, const std::string &nam
 	return static_cast<Float>(data[name]);
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

@@ -14,7 +14,6 @@ std::vector<Float> PrecomputeCosine()
         result[i] = std::cos(i * d_phi);
     return result;
 }
-static const std::vector<Float> cos_phi = PrecomputeCosine();
 
 std::vector<Float> PrecomputeSine()
 {
@@ -23,12 +22,14 @@ std::vector<Float> PrecomputeSine()
         result[i] = std::sin(i * d_phi);
     return result;
 }
-static const std::vector<Float> sin_phi = PrecomputeSine();
 
 inline void LoadSphere(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
 {
-    auto to_world_pos = static_cast<gmat4 *>(nullptr),
-         to_world_norm = static_cast<gmat4 *>(nullptr);
+    const std::vector<Float> &cos_phi = PrecomputeCosine();
+    const std::vector<Float> &sin_phi = PrecomputeSine();
+    
+    gmat4* to_world_pos = nullptr,
+        * to_world_norm = nullptr;
     auto to_world = shape_info->to_world;
     if (to_world != nullptr)
     {

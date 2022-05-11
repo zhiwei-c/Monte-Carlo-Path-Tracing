@@ -2,7 +2,7 @@
 
 #include "math_base.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 constexpr int UP_DIM_WORLD = 1;
 constexpr int FRONT_DIM_WORLD = 2;
@@ -31,7 +31,13 @@ inline Vector3 TransfromPt(Mat4 trans, Vector3 pt)
 ///\brief 两个向量是否同向
 inline bool SameDirection(const Vector3 &a, const Vector3 &b)
 {
-    return FloatEqual(glm::dot(a, b), 1, kEpsilonL);
+    return FloatEqual(glm::dot(a, b), 1, kEpsilonPdf);
+}
+
+///\brief 两个向量是否垂直
+inline bool Perpendicular(const Vector3 &a, const Vector3 &b)
+{
+    return FloatEqual(glm::dot(a, b), 0, kEpsilonPdf);
 }
 
 ///\brief 两个向量是否不在同一个半球之中（夹角大于90度）
@@ -46,38 +52,32 @@ inline bool SameHemis(const Vector3 &a, const Vector3 &b)
     return glm::dot(a, b) > 0;
 }
 
-///\brief 两个向量是否垂直
-inline bool Perpendicular(const Vector3 &a, const Vector3 &b)
-{
-    return FloatEqual(glm::dot(a, b), 0, kEpsilonL);
-}
-
 ///\brief 将单位向量从局部坐标系转换到世界坐标系
 ///\param dir 待转换的单位向量
-///\param normal 局部坐标系的竖直向上方向在世界坐标系下的方向
-inline Vector3 ToWorld(const Vector3 &dir, const Vector3 &normal)
+///\param up 局部坐标系的竖直向上方向在世界坐标系下的方向
+inline Vector3 ToWorld(const Vector3 &dir, const Vector3 &up)
 {
-    Vector3 B, C;
-    if (std::fabs(normal.x) > std::fabs(normal.y))
+    auto B = Vector3(0), C = Vector3(0);
+    if (std::fabs(up.x) > std::fabs(up.y))
     {
-        Float len_inv = 1 / std::sqrt(normal.x * normal.x + normal.z * normal.z);
-        C = Vector3(normal.z * len_inv, 0, -normal.x * len_inv);
+        Float len_inv = 1 / std::sqrt(up.x * up.x + up.z * up.z);
+        C = Vector3(up.z * len_inv, 0, -up.x * len_inv);
     }
     else
     {
-        Float len_inv = 1 / std::sqrt(normal.y * normal.y + normal.z * normal.z);
-        C = Vector3(0, normal.z * len_inv, -normal.y * len_inv);
+        Float len_inv = 1 / std::sqrt(up.y * up.y + up.z * up.z);
+        C = Vector3(0, up.z * len_inv, -up.y * len_inv);
     }
-    B = glm::cross(C, normal);
-    return glm::normalize(dir.x * B + dir.y * C + dir.z * normal);
+    B = glm::cross(C, up);
+    return glm::normalize(dir.x * B + dir.y * C + dir.z * up);
 }
 
 ///\brief 将单位向量从世界坐标系转换到局部坐标系
 ///\param dir 待转换的单位向量
-///\param normal 局部坐标系的竖直向上方向在世界坐标系下的方向
+///\param up 局部坐标系的竖直向上方向在世界坐标系下的方向
 inline Vector3 ToLocal(const Vector3 &dir, const Vector3 &up)
 {
-    Vector3 B, C;
+    auto B = Vector3(0), C = Vector3(0);
     if (std::fabs(up.x) > std::fabs(up.y))
     {
         Float len_inv = 1 / std::sqrt(up.x * up.x + up.z * up.z);
@@ -98,16 +98,12 @@ inline Vector3 ToLocal(const Vector3 &dir, const Vector3 &up)
 ///\param phi - 向量与 Front 方向的夹角（方位角）
 inline void CartesianToSpherical(const Vector3 &dir, Float &theta, Float &phi)
 {
-    auto cos_theta = dir[UP_DIM_WORLD];
-
+    Float cos_theta = dir[UP_DIM_WORLD];
     theta = glm::acos(cos_theta);
-
-    auto sin_theta = std::sqrt(1 - cos_theta * cos_theta);
-    auto cos_phi = Clamp<Float>(-1 + kEpsilon, 1 - kEpsilon, dir[FRONT_DIM_WORLD] / sin_theta);
-    auto sin_phi = dir[RIGHT_DIM_WORLD] / sin_theta;
-
+    Float sin_theta = std::sqrt(1 - cos_theta * cos_theta),
+          cos_phi = Clamp<Float>(-1 + kEpsilon, 1 - kEpsilon, dir[FRONT_DIM_WORLD] / sin_theta),
+          sin_phi = dir[RIGHT_DIM_WORLD] / sin_theta;
     phi = (sin_phi > 0) ? glm::acos(cos_phi) : (2 * kPi - glm::acos(cos_phi));
-
     if (phi < 0)
         phi += 2 * kPi;
     if (phi > 2 * kPi)
@@ -131,12 +127,12 @@ inline void CartesianToSpherical(const Vector3 &dir, Float &theta, Float &phi, F
 ///\return 转换得到的单位向量
 inline Vector3 SphericalToCartesian(Float theta, Float phi, Float r = 1)
 {
-    Vector3 dir(0);
+    auto dir = Vector3(0);
+    Float sin_theta = std::sin(theta);
     dir[UP_DIM_WORLD] = r * std::cos(theta);
-    auto sin_theta = std::sin(theta);
     dir[RIGHT_DIM_WORLD] = r * std::sin(phi) * sin_theta;
     dir[FRONT_DIM_WORLD] = r * std::cos(phi) * sin_theta;
     return dir;
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

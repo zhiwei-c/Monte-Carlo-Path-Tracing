@@ -45,6 +45,13 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 | 3840*2160 分辨率，<br />4 spp  | ![ajar, path tracing, 4 spp](resources/rendering_results/ajar-path-4_spp.png)   | ![ajar, Bidirectional Path Tracing, 4 spp](resources/rendering_results/ajar-bdpt-4_spp.png)   |
 | 960*960 分辨率，<br />64 spp | ![bidir, path tracing, 64 spp](resources/rendering_results/bidir-path-64_spp.png) | ![bidir, Bidirectional Path Tracing, 64 spp](resources/rendering_results/bidir-bdpt-64_spp.png) |
 
+### 1.3 多重重要性抽样（Multiple Importance Sampling）
+
+
+- [1280*720 分辨率，64 spp](resources/rendering_resources/veach-mis/scene.xml)
+
+![mis, Path Tracing, 64 spp](resources/rendering_results/cpu_mis_2min8s.png)
+
 ## 2 实现的功能
 
 ### 2.1 积分器（Integrators）
@@ -106,7 +113,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 - 凹凸映射（bump mapping）
 
-- 内置了一些材质的[折射率（refractive index）](cpu_version/src/core/ray.h#L200)和[消光系数（extinction coefficient）](cpu_version/src/core/ray.h#L374)，在配置文件中可根据名称直接调用
+- 内置了一些材质的[折射率（refractive index）](cpu_version/src/core/ior.h#L21)和[消光系数（extinction coefficient）](cpu_version/src/core/ior.h#L196)，在配置文件中可根据名称直接调用
 
 ## 3 支持的绘制配置文件格式及使用说明
 

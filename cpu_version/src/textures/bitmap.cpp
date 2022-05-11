@@ -14,7 +14,7 @@
 
 #include "../utils/file_path.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 ///\brief 撤销伽马校正
 Float UndoGamma(Float value, Float gamma);
@@ -46,24 +46,19 @@ const std::set<std::string> kStbInputFormat = {"EXR", "exr",
                                                "pic", "PIC",
                                                "pgm", "PGM", "ppm", "PPM"};
 
-///\brief 位图
+///\brief 空白位图
 Bitmap::Bitmap(int width, int height, int channels, Float gamma)
     : Texture(TextureType::kBitmap),
-      width_(width),
-      height_(height),
-      channels_(channels),
-      gamma_(gamma),
-      gamma_inv_(1.0 / gamma)
+      width_(width), height_(height), channels_(channels),
+      gamma_(gamma), gamma_inv_(1.0 / gamma)
 {
     data_.resize(width * height * channels);
     std::fill(data_.begin(), data_.end(), 0);
 }
 
-///\brief 空白位图
+///\brief 位图
 Bitmap::Bitmap(const std::string &filename, Float gamma)
-    : Texture(TextureType::kBitmap),
-      gamma_(gamma),
-      gamma_inv_(1.0 / gamma)
+    : Texture(TextureType::kBitmap), gamma_(gamma), gamma_inv_(1.0 / gamma)
 {
     auto suffix = GetSuffix(filename);
     if (!kStbInputFormat.count(suffix))
@@ -92,14 +87,14 @@ Spectrum Bitmap::Color(const Vector2 &coord) const
          y = static_cast<int>(coord.y * height_);
     x = Modulo(x, width_);
     y = Modulo(y, height_);
-    auto offset = (x + static_cast<size_t>(width_) * y) * channels_;
+    int offset = (x + width_ * y) * channels_;
     if (channels_ == 1)
         return Spectrum(data_[offset], data_[offset], data_[offset]);
     else
     {
-        auto r = data_[offset];
-        auto g = data_[offset + 1];
-        auto b = data_[offset + 2];
+        Float r = data_[offset],
+              g = data_[offset + 1],
+              b = data_[offset + 2];
         return Spectrum(r, g, b);
     }
 }
@@ -113,23 +108,23 @@ Vector2 Bitmap::Gradient(const Vector2 &coord) const
              y = static_cast<int>(coord.y * height_) + offset_y;
         x = Modulo(x, width_);
         y = Modulo(y, height_);
-        auto offset = (x + static_cast<size_t>(width_) * y) * channels_;
+        int offset = (x + width_ * y) * channels_;
         if (channels_ == 1)
             return 255 * data_[offset];
         else
         {
-            auto r = 255 * data_[offset];
-            auto g = 255 * data_[offset + 1];
-            auto b = 255 * data_[offset + 2];
-            return glm::length(Vector3(r, g, b));
+            Float r = data_[offset],
+                  g = data_[offset + 1],
+                  b = data_[offset + 2];
+            return std::sqrt(r * r + g * g + b * b);
         }
     };
-    auto kh = 0.2, kn = 0.1;
-    auto value = GetNorm(coord, 0, 0),
-         value_u = GetNorm(coord, 1, 0),
-         value_v = GetNorm(coord, 0, 1);
-    auto du = kh * kn * (value_u - value),
-         dv = kh * kn * (value_v - value);
+    Float kh = 0.2, kn = 0.1,
+          value = GetNorm(coord, 0, 0),
+          value_u = GetNorm(coord, 1, 0),
+          value_v = GetNorm(coord, 0, 1);
+    Float du = kh * kn * (value_u - value),
+          dv = kh * kn * (value_v - value);
     return Vector2(du, dv);
 }
 
@@ -143,16 +138,15 @@ bool Bitmap::Transparent(const Vector2 &coord) const
          y = static_cast<int>(coord.y * height_);
     x = Modulo(x, width_);
     y = Modulo(y, height_);
-    auto offset = (static_cast<size_t>(x) + width_ * y) * channels_;
-    auto alpha = data_[offset + 3];
+    int offset = (x + width_ * y) * channels_;
+    Float alpha = data_[offset + 3];
     if (alpha == 1)
         return false;
     else if (alpha == 0)
         return true;
     else
     {
-        auto xi = UniformFloat();
-        if (xi < alpha)
+        if (UniformFloat() < alpha)
             return false;
         else
             return true;
@@ -162,7 +156,7 @@ bool Bitmap::Transparent(const Vector2 &coord) const
 ///\brief 设置纹理在给定坐标处像素值
 void Bitmap::SetColor(int x, int y, const Vector3 &value)
 {
-    auto offset = (static_cast<size_t>(x) + width_ * y) * channels_;
+    int offset = (x + width_ * y) * channels_;
     for (int i = 0; i < 3; i++)
         data_[offset + i] = ClampBottom<Float>(0, value[i]);
 }
@@ -170,7 +164,7 @@ void Bitmap::SetColor(int x, int y, const Vector3 &value)
 ///\brief 保存图像到指定路径
 void Bitmap::Save(const std::string &filename)
 {
-    auto suffix = GetSuffix(filename);
+    std::string suffix = GetSuffix(filename);
     switch (Hash(suffix.c_str()))
     {
     case "exr"_hash:
@@ -195,10 +189,10 @@ Float UndoGamma(Float value, Float gamma)
 {
     if (gamma == -1)
     {
-        if (value <= (Float)0.04045)
-            return value * (Float)(1.0 / 12.92);
+        if (value <= 0.04045)
+            return value / 12.92;
         else
-            return std::pow((Float)((value + (Float)0.055) * (Float)(1.0 / 1.055)), (Float)2.4);
+            return std::pow((value + 0.055) / 1.055, 2.4);
     }
     else
         return std::pow(value, gamma);
@@ -208,8 +202,8 @@ Float UndoGamma(Float value, Float gamma)
 Float ApplyGamma(Float value, Float gamma_inv)
 {
     if (gamma_inv == -1)
-        return (value <= (Float)0.0031308) ? ((Float)12.92 * value)
-                                           : ((Float)1.055 * std::pow(value, (Float)(1.0 / 2.4)) - (Float)0.055);
+        return (value <= 0.0031308) ? (12.92 * value)
+                                    : (1.055 * std::pow(value, 1.0 / 2.4) - 0.055);
     else
         return std::pow(value, gamma_inv);
 }
@@ -217,8 +211,8 @@ Float ApplyGamma(Float value, Float gamma_inv)
 ///\brief 通过 tinyexr 加载 HDR 图像
 void LoadByTinyExr(const std::string &filename, Float gamma, std::vector<Float> &data, int &width, int &height, int &channels)
 {
-    auto raw_data = static_cast<float *>(nullptr); // width * height * RGBA
-    auto err = static_cast<const char *>(nullptr);
+    float *raw_data = nullptr; // width * height * RGBA
+    const char *err = nullptr;
     auto ret = LoadEXR(&raw_data, &width, &height, filename.c_str(), &err);
     if (ret != TINYEXR_SUCCESS)
     {
@@ -231,7 +225,7 @@ void LoadByTinyExr(const std::string &filename, Float gamma, std::vector<Float> 
         exit(1);
     }
     channels = 4;
-    auto cnt = width * height * channels;
+    int cnt = width * height * channels;
     data.resize(cnt);
     for (size_t i = 0; i < cnt; i++)
         data[i] = UndoGamma(raw_data[i], gamma);
@@ -348,4 +342,4 @@ void SaveHdrByTinyExr(const std::string &filename, const std::vector<Float> &dat
     free(header.requested_pixel_types);
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

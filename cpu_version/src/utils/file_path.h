@@ -2,7 +2,7 @@
 
 #include "global.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 ///\brief 将路径中的反斜杠转换成斜杠
 inline std::string ConvertBackSlash(std::string path)
@@ -45,4 +45,4 @@ inline std::string ChangeSuffix(const std::string &path, const std::string &new_
         return path + "." + new_suffix;
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

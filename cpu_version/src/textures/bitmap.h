@@ -4,23 +4,23 @@
 
 #include "../core/texture_base.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 //位图派生类
 class Bitmap : public Texture
 {
 
 public:
-    ///\brief 位图
-    ///\param filename - 加载图像文件名
-    ///\param gamma - 伽马值
-    Bitmap(const std::string &filename, Float gamma);
-
     ///\brief 空白位图
     ///\param width - 图像宽度
     ///\param height - 图像高度
     ///\param channels - 图像的通道数
     Bitmap(int width, int height, int channels, Float gamma);
+
+    ///\brief 位图
+    ///\param filename - 加载图像文件名
+    ///\param gamma - 伽马值
+    Bitmap(const std::string &filename, Float gamma);
 
     ///\return 纹理在给定坐标处像素值
     Spectrum Color(const Vector2 &coord) const override;
@@ -46,4 +46,4 @@ private:
     std::vector<Float> data_; //图像的数据
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

@@ -4,7 +4,7 @@
 
 #include "../utils/math.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 //纹理类型
 enum class TextureType
@@ -40,4 +40,4 @@ private:
     TextureType type_; //纹理类型
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

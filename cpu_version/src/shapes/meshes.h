@@ -5,7 +5,7 @@
 #include "../core/shape_base.h"
 #include "../accelerator/bvh_accel.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 class Meshes : public Shape
 {
 public:
@@ -48,4 +48,4 @@ private:
 	std::vector<Shape *> meshes_;	//包含的三角面片
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

@@ -5,7 +5,7 @@
 #include "../utils/math/math_base.h"
 #include "../utils/global.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 ///\brief 微表面分布类型
 enum class MicrofacetDistribType
@@ -43,9 +43,9 @@ protected:
     Float alpha_v_;              //沿副切线（bitangent）方向的粗糙度
 
     MicrofacetDistribution(Float alpha_u, Float alpha_v)
-        : isotropic_(alpha_u == alpha_v),
-          alpha_u_(alpha_u),
-          alpha_v_(alpha_v) {}
+        : isotropic_(alpha_u == alpha_v), alpha_u_(alpha_u), alpha_v_(alpha_v)
+    {
+    }
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

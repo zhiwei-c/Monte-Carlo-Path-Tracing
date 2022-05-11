@@ -4,28 +4,25 @@
 
 #include "../core/shape_base.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
+///\brief 层次包围盒叶节点
 class BvhNode
 {
 public:
 	///\brief 层次包围盒叶节点
 	///\param shape 叶节点包含的物体
 	BvhNode(Shape *shape)
-		: left_(nullptr),
-		  right_(nullptr),
-		  shape_(shape),
-		  area_(shape->area()),
-		  aabb_(shape->aabb()) {}
+		: left_(nullptr), right_(nullptr), shape_(shape),
+		  area_(shape->area()), aabb_(shape->aabb())
+	{
+	}
 
 	///\brief 层次包围盒非叶节点
 	///\param left 左子节点
 	///\param right 右子节点
-	BvhNode(std::unique_ptr<BvhNode> left,
-			std::unique_ptr<BvhNode> right)
-		: left_(std::move(left)),
-		  right_(std::move(right)),
-		  shape_(nullptr)
+	BvhNode(std::unique_ptr<BvhNode> left, std::unique_ptr<BvhNode> right)
+		: left_(std::move(left)), right_(std::move(right)), shape_(nullptr)
 	{
 		area_ = left_->area() + right_->area();
 		aabb_ = left_->aabb() + right_->aabb();
@@ -36,8 +33,7 @@ public:
 	{
 		if (!aabb_.Intersect(ray))
 			return;
-
-		if (shape_)
+		else if (shape_)
 			shape_->Intersect(ray, its);
 		else
 		{
@@ -70,4 +66,4 @@ private:
 	std::unique_ptr<BvhNode> left_, right_; //子节点
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

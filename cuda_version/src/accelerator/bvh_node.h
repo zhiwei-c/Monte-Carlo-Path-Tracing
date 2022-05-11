@@ -5,8 +5,7 @@
 class BvhNode
 {
 public:
-    __device__ BvhNode()
-        : leaf_(true), aabb_(AABB()), mesh_(nullptr), left_(nullptr), right_(nullptr), area_(0) {}
+    __device__ BvhNode() : leaf_(true), aabb_(AABB()), mesh_(nullptr), left_(nullptr), right_(nullptr), area_(0) {}
 
     __device__ void InitBvhNode(const AABB &aabb, Float area, BvhNode *left, BvhNode *right)
     {

@@ -8,7 +8,7 @@
 
 #include "../../renderer.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 Renderer *ParseJsonCfg(const std::string &file_path);
 
@@ -36,4 +36,4 @@ static std::optional<int> GetInt(const nlohmann::json &data, const std::string &
 ///\brief 从json格式数据内解析出一个类型为 Float 的变量
 static std::optional<Float> GetFloat(const nlohmann::json &data, const std::string &name, bool not_exist_ok = true);
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

@@ -89,9 +89,6 @@ public:
         bs.texcoord = texcoord_;
 
         (*material_)->Sample(bs, sample);
-
-        if (bs.pdf < kEpsilonPdf)
-            bs.valid = false;
     }
 
     /**

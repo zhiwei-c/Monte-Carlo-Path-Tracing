@@ -15,7 +15,7 @@
 #include <glm/glm.hpp>
 #include <glm/ext/scalar_constants.hpp>
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 using Float = glm::f64;
 using Vector3 = glm::dvec3;
@@ -24,14 +24,20 @@ using Vector2 = glm::dvec2;
 using Mat4 = glm::dmat4;
 using Mat3 = glm::dmat3;
 
-constexpr auto kEpsilon = static_cast<Float>(1e-10);
-constexpr auto kOneMinusEpsilon = static_cast<Float>(1 - 1e-10);
-constexpr auto kEpsilonDistance = static_cast<Float>(1e-6);
-constexpr auto kEpsilonL = static_cast<Float>(1e-3);
-constexpr auto kEpsilonPdf = static_cast<Float>(1e-5);
-constexpr auto kEpsilonPdf2 = static_cast<Float>(5e-2);
+constexpr auto kPi = glm::pi<Float>();
+constexpr auto kPiInv = static_cast<Float>(1.0 / glm::pi<Float>());
 
-constexpr auto kEpsilonMachine = std::numeric_limits<Float>::epsilon() * 0.5;
+constexpr Float kMaxFloat = std::numeric_limits<Float>::max();
+constexpr Float kLowestFloat = std::numeric_limits<Float>::lowest();
+
+constexpr auto kMaxVector3 = Vector3(kMaxFloat);
+constexpr auto kMinVector3 = Vector3(kLowestFloat);
+
+constexpr Float kEpsilon = 1e-10;
+constexpr Float kEpsilonDistance = 1e-6;
+constexpr Float kEpsilonPdf = 1e-3;
+constexpr Float kEpsilonPdf2 = 0.025 * glm::pi<Float>();
+constexpr Float kEpsilonMachine = std::numeric_limits<Float>::epsilon() * 0.5;
 
 inline Float GammaError(int n)
 {
@@ -48,4 +54,4 @@ constexpr size_t operator"" _hash(const char *str, size_t)
     return Hash(str);
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

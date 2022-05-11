@@ -3,7 +3,7 @@
 #include "triangle.h"
 #include "../accelerator/bvh_accel.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 class Cube : public Shape
 {
@@ -35,4 +35,4 @@ private:
     std::vector<Shape *> meshes_;   //包含的三角面片
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

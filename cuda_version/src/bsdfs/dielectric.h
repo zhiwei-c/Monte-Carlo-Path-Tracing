@@ -5,22 +5,17 @@
 class Dielectric : public Material
 {
 public:
-    __device__ Dielectric(uint idx, bool twosided,
-                          Texture *bump_map,
-                          Texture *opacity_map,
-                          vec3 eta,
-                          Texture *specular_reflectance,
-                          Texture *specular_transmittance)
+    __device__ Dielectric(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
+                          vec3 eta, Texture *specular_reflectance, Texture *specular_transmittance)
         : Material(idx, kDielectric, twosided, bump_map, opacity_map),
-          eta_d_(eta.x),
-          eta_inv_d_(1.0 / eta.x),
-          specular_reflectance_(specular_reflectance),
-          specular_transmittance_(specular_transmittance) {}
+          eta_d_(eta.x), eta_inv_d_(1.0 / eta.x), specular_reflectance_(specular_reflectance),
+          specular_transmittance_(specular_transmittance)
+    {
+    }
 
     __device__ void Sample(BsdfSampling &bs, const vec3 &sample) const override
     {
         auto eta_inv = (bs.inside == kTrue) ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
-
         auto kr = Fresnel(-bs.wo, bs.normal, eta_inv);
         if (sample.x < kr)
             bs.wi = -Reflect(-bs.wo, bs.normal);
@@ -36,7 +31,6 @@ public:
     __device__ vec3 Eval(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const override
     {
         auto eta_inv = (inside == kTrue) ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
-
         auto kr = Fresnel(wi, normal, eta_inv);
         if (SameDirection(wo, Reflect(wi, normal)))
         {
@@ -61,12 +55,9 @@ public:
     __device__ Float Pdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const override
     {
         auto eta_inv = (inside == kTrue) ? eta_d_ : eta_inv_d_; //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
-
         auto kr = Fresnel(wi, normal, eta_inv);
         if (SameDirection(wo, Reflect(wi, normal)))
             return kr;
-        else if (kr > 1 - kEpsilon)
-            return 0;
         else if (SameDirection(wo, Refract(wi, normal, eta_inv)))
             return 1.0 - kr;
         else
@@ -85,19 +76,19 @@ __device__ inline void InitDielectric(uint m_idx,
                                       Texture *texture_list,
                                       Material **&material_list)
 {
-    auto bump_map = static_cast<Texture *>(nullptr);
+    Texture *bump_map = nullptr;
     if (material_info_list[m_idx].bump_map_idx != kUintMax)
         bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
 
-    auto opacity_map = static_cast<Texture *>(nullptr);
+    Texture *opacity_map = nullptr;
     if (material_info_list[m_idx].opacity_idx != kUintMax)
         opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
 
-    auto specular_reflectance = static_cast<Texture *>(nullptr);
+    Texture *specular_reflectance = nullptr;
     if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
         specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
 
-    auto specular_transmittance = static_cast<Texture *>(nullptr);
+    Texture *specular_transmittance = nullptr;
     if (material_info_list[m_idx].specular_transmittance_idx != kUintMax)
         specular_transmittance = texture_list + material_info_list[m_idx].specular_transmittance_idx;
 

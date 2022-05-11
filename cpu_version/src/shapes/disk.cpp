@@ -1,6 +1,6 @@
 #include "disk.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 Disk::Disk(Material *material,
            std::unique_ptr<Mat4> to_world,
@@ -25,10 +25,10 @@ Disk::Disk(Material *material,
         to_world_norm_.reset(new Mat4(glm::inverse(glm::transpose(*to_world_))));
     }
 
-    auto radius_world = glm::length(center - p1);
+    Float radius_world = glm::length(center - p1);
 
     area_ = kPi * radius_world * radius_world;
-    pdf_area_ = 1 / area_;
+    pdf_area_ = 1.0 / area_;
     aabb_ = AABB();
     aabb_ += pos_max;
     aabb_ += pos_min;
@@ -36,8 +36,8 @@ Disk::Disk(Material *material,
 
 void Disk::Intersect(const Ray &ray, Intersection &its) const
 {
-    auto ray_o = ray.origin(),
-         ray_d = ray.dir();
+    Vector3 ray_o = ray.origin(),
+            ray_d = ray.dir();
     if (to_local_)
     {
         ray_o = TransfromPt(*to_local_, ray_o);
@@ -46,11 +46,11 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
 
     auto normal = Vector3(0, 0, 1);
 
-    auto t_z = -ray_o.z / ray_d.z;
+    Float t_z = -ray_o.z / ray_d.z;
     if (t_z < kEpsilon)
         return;
 
-    auto pos = ray_o + t_z * ray_d;
+    Vector3 pos = ray_o + t_z * ray_d;
 
     if (glm::length(pos) > 0.5)
         return;
@@ -58,12 +58,10 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
     auto texcoord = Vector2(-1);
     if (material_->TextureMapping())
     {
-        auto theta = static_cast<Float>(0),
-             phi = static_cast<Float>(0),
-             r = static_cast<Float>(0);
+        Float theta = 0, phi = 0, r = 0;
         CartesianToSpherical(pos, theta, phi, r);
         auto texcoord = Vector2(0);
-        texcoord.x = std::min((Float)1, r);
+        texcoord.x = std::min(1.0, r);
         texcoord.y = phi * 0.5 * kPiInv;
 
         if (material_->Transparent(texcoord))
@@ -71,22 +69,22 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
 
         if (material_->NormalPerturbing())
         {
-            auto r_1 = r + kEpsilon < 1 ? r + kEpsilon : r - kEpsilon;
-            auto pos1 = SphericalToCartesian(theta, phi, r_1);
+            Float r_1 = r + kEpsilon < 1 ? r + kEpsilon : r - kEpsilon;
+            Vector3 pos1 = SphericalToCartesian(theta, phi, r_1);
             auto texcoord1 = Vector2(r_1, texcoord.y);
 
-            auto phi2 = phi + kEpsilon < 2 * kPi ? phi + kEpsilon : phi - kEpsilon;
-            auto pos2 = SphericalToCartesian(theta, phi2, r);
+            Float phi2 = phi + kEpsilon < 2 * kPi ? phi + kEpsilon : phi - kEpsilon;
+            Vector3 pos2 = SphericalToCartesian(theta, phi2, r);
             auto texcoord2 = Vector2(texcoord.x, phi2 * 0.5 * kPiInv);
 
-            auto v0v1 = pos1 - pos,
-                 v0v2 = pos2 - pos;
-            auto delta_uv_1 = texcoord1 - texcoord,
-                 delta_uv_2 = texcoord2 - texcoord;
+            Vector3 v0v1 = pos1 - pos,
+                    v0v2 = pos2 - pos;
+            Vector2 delta_uv_1 = texcoord1 - texcoord,
+                    delta_uv_2 = texcoord2 - texcoord;
 
-            auto r = 1 / (delta_uv_2.x * delta_uv_1.y - delta_uv_1.x * delta_uv_2.y);
-            auto tangent = glm::normalize(Vector3(delta_uv_1.y * v0v2 - delta_uv_2.y * v0v1) * r),
-                 bitangent = glm::normalize(Vector3(delta_uv_2.x * v0v1 - delta_uv_1.x * v0v2) * r);
+            Float r = 1.0 / (delta_uv_2.x * delta_uv_1.y - delta_uv_1.x * delta_uv_2.y);
+            Vector3 tangent = glm::normalize(Vector3(delta_uv_1.y * v0v2 - delta_uv_2.y * v0v1) * r),
+                    bitangent = glm::normalize(Vector3(delta_uv_2.x * v0v1 - delta_uv_1.x * v0v2) * r);
 
             normal = material_->PerturbNormal(normal, tangent, bitangent, texcoord);
         }
@@ -96,7 +94,7 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
         pos = TransfromPt(*to_world_, pos);
         normal = TransfromDir(*to_world_norm_, normal);
     }
-    auto distance = glm::length(pos - ray.origin());
+    Float distance = glm::length(pos - ray.origin());
     if (distance > its.distance())
         return;
 
@@ -126,10 +124,9 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
 
 Intersection Disk::SampleP() const
 {
-    auto pos_xy = DiskUnifrom();
+    Vector2 pos_xy = DiskUnifrom();
     auto pos = Vector3(pos_xy.x * 0.5, pos_xy.y * 0.5, 0);
     auto normal = Vector3(0, 0, 1);
-
     if (to_world_)
     {
         pos = TransfromPt(*to_world_, pos);
@@ -138,4 +135,4 @@ Intersection Disk::SampleP() const
     return Intersection(pos, normal, Vector2(-1), false, INFINITY, material_, pdf_area_);
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

@@ -2,18 +2,14 @@
 
 #include "../core/ray.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 //轴对齐包围盒类
 class AABB
 {
 public:
 	///\brief 轴对齐包围盒
-	AABB()
-	{
-		max_ = Vector3(std::numeric_limits<Float>::lowest());
-		min_ = Vector3(std::numeric_limits<Float>::max());
-	}
+	AABB() : max_(kMinVector3), min_(kMaxVector3) {}
 
 	///\brief 轴对齐包围盒
 	///\param min 底边界
@@ -23,26 +19,26 @@ public:
 	///\brief 判断光线与轴对齐包围盒是否相交
 	bool Intersect(const Ray &ray) const
 	{
-		auto t_min = static_cast<Float>(0),
-			 t_max = static_cast<Float>(0),
-			 t_enter = static_cast<Float>(-INFINITY),
-			 t_exit = static_cast<Float>(INFINITY);
+		Float t_min = 0, t_max = 0;
+		Float t_enter = kLowestFloat, t_exit = kMaxFloat;
 		for (int i = 0; i < 3; i += 1)
 		{
 			//检查光线是否与轴对齐包围盒某一对边界面平行
 			if (ray.dir()[i] == 0)
 			{
-				if (ray.origin()[i] > this->max_[i] ||
-					ray.origin()[i] < this->min_[i])
+				if (ray.origin()[i] > this->max_[i] || ray.origin()[i] < this->min_[i])
+				{
 					return false;
+				}
 			}
 			else
 			{
 				t_min = (this->min_[i] - ray.origin()[i]) * ray.dir_inv()[i];
 				t_max = (this->max_[i] - ray.origin()[i]) * ray.dir_inv()[i];
 				if (ray.dir()[i] < 0)
+				{
 					std::swap(t_min, t_max);
-
+				}
 				t_enter = std::max(t_min, t_enter);
 				t_exit = std::min(t_max, t_exit);
 			}
@@ -52,10 +48,16 @@ public:
 	}
 
 	///\return 底边界
-	Vector3 min() const { return min_; }
+	Vector3 min() const
+	{
+		return min_;
+	}
 
 	///\return 顶边界
-	Vector3 max() const { return max_; }
+	Vector3 max() const
+	{
+		return max_;
+	}
 
 	///\return 中心
 	Vector3 center() const
@@ -89,4 +91,4 @@ private:
 	Vector3 max_; //轴对齐包围盒顶边界
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

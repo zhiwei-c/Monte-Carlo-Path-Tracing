@@ -240,7 +240,7 @@ void Renderer::InitTextureList()
         case kBitmap:
         {
             auto resolution = texture_info_list_[texture_idx]->colors.size();
-            auto bitmap_data = static_cast<float *>(nullptr);
+            float* bitmap_data = nullptr;
             CheckCudaErrors(cudaMallocManaged(&bitmap_data, resolution * sizeof(float)));
             cudaMemcpy(bitmap_data, texture_info_list_[texture_idx]->colors.data(), resolution * sizeof(float), cudaMemcpyHostToDevice);
             texture_bitmap_data_.push_back(bitmap_data);
@@ -341,10 +341,10 @@ void Renderer::InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list,
                                 std::vector<Float> &mesh_area_list)
 {
     std::cerr << "[info] create mesh ..." << std::endl;
-    auto vertex_list = static_cast<Vertex *>(nullptr);
-    auto mesh_idx_list = static_cast<uvec3 *>(nullptr);
-    auto mesh_material_idx_list = static_cast<uint *>(nullptr);
-    auto mesh_num = static_cast<uint>(0);
+    Vertex* vertex_list = nullptr;
+    uvec3* mesh_idx_list = nullptr;
+    uint* mesh_material_idx_list = nullptr;
+    uint mesh_num = 0;
     mesh_idx_range_list = std::vector<uvec2>();
     InitVertexIndexBuffer(vertex_list,
                           mesh_idx_list,
@@ -357,9 +357,9 @@ void Renderer::InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list,
     //
     mesh_list_ = nullptr;
     CheckCudaErrors(cudaMallocManaged(&mesh_list_, mesh_num * sizeof(Mesh)));
-    auto local_mesh_aabbs = static_cast<AABB *>(nullptr);
+    AABB* local_mesh_aabbs = nullptr;
     CheckCudaErrors(cudaMallocManaged(&local_mesh_aabbs, mesh_num * sizeof(Mesh)));
-    auto local_mesh_areas = static_cast<Float *>(nullptr);
+    Float* local_mesh_areas = nullptr;
     CheckCudaErrors(cudaMallocManaged(&local_mesh_areas, mesh_num * sizeof(Float)));
     auto nx = static_cast<uint>(sqrt(mesh_num) + 1);
     auto ny = static_cast<uint>(mesh_num / nx + 1);
@@ -448,11 +448,11 @@ void Renderer::InitShapeBvh(std::vector<BvhNodeInfo> &shape_info_list)
         CheckCudaErrors(cudaGetLastError());
         CheckCudaErrors(cudaDeviceSynchronize());
         //
-        auto local_bvhnodes_info_list = static_cast<BvhNodeInfo *>(nullptr);
+        BvhNodeInfo* local_bvhnodes_info_list = nullptr;
         CheckCudaErrors(cudaMallocManaged(&local_bvhnodes_info_list, bvhnode_num * sizeof(BvhNodeInfo)));
         cudaMemcpy(local_bvhnodes_info_list, bvhnode_info_list.data(), bvhnode_num * sizeof(BvhNodeInfo), cudaMemcpyHostToDevice);
         //
-        auto bvhnode_list = static_cast<BvhNode *>(nullptr);
+        BvhNode* bvhnode_list = nullptr;
         CheckCudaErrors(cudaMallocManaged(&bvhnode_list, bvhnode_num * sizeof(BvhNode)));
         auto nx = static_cast<uint>(sqrt(bvhnode_num) + 1);
         auto ny = static_cast<uint>(bvhnode_num / nx + 1);
@@ -496,7 +496,7 @@ void Renderer::InitSceneBvh(AABB &scene_aabb)
     BuildSceneBvhInfo(0, 0, shape_num, shape_idx_list, shape_info_list, node_info_list);
     scene_aabb = node_info_list[0].aabb;
 
-    auto node_info_list_gpu = static_cast<BvhNodeInfo *>(nullptr);
+    BvhNodeInfo* node_info_list_gpu = nullptr;
     CheckCudaErrors(cudaMallocManaged(&node_info_list_gpu, node_num * sizeof(BvhNodeInfo)));
     cudaMemcpy(node_info_list_gpu, node_info_list.data(), node_num * sizeof(BvhNodeInfo), cudaMemcpyHostToDevice);
 
@@ -533,7 +533,7 @@ void Renderer::InitEnvMap(const AABB &scene_aabb)
     auto radius = myvec::length(scene_aabb.max() - scene_aabb.min()) * 0.5;
     auto pdf_area = 1.0 / (4.0 * kPi * radius * radius);
 
-    auto to_local = static_cast<gmat4 *>(nullptr);
+    gmat4* to_local = nullptr;
     if (env_map_info_->to_local)
     {
         CheckCudaErrors(cudaMallocManaged(&to_local, sizeof(gmat4)));
@@ -594,7 +594,7 @@ void Renderer::Render(const std::string &output_filename)
     timer_.PrintTimePassed("prepare work");
 
     auto resolution = camera_info_.height * camera_info_.width;
-    auto frame_data = static_cast<float *>(nullptr);
+    float* frame_data = nullptr;
     CheckCudaErrors(cudaMallocManaged((void **)&frame_data, 3 * resolution * sizeof(float)));
     auto tx = camera_info_.width > 8 ? 8 : camera_info_.width;
     auto ty = camera_info_.height > 8 ? 8 : camera_info_.height;
@@ -602,10 +602,12 @@ void Renderer::Render(const std::string &output_filename)
     auto ny = camera_info_.height;
     auto blocks = dim3(nx / tx + 1, ny / ty + 1);
     auto threads = dim3(tx, ty);
+    Timer timer2;
     RenderProcess<<<blocks, threads>>>(nx, ny, resolution, d_rand_state_, camera_, integrator_, frame_data);
     CheckCudaErrors(cudaGetLastError());
     CheckCudaErrors(cudaDeviceSynchronize());
     timer_.PrintTimePassed("rendering");
+    timer2.PrintTimePassed2("rendering");
 
     auto frame = Frame();
     frame.width = camera_info_.width;

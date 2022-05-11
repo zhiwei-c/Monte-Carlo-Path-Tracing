@@ -30,11 +30,11 @@ __global__ void CreateMeshes(uint max_x,
         mesh_aabbs[idx] += v[k].position;
     }
 
-    auto pre = static_cast<Mesh *>(nullptr);
+    Mesh* pre = nullptr;
     if (idx > 0)
         pre = mesh_list + idx - 1;
 
-    auto next = static_cast<Mesh *>(nullptr);
+    Mesh* next = nullptr;
     if (idx + 1 < mesh_num)
         next = mesh_list + idx + 1;
 

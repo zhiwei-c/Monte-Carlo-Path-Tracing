@@ -1,17 +1,12 @@
 #include "checkerboard.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 //棋盘图
-Checkerboard::Checkerboard(const Spectrum &color0,
-                           const Spectrum &color1,
-                           const Vector2 &uv_offset,
-                           const Vector2 &uv_scale)
+Checkerboard::Checkerboard(const Spectrum &color0, const Spectrum &color1,
+                           const Vector2 &uv_offset, const Vector2 &uv_scale)
     : Texture(TextureType::kCheckerboard),
-      color0_(color0),
-      color1_(color1),
-      uv_offset_(nullptr),
-      uv_scale_(nullptr)
+      color0_(color0), color1_(color1), uv_offset_(nullptr), uv_scale_(nullptr)
 {
     if (uv_offset.x > kEpsilon || uv_offset.y > kEpsilon)
         uv_offset_ = std::make_unique<Vector2>(uv_offset);
@@ -22,7 +17,7 @@ Checkerboard::Checkerboard(const Spectrum &color0,
 ///\return 纹理在给定坐标处像素值
 Spectrum Checkerboard::Color(const Vector2 &coord) const
 {
-    auto u = coord.x, v = coord.y;
+    Float u = coord.x, v = coord.y;
     if (uv_scale_)
     {
         u *= (*uv_scale_).x;
@@ -36,8 +31,8 @@ Spectrum Checkerboard::Color(const Vector2 &coord) const
     u = CyclicClamp(u);
     v = CyclicClamp(v);
 
-    auto x = 2 * (int)((int)(u * 2) % 2) - 1;
-    auto y = 2 * (int)((int)(v * 2) % 2) - 1;
+    int x = 2 * (int)((int)(u * 2) % 2) - 1,
+        y = 2 * (int)((int)(v * 2) % 2) - 1;
 
     if (x * y == 1)
         return color0_;
@@ -48,12 +43,12 @@ Spectrum Checkerboard::Color(const Vector2 &coord) const
 ///\return 纹理在给定坐标处梯度
 Vector2 Checkerboard::Gradient(const Vector2 &coord) const
 {
-    auto value = glm::length(Color(coord)),
-         value_u = glm::length(Color({coord.x + 1e-4, coord.y})),
-         value_v = glm::length(Color({coord.x, coord.y + 1e-4}));
-    auto du = (value_u - value) * (1 / 1e-4),
-         dv = (value_v - value) * (1 / 1e-4);
+    Float value = glm::length(Color(coord)),
+          value_u = glm::length(Color({coord.x + 1e-4, coord.y})),
+          value_v = glm::length(Color({coord.x, coord.y + 1e-4}));
+    Float du = (value_u - value) * (1.0 / 1e-4),
+          dv = (value_v - value) * (1.0 / 1e-4);
     return Vector2(du, dv);
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

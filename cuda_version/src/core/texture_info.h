@@ -15,17 +15,6 @@ enum TextureType
     kBitmap,      //位图
 };
 
-static const std::set<std::string> kStbInputFormat = {"jpg", "jpeg", "JPG", "JPEG",
-                                                      "png", "PNG",
-                                                      "tga", "TGA",
-                                                      "bmp", "BMP",
-                                                      "psd", "PSD",
-                                                      "gif", "GIF",
-                                                      "hdr", "HDR",
-                                                      "pic", "PIC",
-                                                      "pgm", "PGM",
-                                                      "ppm", "PPM"};
-
 inline static Float UndoGamma(Float value, Float gamma)
 {
     if (gamma == -1)
@@ -77,7 +66,17 @@ struct TextureInfo
         : type(kBitmap), filename(filename)
     {
         auto suffix = GetSuffix(filename);
-        if (kStbInputFormat.find(suffix) != kStbInputFormat.end())
+        auto stb_input_format = std::set<std::string>{"jpg", "jpeg", "JPG", "JPEG",
+                                                    "png", "PNG",
+                                                    "tga", "TGA",
+                                                    "bmp", "BMP",
+                                                    "psd", "PSD",
+                                                    "gif", "GIF",
+                                                    "hdr", "HDR",
+                                                    "pic", "PIC",
+                                                    "pgm", "PGM",
+                                                    "ppm", "PPM"};
+        if (stb_input_format.find(suffix) != stb_input_format.end())
         {
             if (auto data = stbi_load(filename.c_str(), &width, &height, &channel, 0);
                 data != nullptr)
@@ -99,8 +98,8 @@ struct TextureInfo
         }
         else if (suffix == "exr")
         {
-            auto data = static_cast<float *>(nullptr);
-            auto err = static_cast<const char *>(nullptr);
+            float* data = nullptr;
+            const char* err = nullptr;
             int ret = LoadEXR(&data, &width, &height, filename.c_str(), &err);
             channel = 4;
             if (ret != TINYEXR_SUCCESS)

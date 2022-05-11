@@ -16,8 +16,8 @@ int main(int argc, char *argv[])
 	std::string output_name = "";
 	if (argc == 3)
 	{
-		output_name = simple_renderer::ConvertBackSlash(argv[2]);
-		auto out_directory = simple_renderer::GetDirectory(argv[2]);
+		output_name = raytracer::ConvertBackSlash(argv[2]);
+		auto out_directory = raytracer::GetDirectory(argv[2]);
 		if (!out_directory.empty() &&
 			!std::filesystem::exists(std::filesystem::path(out_directory)))
 		{
@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 	}
 
 	//绘制图像配置文件路径
-	auto file_path = simple_renderer::ConvertBackSlash(argv[1]);
+	std::string file_path = raytracer::ConvertBackSlash(argv[1]);
 	std::filesystem::path file_path_now = file_path;
 	if (!std::filesystem::exists(file_path_now))
 	{
@@ -38,13 +38,13 @@ int main(int argc, char *argv[])
 	std::cout << "[info] read config file: \"" << file_path.c_str() << "\"" << std::endl;
 
 	//解析绘制图像配置文件
-	auto renderer = static_cast<simple_renderer::Renderer *>(nullptr);
-	auto suffix = simple_renderer::GetSuffix(file_path);
+	raytracer::Renderer * renderer = nullptr;
+	std::string suffix = raytracer::GetSuffix(file_path);
 	if (suffix == "json")
-		renderer = simple_renderer::ParseJsonCfg(file_path);
+		renderer = raytracer::ParseJsonCfg(file_path);
 	else if (suffix == "xml")
 	{
-		auto parser = simple_renderer::XmlParser();
+		auto parser = raytracer::XmlParser();
 		renderer = parser.Parse(file_path);
 	}
 	else
@@ -59,6 +59,5 @@ int main(int argc, char *argv[])
 
 	delete renderer;
 	renderer = nullptr;
-
 	return 0;
 }

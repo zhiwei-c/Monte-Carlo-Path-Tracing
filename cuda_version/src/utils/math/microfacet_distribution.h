@@ -101,38 +101,37 @@ __device__ inline Float PdfNormDistrib(MicrofacetDistribType type,
     auto alpha_2 = alpha_u * alpha_v;
 
     auto isotropic = (alpha_u == alpha_v);
-    auto pdf = static_cast<Float>(0);
     switch (type)
     {
     case kGgx:
     {
         if (isotropic)
-            pdf = alpha_2 / (kPi * cos_theta_3 * pow(alpha_2 + tan_theta_2, 2));
+            return alpha_2 / (kPi * cos_theta_3 * pow(alpha_2 + tan_theta_2, 2));
         else
         {
             auto dir = ToLocal(facet_normal, macro_normal);
-            pdf = cos_theta / (kPi * alpha_2 *
-                               pow(pow(dir.x / alpha_u, 2) +
-                                       pow(dir.y / alpha_v, 2) +
-                                       pow(dir.z, 2),
-                                   2));
+            return cos_theta / (kPi * alpha_2 *
+                                pow(pow(dir.x / alpha_u, 2) +
+                                        pow(dir.y / alpha_v, 2) +
+                                        pow(dir.z, 2),
+                                    2));
         }
         break;
     }
     default:
     {
         if (isotropic)
-            pdf = exp(-tan_theta_2 / alpha_2) / (kPi * alpha_2 * cos_theta_3);
+            return exp(-tan_theta_2 / alpha_2) / (kPi * alpha_2 * cos_theta_3);
         else
         {
             auto dir = ToLocal(facet_normal, macro_normal);
-            pdf = exp(-(pow(dir.x / alpha_u, 2) + pow(dir.y / alpha_v, 2)) / cos_theta_2) /
-                  (kPi * alpha_2 * cos_theta_3);
+            return exp(-(pow(dir.x / alpha_u, 2) + pow(dir.y / alpha_v, 2)) / cos_theta_2) /
+                   (kPi * alpha_2 * cos_theta_3);
         }
         break;
     }
     }
-    return pdf;
+    return 0;
 }
 
 __device__ inline Float SmithG1(MicrofacetDistribType type,
@@ -151,7 +150,6 @@ __device__ inline Float SmithG1(MicrofacetDistribType type,
         return 1;
 
     auto isotropic = (alpha_u == alpha_v);
-    auto result = static_cast<Float>(0);
     switch (type)
     {
     case kGgx:
@@ -161,14 +159,14 @@ __device__ inline Float SmithG1(MicrofacetDistribType type,
             auto cos_v_n_2 = cos_v_n * cos_v_n;
             auto tan_v_n_2 = (1.0 - cos_v_n_2) / cos_v_n_2;
             auto alpha_2 = alpha_u * alpha_u;
-            result = 2.0 / (1.0 + sqrt(1.0 + alpha_2 * tan_v_n_2));
+            return 2.0 / (1.0 + sqrt(1.0 + alpha_2 * tan_v_n_2));
         }
         else
         {
             auto dir = ToLocal(v, macro_normal);
             Float xy_alpha_2 = pow(alpha_u * dir.x, 2) + pow(alpha_v * dir.y, 2),
                   tan_v_n_alpha_2 = xy_alpha_2 / pow(dir.z, 2);
-            result = 2.0 / (1.0 + sqrt(1.0 + tan_v_n_alpha_2));
+            return 2.0 / (1.0 + sqrt(1.0 + tan_v_n_alpha_2));
         }
         break;
     }
@@ -191,12 +189,12 @@ __device__ inline Float SmithG1(MicrofacetDistribType type,
         if (a < 1.6)
         {
             auto a_2 = a * a;
-            result = (3.535 * a + 2.181 * a_2) / (1.0 + 2.276 * a + 2.577 * a_2);
+            return (3.535 * a + 2.181 * a_2) / (1.0 + 2.276 * a + 2.577 * a_2);
         }
         else
-            result = 1;
+            return 1;
         break;
     }
     }
-    return result;
+    return 0;
 }

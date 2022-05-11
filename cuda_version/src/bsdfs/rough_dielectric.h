@@ -5,32 +5,15 @@
 class RoughDielectric : public Material
 {
 public:
-    __device__ RoughDielectric(uint idx,
-                               bool twosided,
-                               Texture *bump_map,
-                               Texture *opacity_map,
-                               vec3 eta,
-                               Texture *specular_reflectance,
-                               Texture *specular_transmittance,
-                               MicrofacetDistribType distri,
-                               Texture *alpha_u,
-                               Texture *alpha_v,
-                               float *kulla_conty_table,
-                               float albedo_avg)
+    __device__ RoughDielectric(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
+                               vec3 eta, Texture *specular_reflectance, Texture *specular_transmittance,
+                               MicrofacetDistribType distri, Texture *alpha_u, Texture *alpha_v,
+                               float *kulla_conty_table, float albedo_avg)
         : Material(idx, kRoughDielectric, twosided, bump_map, opacity_map),
-          eta_d_(eta.x),
-          eta_inv_d_(1.0 / eta.x),
-          specular_reflectance_(specular_reflectance),
-          specular_transmittance_(specular_transmittance),
-          distri_(distri),
-          alpha_u_(alpha_u),
-          alpha_v_(alpha_v),
-          albedo_avg_(-1),
-          kulla_conty_table_(nullptr),
-          f_add_(vec3(0)),
-          f_add_inv_(vec3(0)),
-          ratio_t_(0),
-          ratio_t_inv_(0)
+          eta_d_(eta.x), eta_inv_d_(1.0 / eta.x), specular_reflectance_(specular_reflectance),
+          specular_transmittance_(specular_transmittance), distri_(distri), alpha_u_(alpha_u),
+          alpha_v_(alpha_v), albedo_avg_(-1), kulla_conty_table_(nullptr), f_add_(vec3(0)),
+          f_add_inv_(vec3(0)), ratio_t_(0), ratio_t_inv_(0)
     {
         if (albedo_avg < 0)
             return;
@@ -89,19 +72,18 @@ public:
             if (cos_i_n >= 0)
                 return;
 
-            auto jacobian = abs(1.0 / (4.0 * myvec::dot(bs.wo, h)));
-            bs.pdf = F * D * jacobian;
-            if (bs.pdf < kEpsilonPdf || albedo_avg_ > 0 && alpha_u > 0.01 && alpha_v > 0.01 && bs.pdf < kEpsilonPdfL)
+            bs.pdf = F * D * abs(1.0 / (4.0 * myvec::dot(bs.wo, h)));
+            if (bs.pdf < kEpsilonPdf)
                 return;
 
             auto G = SmithG1(distri_, alpha_u, alpha_v, -bs.wi, bs.normal, h) *
                      SmithG1(distri_, alpha_u, alpha_v, bs.wo, bs.normal, h);
             auto cos_o_n = myvec::dot(bs.wo, bs.normal);
             bs.attenuation = vec3(F * D * G / (4.0 * abs(cos_i_n * cos_o_n)));
-            if (specular_reflectance_)
-                bs.attenuation *= specular_reflectance_->Color(bs.texcoord);
             if (albedo_avg_ > 0)
                 bs.attenuation += (1 - ratio_t) * EvalMultipleScatter(cos_i_n, cos_o_n, bs.inside);
+            if (specular_reflectance_)
+                bs.attenuation *= specular_reflectance_->Color(bs.texcoord);
         }
         else
         {
@@ -119,9 +101,8 @@ public:
             F = Fresnel(bs.wi, h, eta_inv);
             auto cos_i_h = myvec::dot(-bs.wi, h),
                  cos_o_h = myvec::dot(bs.wo, h);
-            auto jacobian = abs(cos_o_h / pow(eta_inv * cos_i_h + cos_o_h, 2));
-            bs.pdf = (1.0 - F) * D * jacobian;
-            if (bs.pdf < kEpsilonPdf || albedo_avg_ > 0 && alpha_u > 0.01 && alpha_v > 0.01 && bs.pdf < kEpsilonPdfL)
+            bs.pdf = (1.0 - F) * D * abs(cos_o_h / pow(eta_inv * cos_i_h + cos_o_h, 2));
+            if (bs.pdf < kEpsilonPdf)
                 return;
 
             auto G = SmithG1(distri_, alpha_u, alpha_v, -bs.wi, bs.normal, h) *
@@ -129,10 +110,10 @@ public:
             auto cos_o_n = myvec::dot(bs.wo, bs.normal);
             bs.attenuation = vec3(abs(cos_i_h * cos_o_h * (1.0 - F) * G * D /
                                       (cos_i_n * cos_o_n * pow(eta_inv * cos_i_h + cos_o_h, 2))));
-            if (specular_transmittance_)
-                bs.attenuation *= specular_transmittance_->Color(bs.texcoord);
             if (albedo_avg_ > 0)
                 bs.attenuation += ratio_t * EvalMultipleScatter(cos_i_n, cos_o_n, bs.inside);
+            if (specular_transmittance_)
+                bs.attenuation *= specular_transmittance_->Color(bs.texcoord);
             //光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
             bs.attenuation *= eta_inv * eta_inv;
         }
@@ -227,32 +208,15 @@ public:
 
         if (relfect)
         {
-            auto jacobian = abs(1.0 / (4.0 * myvec::dot(wo, h)));
-            return F * D * jacobian;
+            return F * D * abs(1.0 / (4.0 * myvec::dot(wo, h)));
         }
         else
         {
-            auto jacobian = abs(myvec::dot(wo, h) /
-                                pow(eta_inv * myvec::dot(-wi, h) + myvec::dot(wo, h), 2));
-            return (1.0 - F) * D * jacobian;
+            return (1.0 - F) * D * abs(myvec::dot(wo, h) / pow(eta_inv * myvec::dot(-wi, h) + myvec::dot(wo, h), 2));
         }
     }
 
 private:
-    Float eta_d_;
-    Float eta_inv_d_;
-    Texture *specular_reflectance_;
-    Texture *specular_transmittance_;
-    MicrofacetDistribType distri_;
-    Texture *alpha_u_;
-    Texture *alpha_v_;
-    float albedo_avg_;
-    float *kulla_conty_table_;
-    vec3 f_add_;
-    vec3 f_add_inv_;
-    Float ratio_t_;
-    Float ratio_t_inv_;
-
     __device__ Float GetAlbedo(Float cos_theta) const
     {
         auto offset = cos_theta * kAlbedoResolution;
@@ -272,6 +236,20 @@ private:
         auto f_ms = (1.0 - albedo_o) * (1.0 - albedo_i) / (kPi * (1.0 - albedo_avg_));
         return f_ms * f_add;
     }
+
+    Float eta_d_;
+    Float eta_inv_d_;
+    Texture *specular_reflectance_;
+    Texture *specular_transmittance_;
+    MicrofacetDistribType distri_;
+    Texture *alpha_u_;
+    Texture *alpha_v_;
+    float albedo_avg_;
+    float *kulla_conty_table_;
+    vec3 f_add_;
+    vec3 f_add_inv_;
+    Float ratio_t_;
+    Float ratio_t_inv_;
 };
 
 __device__ inline void InitRoughDielectric(uint m_idx,
@@ -279,32 +257,32 @@ __device__ inline void InitRoughDielectric(uint m_idx,
                                            Texture *texture_list,
                                            Material **&material_list)
 {
-    auto bump_map = static_cast<Texture *>(nullptr);
+    Texture *bump_map = nullptr;
     if (material_info_list[m_idx].bump_map_idx != kUintMax)
         bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
 
-    auto opacity_map = static_cast<Texture *>(nullptr);
+    Texture *opacity_map = nullptr;
     if (material_info_list[m_idx].opacity_idx != kUintMax)
         opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
 
-    auto specular_reflectance = static_cast<Texture *>(nullptr);
+    Texture *specular_reflectance = nullptr;
     if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
         specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
 
-    auto specular_transmittance = static_cast<Texture *>(nullptr);
+    Texture *specular_transmittance = nullptr;
     if (material_info_list[m_idx].specular_transmittance_idx != kUintMax)
         specular_transmittance = texture_list + material_info_list[m_idx].specular_transmittance_idx;
 
-    auto alpha_u = static_cast<Texture *>(nullptr);
+    Texture *alpha_u = nullptr;
     if (material_info_list[m_idx].alpha_u_idx != kUintMax)
         alpha_u = texture_list + material_info_list[m_idx].alpha_u_idx;
 
-    auto alpha_v = static_cast<Texture *>(nullptr);
+    Texture *alpha_v = nullptr;
     if (material_info_list[m_idx].alpha_v_idx != kUintMax)
         alpha_v = texture_list + material_info_list[m_idx].alpha_v_idx;
 
     auto albedo_avg = static_cast<float>(-1);
-    auto kulla_conty_table = static_cast<float *>(nullptr);
+    float *kulla_conty_table = nullptr;
     CreateCosinAlbedoTexture(material_info_list[m_idx].distri, alpha_u, alpha_v,
                              kulla_conty_table, albedo_avg);
 

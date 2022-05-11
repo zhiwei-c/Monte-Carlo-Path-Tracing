@@ -6,7 +6,7 @@
 #include <tiny_obj_loader.h>
 #include "../global.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 class ObjLoader : public tinyobj::ObjReader
 {
@@ -47,4 +47,4 @@ private:
     std::string error_;
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

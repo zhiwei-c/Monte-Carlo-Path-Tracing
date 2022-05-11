@@ -5,29 +5,15 @@
 class RoughPlastic : public Material
 {
 public:
-    __device__ RoughPlastic(uint idx,
-                            bool twosided,
-                            Texture *bump_map,
-                            Texture *opacity_map,
-                            vec3 eta,
-                            Texture *diffuse_reflectance,
-                            Texture *specular_reflectance,
-                            MicrofacetDistribType distri,
-                            Texture *alpha,
-                            bool nonlinear,
-                            float *kulla_conty_table,
-                            float albedo_avg)
+    __device__ RoughPlastic(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
+                            vec3 eta, Texture *diffuse_reflectance, Texture *specular_reflectance,
+                            MicrofacetDistribType distri, Texture *alpha, bool nonlinear,
+                            float *kulla_conty_table, float albedo_avg)
         : Material(idx, kRoughPlastic, twosided, bump_map, opacity_map),
-          eta_inv_d_(1.0 / eta.x),
-          diffuse_reflectance_(diffuse_reflectance),
-          specular_reflectance_(specular_reflectance),
-          distri_(distri),
-          alpha_(alpha),
-          nonlinear_(nonlinear),
-          fdr_int_(AverageFresnel(eta.x)),
-          albedo_avg_(-1),
-          kulla_conty_table_(nullptr),
-          f_add_(vec3(0))
+          eta_inv_d_(1.0 / eta.x), diffuse_reflectance_(diffuse_reflectance),
+          specular_reflectance_(specular_reflectance), distri_(distri), alpha_(alpha),
+          nonlinear_(nonlinear), fdr_int_(AverageFresnel(eta.x)), albedo_avg_(-1),
+          kulla_conty_table_(nullptr), f_add_(vec3(0))
     {
         if (albedo_avg < 0)
             return;
@@ -155,27 +141,19 @@ public:
             return 0;
 
         auto alpha = alpha_ ? alpha_->Color(texcoord).x : 0.1;
-
         auto kr = Fresnel(wi, normal, eta_inv_d_);
         auto specular_sampling_weight = SpecularSamplingWeight(texcoord);
-
         auto pdf_specular = kr * specular_sampling_weight,
              pdf_diffuse = (1.0 - kr) * (1.0 - specular_sampling_weight);
         pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
         pdf_diffuse = 1.0 - pdf_specular;
-
         auto wo_local = ToLocal(wo, normal);
         auto pdf = pdf_diffuse * PdfHemisCos(wo_local);
-
         auto h = myvec::normalize(-wi + wo);
-
         auto D = PdfNormDistrib(distri_, alpha, alpha, normal, h);
-
         if (D > kEpsilon)
-        {
-            auto jacobian = abs(1.0 / (4.0 * myvec::dot(wo, h)));
-            pdf += pdf_specular * D * jacobian;
-        }
+            pdf += pdf_specular * D * abs(1.0 / (4.0 * myvec::dot(wo, h)));
+
         return pdf;
     }
 
@@ -194,17 +172,6 @@ public:
     }
 
 private:
-    Float eta_inv_d_;
-    Texture *diffuse_reflectance_;
-    Texture *specular_reflectance_;
-    MicrofacetDistribType distri_;
-    Texture *alpha_;
-    bool nonlinear_;
-    Float fdr_int_;
-    float albedo_avg_;
-    float *kulla_conty_table_;
-    vec3 f_add_;
-
     __device__ Float SpecularSamplingWeight(const vec2 &texcoord) const
     {
         if (!diffuse_reflectance_ && !specular_reflectance_)
@@ -248,6 +215,17 @@ private:
         auto f_ms = (1.0 - albedo_o) * (1.0 - albedo_i) / (kPi * (1.0 - albedo_avg_));
         return f_ms * f_add_;
     }
+
+    Float eta_inv_d_;
+    Texture *diffuse_reflectance_;
+    Texture *specular_reflectance_;
+    MicrofacetDistribType distri_;
+    Texture *alpha_;
+    bool nonlinear_;
+    Float fdr_int_;
+    float albedo_avg_;
+    float *kulla_conty_table_;
+    vec3 f_add_;
 };
 
 __device__ inline void InitRoughPlastic(uint m_idx,
@@ -255,28 +233,28 @@ __device__ inline void InitRoughPlastic(uint m_idx,
                                         Texture *texture_list,
                                         Material **&material_list)
 {
-    auto bump_map = static_cast<Texture *>(nullptr);
+    Texture *bump_map = nullptr;
     if (material_info_list[m_idx].bump_map_idx != kUintMax)
         bump_map = texture_list + material_info_list[m_idx].bump_map_idx;
 
-    auto opacity_map = static_cast<Texture *>(nullptr);
+    Texture *opacity_map = nullptr;
     if (material_info_list[m_idx].opacity_idx != kUintMax)
         opacity_map = texture_list + material_info_list[m_idx].opacity_idx;
 
-    auto diffuse_reflectance = static_cast<Texture *>(nullptr);
+    Texture *diffuse_reflectance = nullptr;
     if (material_info_list[m_idx].diffuse_reflectance_idx != kUintMax)
         diffuse_reflectance = texture_list + material_info_list[m_idx].diffuse_reflectance_idx;
 
-    auto specular_reflectance = static_cast<Texture *>(nullptr);
+    Texture *specular_reflectance = nullptr;
     if (material_info_list[m_idx].specular_reflectance_idx != kUintMax)
         specular_reflectance = texture_list + material_info_list[m_idx].specular_reflectance_idx;
 
-    auto alpha = static_cast<Texture *>(nullptr);
+    Texture *alpha = nullptr;
     if (material_info_list[m_idx].alpha_u_idx != kUintMax)
         alpha = texture_list + material_info_list[m_idx].alpha_u_idx;
 
     auto albedo_avg = static_cast<float>(-1);
-    auto kulla_conty_table = static_cast<float *>(nullptr);
+    float *kulla_conty_table = nullptr;
     CreateCosinAlbedoTexture(material_info_list[m_idx].distri, alpha, alpha,
                              kulla_conty_table, albedo_avg);
 

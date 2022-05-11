@@ -4,7 +4,7 @@
 
 #include "../core/texture_base.h"
 
-NAMESPACE_BEGIN(simple_renderer)
+NAMESPACE_BEGIN(raytracer)
 
 ///\brief 恒定颜色纹理派生类
 class ConstantTexture : public Texture
@@ -26,4 +26,4 @@ private:
     Spectrum color_; //颜色
 };
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)

@@ -152,8 +152,8 @@ inline void LoadMeshes(ShapeInfo *shape_info, bool bump_mapping, std::vector<Ver
 {
     std::cout << "[info] begin load " << shape_info->filename << "\r";
 
-    auto to_world_pos = static_cast<gmat4 *>(nullptr),
-         to_world_norm = static_cast<gmat4 *>(nullptr);
+    gmat4* to_world_pos = nullptr,
+        * to_world_norm = nullptr;
     auto to_world = shape_info->to_world;
     if (to_world != nullptr)
     {

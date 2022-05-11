@@ -9,7 +9,9 @@
 #include "rapidxml/rapidxml_utils.hpp"
 #include "glm/gtx/matrix_query.hpp"
 
-NAMESPACE_BEGIN(simple_renderer)
+#include "../../core/ior.h"
+
+NAMESPACE_BEGIN(raytracer)
 
 Renderer *XmlParser::Parse(const std::string &path)
 {
@@ -243,7 +245,7 @@ void XmlParser::ParseMaterial(rapidxml::xml_node<> *node_bsdf, Renderer *rendere
 	}
 	if (ParseCoating(id, node_bsdf, bsdf_type))
 		return;
-	auto material = static_cast<Material *>(nullptr);
+	Material *material = nullptr;
 	switch (Hash(bsdf_type.c_str()))
 	{
 	case "diffuse"_hash:
@@ -357,7 +359,6 @@ Material *XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_diele
 
 Material *XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor)
 {
-	auto mirror = true;
 	auto eta = Spectrum(0);
 	auto k = Spectrum(1);
 	auto ext_eta = GetIor(node_conductor, "extEta", "air");
@@ -365,13 +366,7 @@ Material *XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor)
 	if (node_material)
 	{
 		auto material_name = GetAttri(node_material, "value").value();
-		if (IOR_eta.count(material_name))
-		{
-			mirror = false;
-			eta = IOR_eta.at(material_name),
-			k = IOR_k.at(material_name);
-		}
-		else if (material_name != "none")
+		if (!LookupConductorIor(material_name, eta, k))
 		{
 			std::cerr << "[error] " << GetTreeName(node_material) << std::endl
 					  << " unsupported material :" << material_name << ", "
@@ -381,7 +376,6 @@ Material *XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor)
 	}
 	else if (node_conductor->first_node())
 	{
-		mirror = false;
 		auto node_eta = GetChild(node_conductor, "eta", false);
 		eta = GetSpectrum(node_eta);
 		auto node_k = GetChild(node_conductor, "k", false);
@@ -390,8 +384,7 @@ Material *XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor)
 
 	auto specular_reflectance = ParseTextureOrOther(node_conductor, "specularReflectance");
 
-	return new Conductor(mirror,
-						 eta,
+	return new Conductor(eta,
 						 k,
 						 ext_eta,
 						 std::move(specular_reflectance));
@@ -399,7 +392,6 @@ Material *XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor)
 
 Material *XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor)
 {
-	auto mirror = true;
 	auto eta = Spectrum(0);
 	auto k = Spectrum(1);
 	auto ext_eta = GetIor(node_rough_conductor, "extEta", "air");
@@ -407,13 +399,7 @@ Material *XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conduc
 	if (node_material)
 	{
 		auto material_name = GetAttri(node_material, "value").value();
-		if (IOR_eta.count(material_name))
-		{
-			mirror = false;
-			eta = IOR_eta.at(material_name),
-			k = IOR_k.at(material_name);
-		}
-		else if (material_name != "none")
+		if (!LookupConductorIor(material_name, eta, k))
 		{
 			std::cerr << "[error] " << GetTreeName(node_material) << std::endl
 					  << "unsupported material :" << material_name << ", "
@@ -423,7 +409,6 @@ Material *XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conduc
 	}
 	else if (node_rough_conductor->first_node())
 	{
-		mirror = false;
 		auto node_eta = GetChild(node_rough_conductor, "eta", false);
 		eta = GetSpectrum(node_eta);
 		auto node_k = GetChild(node_rough_conductor, "k", false);
@@ -440,8 +425,7 @@ Material *XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conduc
 		alpha_u.reset(new ConstantTexture(Spectrum(0.1)));
 	auto alpha_v = ParseTextureOrOther(node_rough_conductor, "alphaV");
 
-	return new RoughConductor(mirror,
-							  eta,
+	return new RoughConductor(eta,
 							  k,
 							  ext_eta,
 							  std::move(specular_reflectance),
@@ -551,7 +535,7 @@ void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape, Renderer *renderer)
 	}
 
 	auto material = id_to_material_[ref];
-	auto shape = static_cast<Shape *>(nullptr);
+	Shape *shape = nullptr;
 	switch (Hash(type.c_str()))
 	{
 	case "disk"_hash:
@@ -901,23 +885,23 @@ std::optional<Float> XmlParser::GetFloat(rapidxml::xml_node<> *node_parent, std:
 
 Float XmlParser::GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::string default_material_name)
 {
+	Float ior = 0;
 	auto node_ior = GetChild(node_parent, ior_type);
 	if (!node_ior)
-		return IOR.at(default_material_name);
-	if (strcmp(node_ior->name(), "float") == 0)
-		return std::stof(GetAttri(node_ior, "value").value());
+		LookupDielectricIor(default_material_name, ior);
+	else if (strcmp(node_ior->name(), "float") == 0)
+		ior = std::stof(GetAttri(node_ior, "value").value());
 	else
 	{
 		auto int_ior_name = GetAttri(node_ior, "value").value();
-		if (IOR.find(int_ior_name) != IOR.end())
-			return IOR.at(int_ior_name);
-		else
+		if (!LookupDielectricIor(int_ior_name, ior))
 		{
 			std::cerr << "[error] " << GetTreeName(node_ior) << std::endl
 					  << "\tunsupported ior material " << int_ior_name << std::endl;
 			exit(1);
 		}
 	}
+	return ior;
 }
 
 std::string XmlParser::GetTreeName(rapidxml::xml_node<> *node)
@@ -981,4 +965,4 @@ MicrofacetDistribType XmlParser::GetDistrbType(const std::string &name)
 	}
 }
 
-NAMESPACE_END(simple_renderer)
+NAMESPACE_END(raytracer)
