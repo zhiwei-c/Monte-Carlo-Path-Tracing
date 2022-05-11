@@ -56,14 +56,14 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 ### 2.1 积分器（Integrators）
 
-- 基于路径追踪（path tracing）算法的[积分器](cpu_version/src/rendering/integrators/path.h)，包括：
+- 基于路径追踪（path tracing）算法的[积分器](cpu_version/src/integrators/path.h)，包括：
   - 使用蒙特卡洛方法（Monte Carlo method）计算辐射亮度（radiance）的数学期望；
   - 重要性抽样（importance sampling），给定光线入射方向和表面法线方向，根据 BSDF 对光线出射方向进行重要性抽样；
   - 多重重要性抽样（multiple importance sampling）：
     - 按发光物体表面积直接采样光源；
     - 按 BSDF 采样光源；
   - 俄罗斯轮盘赌（Russian roulette）控制路径追踪深度；
-- 基于双向路径追踪（bidirectional path tracing，BDPT）算法的[积分器](cpu_version/src/rendering/integrators/bdpt.h)；
+- 基于双向路径追踪（bidirectional path tracing，BDPT）算法的[积分器](cpu_version/src/integrators/bdpt.h)；
 
 ### 2.2 表面散射模型（Surface Scattering Models）
 
