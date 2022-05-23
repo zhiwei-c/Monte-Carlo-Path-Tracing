@@ -25,7 +25,7 @@ __device__ inline void CreateCosinAlbedoTexture(MicrofacetDistribType type,
     Float alpha_u = 0.1;
     if (alpha_u_texture)
     {
-        if (alpha_u_texture->type() != kConstant)
+        if (alpha_u_texture->Varying())
             return;
         alpha_u = alpha_u_texture->Color(vec2(0)).x;
     }
@@ -33,7 +33,7 @@ __device__ inline void CreateCosinAlbedoTexture(MicrofacetDistribType type,
     Float alpha_v = 0.1;
     if (alpha_v_texture)
     {
-        if (alpha_v_texture->type() != kConstant)
+        if (alpha_v_texture->Varying())
             return;
         alpha_v = alpha_v_texture->Color(vec2(0)).x;
     }

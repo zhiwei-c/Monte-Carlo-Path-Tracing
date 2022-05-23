@@ -44,8 +44,6 @@ public:
 
 protected:
     ///\brief 按面积直接采样发光物体上一点
-    ///\param its 采样到的发光物体上一点（输入/输出参数）
-    ///\return 是否采样成功
     bool SampleEmitterDirectIts(Intersection &its) const
     {
         if (this->emitters_.empty())
@@ -56,9 +54,6 @@ protected:
     }
 
     ///\brief 按面积直接采样发光物体上一点，累计多重重要性采样下直接来自光源的辐射亮度
-    ///\param its 采样时当前所在的光线与物体表面交点
-    ///\param wo 采样时当前所在的光线与物体表面交点处，光线的出射方向
-    ///\param value 直接来自光源的辐射亮度（光亮度） （输入/输出参数）
     bool EmitterDirectArea(const Intersection &its, const Vector3 &wo, Spectrum &value, const Spectrum *attenuation = nullptr, const Intersection *its_emitter_ptr = nullptr) const
     {
         if (this->emitters_.empty())

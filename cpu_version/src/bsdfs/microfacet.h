@@ -33,6 +33,9 @@ public:
         : distrib_type_(distrib_type), albedo_avg_(-1), alpha_u_(std::move(alpha_u)), alpha_v_(std::move(alpha_v))
     {
     }
+    virtual ~Microfacet() {}
+
+    virtual bool TextureMapping() const { return alpha_u_ != nullptr || alpha_v_ != nullptr; }
 
 protected:
     MicrofacetDistribType distrib_type_; //微表面分布类型
@@ -49,21 +52,21 @@ protected:
         return {alpha_u, alpha_v};
     }
 
-    ///\brief 给定光线出射方向与法线方向夹角的余弦，获取反照率
+    ///\brief 给定光线出射方向与法线方向夹角的余弦，获取平均反照率
     Float GetAlbedo(Float cos_theta) const
     {
         Float offset = cos_theta * kResolution;
         auto offset_int = static_cast<int>(offset);
         if (offset_int >= kResolution - 1)
-            return albedo_.back();
+            return albedo_lut_.back();
         else
-            return Lerp(offset - offset_int, albedo_[offset_int], albedo_[offset_int + 1]);
+            return Lerp(offset - offset_int, albedo_lut_[offset_int], albedo_lut_[offset_int + 1]);
     }
 
     ///\brief 预计算光线出射方向与法线方向夹角的余弦从0到1的一系列反照率和平均反照率
     void ComputeAlbedoTable()
     {
-        albedo_.fill(0);
+        albedo_lut_.fill(0);
         auto normal = Vector3(0, 0, 1);
         auto [alpha_u, alpha_v] = GetAlpha(Vector2(0));
         if (alpha_u < 0.01 || alpha_v < 0.01)
@@ -83,9 +86,9 @@ protected:
                       cos_m_o = std::max(glm::dot(wo, normal_micro), 0.0),
                       cos_m_n = std::max(glm::dot(normal, normal_micro), 0.0);
                 //重要性采样的微表面模型BSDF，并且菲涅尔项置为1（或0）
-                albedo_[j] += (cos_m_o * G / (cos_theta_o * cos_m_n));
+                albedo_lut_[j] += (cos_m_o * G / (cos_theta_o * cos_m_n));
             }
-            albedo_[j] = std::max(sample_count_inv * albedo_[j], 0.0);
+            albedo_lut_[j] = std::max(sample_count_inv * albedo_lut_[j], 0.0);
         }
 
         albedo_avg_ = 0;
@@ -99,7 +102,7 @@ protected:
                 auto [normal_micro, pdf] = distrib->Sample(normal, Hammersley(i + 1, sample_count + 1));
                 Vector3 wi = -Reflect(-wo, normal_micro);
                 Float cos_theta_i = std::max(glm::dot(-wi, normal), static_cast<Float>(0));
-                avg_tmp += (albedo_[j] * cos_theta_i);
+                avg_tmp += (albedo_lut_[j] * cos_theta_i);
             }
             albedo_avg_ += (avg_tmp * 2 * sample_count_inv);
         }
@@ -109,7 +112,7 @@ protected:
     }
 
 private:
-    std::array<Float, kResolution> albedo_; //光线出射方向与法线方向夹角的余弦从0到1的一系列反照率
+    std::array<Float, kResolution> albedo_lut_; //光线出射方向与法线方向夹角的余弦从0到1的一系列反照率
 };
 
 NAMESPACE_END(raytracer)

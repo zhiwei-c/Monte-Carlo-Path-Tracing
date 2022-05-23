@@ -36,7 +36,7 @@ public:
 
     __device__ vec3 radiance(const vec3 &wo) const
     {
-        if (radiance_->type() == kConstant)
+        if (!radiance_->Varying())
             return radiance_->Color(vec2(0));
 
         auto look_dir = gvec3(-wo.x, -wo.y, -wo.z);

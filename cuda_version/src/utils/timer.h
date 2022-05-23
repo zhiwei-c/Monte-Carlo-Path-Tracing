@@ -37,6 +37,6 @@ public:
 		auto pass_hours = static_cast<int>(diff / 3600);
 		auto pass_mins = static_cast<int>(diff / 60) - pass_hours * 60;
 		auto pass_secs = static_cast<int>(diff) - pass_hours * 3600 - pass_mins * 60;
-		printf("[info]  it takes %i h %i m %i s for \"%s\".\n", pass_hours, pass_mins, pass_secs, name.c_str());
+		printf("[info] it takes %i h %i m %i s for \"%s\".\n", pass_hours, pass_mins, pass_secs, name.c_str());
 	}
 };

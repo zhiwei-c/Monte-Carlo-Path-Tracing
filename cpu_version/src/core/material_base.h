@@ -84,7 +84,7 @@ public:
     virtual Spectrum radiance() const { return Spectrum(0); };
 
     ///\return 是否映射纹理
-    virtual bool TextureMapping() const { return opacity_ && !opacity_->Constant() || bump_map_ && !bump_map_->Constant(); }
+    virtual bool TextureMapping() const { return opacity_ != nullptr || bump_map_ != nullptr; }
 
     ///\brief 设置是否两面都有效
     void SetTwosided(bool twosided) { twosided_ = twosided; }
@@ -129,7 +129,7 @@ private:
     MaterialType type_;                 // 材质类型（表面散射模型类型）
     bool twosided_;                     // 材质两面都有效
     std::unique_ptr<Texture> opacity_;  // 不透明度纹理映射
-    std::unique_ptr<Texture> bump_map_; // 透明度纹理映射
+    std::unique_ptr<Texture> bump_map_; // 凹凸映射
 };
 
 NAMESPACE_END(raytracer)

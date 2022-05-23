@@ -35,8 +35,10 @@ public:
     __device__ vec2 Gradient(const vec2 &texcoord) const;
 
     __device__ bool Transparent(const vec2 &texcoord, Float sample) const;
+    
+    __device__ bool IsBitmap() const { return type_ == kBitmap; }
 
-    __device__ TextureType type() const { return type_; }
+    __device__ bool Varying() const { return type_ != kConstant; }
 
     __device__ void InitConstant(const vec3 &color);
     __device__ void InitBitmap(int width, int height, int channel, float *colors);

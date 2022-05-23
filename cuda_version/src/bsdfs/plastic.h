@@ -2,9 +2,22 @@
 
 #include "../core/material_base.h"
 
+///\brief 平滑的塑料材质派生类
 class Plastic : public Material
 {
 public:
+    /**
+     * @brief 平滑的塑料材质
+     *
+     * @param idx 材质编号
+     * @param twosided 材质是否两面都有效
+     * @param bump_map 不透明度纹理映射
+     * @param opacity_map 凹凸映射
+     * @param eta 相对折射率
+     * @param diffuse_reflectance 漫反射系数
+     * @param specular_reflectance 镜面反射系数 （注意：对于物理真实感绘制，默认为 1，表示为空指针，不应更改此参数）
+     * @param nonlinear 是否考虑因内部散射而引起的非线性色移
+     */
     __device__ Plastic(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
                        vec3 eta, Texture *diffuse_reflectance, Texture *specular_reflectance, bool nonlinear)
         : Material(idx, kPlastic, twosided, bump_map, opacity_map),
@@ -13,15 +26,15 @@ public:
     {
     }
 
+    ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     __device__ void Sample(BsdfSampling &bs, const vec3 &sample) const override
     {
-        auto specular_sampling_weight = SpecularSamplingWeight(bs.texcoord);
-        auto kr_o = Fresnel(-bs.wo, bs.normal, eta_inv_d_);
-        auto pdf_specular = kr_o * specular_sampling_weight,
-             pdf_diffuse = (1.0 - kr_o) * (1.0 - specular_sampling_weight);
-        pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
+        Float kr_i = 0, kr_o = Fresnel(-bs.wo, bs.normal, eta_inv_d_),
+              specular_sampling_weight = SpecularSamplingWeight(bs.texcoord);
         bs.pdf = 0;
-        auto kr_i = static_cast<Float>(0);
+        Float pdf_specular = kr_o * specular_sampling_weight,
+              pdf_diffuse = (1.0 - kr_o) * (1.0 - specular_sampling_weight);
+        pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
         auto specular = false;
         if (sample.x < pdf_specular)
         {
@@ -33,7 +46,7 @@ public:
         else
         {
             auto wi_local = vec3(0);
-            auto pdf = static_cast<Float>(0);
+            Float pdf = 0;
             HemisCos(sample.y, sample.z, wi_local, pdf);
             bs.wi = -ToWorld(wi_local, bs.normal);
             kr_i = Fresnel(bs.wi, bs.normal, eta_inv_d_);
@@ -45,7 +58,7 @@ public:
         bs.pdf += pdf_diffuse * PdfHemisCos(ToLocal(bs.wo, bs.normal));
         if (bs.pdf < kEpsilonPdf)
             return;
-        auto diffuse_reflectance = diffuse_reflectance_ ? diffuse_reflectance_->Color(bs.texcoord) : vec3(0.5);
+        vec3 diffuse_reflectance = diffuse_reflectance_ ? diffuse_reflectance_->Color(bs.texcoord) : vec3(0.5);
         if (nonlinear_)
             bs.attenuation = diffuse_reflectance / (vec3(1) - diffuse_reflectance * fdr_int_);
         else
@@ -61,16 +74,17 @@ public:
         bs.valid = true;
     }
 
+    ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
     __device__ vec3 Eval(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const override
     {
         auto albedo = vec3(0);
-        auto diffuse_reflectance = diffuse_reflectance_ ? diffuse_reflectance_->Color(texcoord) : vec3(0.5);
+        vec3 diffuse_reflectance = diffuse_reflectance_ ? diffuse_reflectance_->Color(texcoord) : vec3(0.5);
         if (nonlinear_)
             albedo = diffuse_reflectance / (vec3(1) - diffuse_reflectance * fdr_int_);
         else
             albedo = diffuse_reflectance / (1.0 - fdr_int_);
-        auto kr_i = Fresnel(wi, normal, eta_inv_d_);
-        auto kr_o = Fresnel(-wo, normal, eta_inv_d_);
+        Float kr_i = Fresnel(wi, normal, eta_inv_d_),
+              kr_o = Fresnel(-wo, normal, eta_inv_d_);
         albedo *= eta_inv_d_ * eta_inv_d_ * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
         if (SameDirection(Reflect(wi, normal), wo))
         {
@@ -82,73 +96,75 @@ public:
         return albedo;
     }
 
+    ///\return 根据光线入射方向和法线方向计算的，光线从给定出射方向射出的概率
     __device__ Float Pdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const override
     {
         // 表面法线方向，光线入射和出射需在介质同侧
         if (NotSameHemis(wo, normal))
             return 0;
-        auto kr = Fresnel(wi, normal, eta_inv_d_);
-        auto specular_sampling_weight = SpecularSamplingWeight(texcoord);
-
-        auto pdf_specular = kr * specular_sampling_weight,
-             pdf_diffuse = (1.0 - kr) * (1.0 - specular_sampling_weight);
+        Float kr = Fresnel(wi, normal, eta_inv_d_),
+              specular_sampling_weight = SpecularSamplingWeight(texcoord);
+        Float pdf_specular = kr * specular_sampling_weight,
+              pdf_diffuse = (1.0 - kr) * (1.0 - specular_sampling_weight);
         pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
-        pdf_diffuse = 1.0 - pdf_specular;
-        auto wo_local = ToLocal(wo, normal);
-        auto local_pdf_diffuse = PdfHemisCos(wo_local);
-        auto pdf = pdf_diffuse * local_pdf_diffuse;
+        Float pdf = (1.0 - pdf_specular) * PdfHemisCos(ToLocal(wo, normal));
         if (SameDirection(wo, Reflect(wi, normal)))
-        {
             pdf += pdf_specular;
-        }
         return pdf;
     }
 
+    ///\return 是否映射纹理
+    __device__ bool TextureMapping() const override
+    {
+        return Material::TextureMapping() ||
+               diffuse_reflectance_ && diffuse_reflectance_->Varying() ||
+               specular_reflectance_ && specular_reflectance_->Varying();
+    }
+
+    ///\return 给定点是否透明
     __device__ bool Transparent(const vec2 &texcoord, const vec2 &sample) const override
     {
         if (Material::Transparent(texcoord, sample))
             return true;
-        if (diffuse_reflectance_)
-        {
-            if (diffuse_reflectance_->type() == kBitmap &&
-                diffuse_reflectance_->Transparent(texcoord, sample.y))
-                return true;
-        }
-        return false;
+        else if (!diffuse_reflectance_ ||
+                 !diffuse_reflectance_->IsBitmap() ||
+                 !diffuse_reflectance_->Transparent(texcoord, sample.y))
+            return false;
+        else
+            return true;
     }
 
 private:
+    ///\return 给定点抽样镜面反射的权重
     __device__ Float SpecularSamplingWeight(const vec2 &texcoord) const
     {
         if (!diffuse_reflectance_ && !specular_reflectance_)
             return 2.0 / 3.0;
         else if (!diffuse_reflectance_)
         {
-            auto ks = specular_reflectance_->Color(texcoord);
-            auto s_sum = ks.x + ks.y + ks.z;
+            vec3 ks = specular_reflectance_->Color(texcoord);
+            Float s_sum = ks.x + ks.y + ks.z;
             return s_sum / (1.5 + s_sum);
         }
         else if (!specular_reflectance_)
         {
-            auto kd = diffuse_reflectance_->Color(texcoord);
-            auto d_sum = kd.x + kd.y + kd.z;
-            return 3.0 / (d_sum + 3.0);
+            vec3 kd = diffuse_reflectance_->Color(texcoord);
+            return 3.0 / (kd.x + kd.y + kd.z + 3.0);
         }
         else
         {
-            auto ks = specular_reflectance_->Color(texcoord);
-            auto s_sum = ks.x + ks.y + ks.z;
-            auto kd = diffuse_reflectance_->Color(texcoord);
-            auto d_sum = kd.x + kd.y + kd.z;
-            return s_sum / (d_sum + s_sum);
+            vec3 ks = specular_reflectance_->Color(texcoord);
+            Float s_sum = ks.x + ks.y + ks.z;
+            vec3 kd = diffuse_reflectance_->Color(texcoord);
+            return s_sum / (kd.x + kd.y + kd.z + s_sum);
         }
     }
 
-    Float eta_inv_d_;
-    Texture *diffuse_reflectance_;
-    Texture *specular_reflectance_;
-    bool nonlinear_;
-    Float fdr_int_;
+    Float eta_inv_d_;               //外部折射率与介质折射率之比
+    Texture *diffuse_reflectance_;  //漫反射系数
+    Texture *specular_reflectance_; //镜面反射系数 （注意：对于物理真实感绘制，默认为 1，表示为空指针，不应更改此参数）
+    bool nonlinear_;                //是否考虑因内部散射而引起的非线性色移
+    Float fdr_int_;                 //漫反射菲涅尔项平均值
 };
 
 __device__ inline void InitPlastic(uint m_idx,

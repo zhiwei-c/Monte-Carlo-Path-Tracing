@@ -51,6 +51,9 @@ public:
 
     __device__ bool BumpMapping() const { return bump_map_ != nullptr; }
 
+    ///\return 是否映射纹理
+    virtual __device__ bool TextureMapping() const { return opacity_map_ != nullptr || bump_map_ != nullptr; }
+
     virtual __device__ bool Transparent(const vec2 &texcoord, const vec2 &sample) const
     {
         if (opacity_map_)

@@ -43,7 +43,7 @@ public:
         { //抽样折射光线
             bs.wi = -Refract(-bs.wo, bs.normal, eta_inv);
             kr = Fresnel(bs.wi, -bs.normal, eta);
-            bs.pdf = 1 - kr;
+            bs.pdf = 1.0 - kr;
             if (!bs.get_attenuation)
                 return;
             bs.attenuation = Spectrum(1.0 - kr);

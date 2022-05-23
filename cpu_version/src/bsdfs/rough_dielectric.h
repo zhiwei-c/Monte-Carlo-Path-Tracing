@@ -201,6 +201,7 @@ public:
 	bool TextureMapping() const override
 	{
 		return Material::TextureMapping() ||
+               Microfacet::TextureMapping() ||
 			   specular_reflectance_ && !specular_reflectance_->Constant() ||
 			   specular_transmittance_ && !specular_transmittance_->Constant();
 	}

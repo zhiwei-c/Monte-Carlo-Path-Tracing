@@ -40,7 +40,8 @@ public:
         // 表面法线方向，光线入射和出射需在介质同侧
         if (NotSameHemis(wo, normal))
             return 0;
-        return PdfHemisCos(wo, normal);
+        else
+            return PdfHemisCos(wo, normal);
     }
 
     ///\brief 是否映射纹理

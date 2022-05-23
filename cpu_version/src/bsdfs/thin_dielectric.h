@@ -31,7 +31,7 @@ public:
         if (kr < 1)
             kr *= 2.0 / (1.0 + kr);
         if (UniformFloat() < kr)
-        {
+        { //抽样反射光线
             bs.pdf = kr;
             bs.wi = -Reflect(-bs.wo, bs.normal);
             bs.attenuation = Spectrum(kr);
@@ -39,7 +39,7 @@ public:
                 bs.attenuation *= specular_reflectance_->Color(bs.texcoord);
         }
         else
-        {
+        { //抽样折射光线
             bs.pdf = 1.0 - kr;
             bs.wi = bs.wo;
             bs.attenuation = Vector3(1 - kr);
