@@ -36,11 +36,11 @@ public:
         Float cos_theta = 1.0 / std::sqrt(1.0 - alpha_2 * std::log(1.0 - sample.x)),
               sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
         auto normal_micro_local = Vector3(sin_theta * cos_phi, sin_theta * sin_phi, cos_theta);
-        Float pdf = (1.0 - sample.x) / (kPiInv * alpha_u_ * alpha_v_ * std::pow(cos_theta, 3));
+        Float pdf = (1.0 - sample.x) / (kPi * alpha_u_ * alpha_v_ * std::pow(cos_theta, 3));
         return {ToWorld(normal_micro_local, normal_macro), pdf};
     }
 
-    ///\brief 计算给定微表面法线的概率
+    ///\brief 计算给定微表面法线余弦加权的概率
     Float Pdf(const Vector3 &normal_micro, const Vector3 &normal_macro) const override
     {
         Float cos_theta = glm::dot(normal_macro, normal_micro);

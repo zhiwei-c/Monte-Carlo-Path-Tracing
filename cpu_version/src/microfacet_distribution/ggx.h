@@ -41,7 +41,7 @@ public:
         return {ToWorld(normal_micro_local, normal_macro), pdf};
     }
 
-    ///\brief 计算给定微表面法线的概率
+    ///\brief 计算给定微表面法线余弦加权的概率
     Float Pdf(const Vector3 &normal_micro, const Vector3 &normal_macro) const
     {
         Float cos_theta = glm::dot(normal_macro, normal_micro);
@@ -49,11 +49,10 @@ public:
             return 0;
         Float sin_theta = std::sqrt(1.0 - std::pow(cos_theta, 2)),
               tan_theta_2 = std::pow(sin_theta / cos_theta, 2),
-              cos_theta_3 = std::pow(cos_theta, 3);
-        Float alpha_2 = alpha_u_ * alpha_v_;
+              alpha_2 = alpha_u_ * alpha_v_;
 
         if (isotropic_)
-            return alpha_2 / (kPi * cos_theta_3 * std::pow(alpha_2 + tan_theta_2, 2));
+            return alpha_2 / (kPi * std::pow(cos_theta, 3) * std::pow(alpha_2 + tan_theta_2, 2));
         else
         {
             Vector3 dir = ToLocal(normal_micro, normal_macro);

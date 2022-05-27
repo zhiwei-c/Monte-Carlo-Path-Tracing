@@ -23,7 +23,7 @@ public:
     ///\brief 抽样微表面法线
     virtual std::pair<Vector3, Float> Sample(const Vector3 &normal_macro, const Vector2 &sample) const = 0;
 
-    ///\brief 计算给定微表面法线的概率
+    ///\brief 计算给定微表面法线余弦加权的概率
     virtual Float Pdf(const Vector3 &normal_micro, const Vector3 &normal_macro) const = 0;
 
     ///\brief 计算给定参数的阴影-遮蔽系数
