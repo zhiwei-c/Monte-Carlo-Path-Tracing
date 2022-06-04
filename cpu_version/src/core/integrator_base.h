@@ -54,7 +54,7 @@ protected:
     }
 
     ///\brief 按面积直接采样发光物体上一点，累计多重重要性采样下直接来自光源的辐射亮度
-    bool EmitterDirectArea(const Intersection &its, const Vector3 &wo, Spectrum &value, const Spectrum *attenuation = nullptr, const Intersection *its_emitter_ptr = nullptr) const
+    bool EmitterDirectArea(const Intersection &its, const Vector3 &wo, Spectrum &L_direct, const Intersection *its_emitter_ptr = nullptr) const
     {
         if (this->emitters_.empty())
             return false;
@@ -79,13 +79,12 @@ protected:
         SamplingRecord rec = its.Eval(wi, wo);
         if (rec.pdf < kEpsilonPdf)
             return false;
+
         Float pdf_area = its_pre.pdf_area() / this->emitters_.size(),
               pdf_direct = pdf_area * distance_sqr / cos_theta_prime,
               weight_direct = MisWeight(pdf_direct, rec.pdf);
-        if (attenuation)
-            value += *attenuation * weight_direct * its_pre.radiance() * rec.attenuation / pdf_direct;
-        else
-            value += weight_direct * its_pre.radiance() * rec.attenuation / pdf_direct;
+
+        L_direct = weight_direct * its_pre.radiance() * rec.attenuation / pdf_direct;
         return true;
     }
 

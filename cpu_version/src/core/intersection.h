@@ -24,6 +24,14 @@ public:
     {
     }
 
+    ///\brief 视点
+    ///\param pos 视点的位置
+    Intersection(const Vector3 &pos)
+        : valid_(true), absorb_(false), pos_(pos), normal_(Vector3(0)), inside_(false),
+          distance_(INFINITY), texcoord_(Vector2(0)), bsdf_(nullptr), pdf_area_(INFINITY)
+    {
+    }
+
     ///\brief 光线与物体模型面片交点，光线与物体相交
     ///\param pos 空间坐标
     ///\param normal 法线
@@ -42,30 +50,49 @@ public:
     ///\brief 给定交点处光线出射方向，抽样入射方向和相应的概率等参数
     SamplingRecord Sample(const Vector3 &wo, bool get_attenuation = true) const
     {
-        bool one_side = glm::dot(wo, normal_) > 0; //光线与交点法线是否同侧
         auto rec = SamplingRecord();
-        rec.inside = one_side ? inside_ : !inside_; //法线方向是否指向介质内侧
         rec.get_attenuation = get_attenuation;
-        rec.texcoord = texcoord_;
-        rec.normal = one_side ? normal_ : -normal_; //处理法线方向，使其与光线出射方向夹角小于90度
         rec.pos = pos_;
         rec.wo = wo;
-        bsdf_->Sample(rec);
+        if (bsdf_)
+        {
+            bool one_side = glm::dot(wo, normal_) > 0;  //光线与交点法线是否同侧
+            rec.inside = one_side ? inside_ : !inside_; //法线方向是否指向介质内侧
+            rec.normal = one_side ? normal_ : -normal_; //处理法线方向，使其与光线出射方向夹角小于90度
+            rec.texcoord = texcoord_;
+            bsdf_->Sample(rec);
+        }
+        else
+        {
+            rec.pdf = 1;
+            rec.wi = wo;
+            rec.type = ScatteringType::kReflect;
+            rec.attenuation = Spectrum(1);
+        }
         return rec;
     }
 
     ///\brief 根据光线入射方向和出射方向，计算交点处光线传播的 BSDF 系数
     SamplingRecord Eval(const Vector3 &wi, const Vector3 &wo) const
     {
-        bool one_side = glm::dot(wi, normal_) < 0; //入射光线与法线是否同侧
         auto rec = SamplingRecord();
-        rec.inside = one_side ? inside_ : !inside_; //法线方向是否指向介质内侧
-        rec.texcoord = texcoord_;
-        rec.normal = one_side ? normal_ : -normal_; //处理法线方向，使其与光线入射方向夹角大于90度
         rec.pos = pos_;
         rec.wi = wi;
         rec.wo = wo;
-        bsdf_->Eval(rec);
+        if (bsdf_)
+        {
+            bool one_side = glm::dot(wi, normal_) < 0;  //入射光线与法线是否同侧
+            rec.inside = one_side ? inside_ : !inside_; //法线方向是否指向介质内侧
+            rec.normal = one_side ? normal_ : -normal_; //处理法线方向，使其与光线入射方向夹角大于90度
+            rec.texcoord = texcoord_;
+            bsdf_->Eval(rec);
+        }
+        else
+        {
+            rec.pdf = 1;
+            rec.type = ScatteringType::kTransimission;
+            rec.attenuation = Spectrum(1);
+        }
         return rec;
     }
 
@@ -94,18 +121,18 @@ public:
     Float pdf_area() const { return pdf_area_; }
 
     ///\return 交点处表面材质对应的散射波瓣分布是否是 δ-函数
-    bool HarshLobe() const { return bsdf_->HarshLobe(); }
+    bool HarshLobe() const { return bsdf_ == nullptr || bsdf_->HarshLobe(); }
 
 private:
-    bool valid_;         //光线与物体的相交是否发生
-    bool inside_;        //交点处法线是否朝内
-    bool absorb_;        //光线与单面材质的物体交于物体背面而被吸收
-    Float distance_;     //从光线起点到该交点的距离
-    Float pdf_area_;     //面元概率
-    Vector2 texcoord_;   //交点纹理坐标
-    Vector3 pos_;        //交点空间坐标
-    Vector3 normal_;     //交点法线
-    Bsdf *bsdf_; //交点面片对应的材质
+    bool valid_;       //光线与物体的相交是否发生
+    bool inside_;      //交点处法线是否朝内
+    bool absorb_;      //光线与单面材质的物体交于物体背面而被吸收
+    Float distance_;   //从光线起点到该交点的距离
+    Float pdf_area_;   //面元概率
+    Vector2 texcoord_; //交点纹理坐标
+    Vector3 pos_;      //交点空间坐标
+    Vector3 normal_;   //交点法线
+    Bsdf *bsdf_;       //交点面片对应的材质
 };
 
 NAMESPACE_END(raytracer)

@@ -79,12 +79,6 @@ public:
         Timer timer;
         std::cout << "[info] Begin render......\t\t\t\r";
 
-        std::vector<Vector3> look_dirs_now = GetDirections(434, 607);
-        for (auto look_dir_now : look_dirs_now)
-        {
-            integrator->Shade(eye_pos_, look_dir_now);
-        }
-
         auto frame = new Bitmap(film_.width, film_.height, 3, film_.gamma);
 
         auto pixels = std::vector<std::pair<int, int>>();

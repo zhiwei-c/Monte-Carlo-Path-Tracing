@@ -197,7 +197,7 @@ private:
         {
             if (its_emitter_ptr)
             {
-                if (!EmitterDirectArea(v.its, wo, L_emitter, nullptr, its_emitter_ptr))
+                if (!EmitterDirectArea(v.its, wo, L_emitter, its_emitter_ptr))
                     EmitterDirectArea(v.its, wo, L_emitter);
             }
             else
