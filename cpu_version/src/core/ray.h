@@ -162,11 +162,11 @@ inline Float AverageFresnel(Float eta)
  * 		参见 [《artist Friendly Metallic Fresnel》](https://jcgt.org/published/0003/04/03/paper.pdf)
  * \param eta 相对折射率的实部
  * \param k 相对折射率的虚部（消光系数）
- * \return 由两个 Spectrum 类型构成的 pair，分别代表反射率 reflectivity 和边缘色差 edgetint
+ * \return 由两个 Spectrum 类型构成的 pair，分别代表反射率（reflectivity）和边缘色差（edgetint）
  */
-inline void IorToReflectivityEdgetint(const Spectrum &eta, const Spectrum &k,
-									  Spectrum &reflectivity, Spectrum &edgetint)
+inline std::pair<Spectrum, Spectrum> IorToReflectivityEdgetint(const Spectrum &eta, const Spectrum &k)
 {
+	auto reflectivity = Spectrum(0), edgetint = Spectrum(0);
 	Float temp1 = 0, temp2 = 0, temp3 = 0;
 	for (int i = 0; i < 3; i++)
 	{
@@ -176,12 +176,22 @@ inline void IorToReflectivityEdgetint(const Spectrum &eta, const Spectrum &k,
 		temp3 = (1.0 - reflectivity[i]) / (1.0 + reflectivity[i]);
 		edgetint[i] = (temp1 - eta[i] * temp2) / (temp1 - temp3 * temp2);
 	}
+	return {reflectivity, edgetint};
 }
 
 ///\brief 导体材质的平均菲涅尔系数，https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
 inline Spectrum AverageFresnelConductor(const Spectrum &r, const Spectrum &g)
 {
-	return Spectrum(0.087237) + 0.0230685 * g - 0.0864902 * g * g + 0.0774594 * g * g * g + 0.782654 * r - 0.136432 * r * r + 0.278708 * r * r * r + 0.19744 * g * r + 0.0360605 * g * g * r - 0.2586 * g * r * r;
+	return Spectrum(0.087237) +
+		   0.0230685 * g -
+		   0.0864902 * g * g +
+		   0.0774594 * g * g * g +
+		   0.782654 * r -
+		   0.136432 * r * r +
+		   0.278708 * r * r * r +
+		   0.19744 * g * r +
+		   0.0360605 * g * g * r -
+		   0.2586 * g * r * r;
 }
 
 NAMESPACE_END(raytracer)

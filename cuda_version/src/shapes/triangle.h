@@ -3,7 +3,7 @@
 #include "../core/shape_base.h"
 
 __device__ void Mesh::InitTriangle(Vertex *v,
-                                   Material **material,
+                                   Bsdf **bsdf,
                                    Float area,
                                    Mesh *pre,
                                    Mesh *next)
@@ -12,7 +12,7 @@ __device__ void Mesh::InitTriangle(Vertex *v,
     {
         v_[k] = v[k];
     }
-    material_ = material;
+    bsdf_ = bsdf;
 
     if (v[0].normal.length() < kEpsilon)
     {
@@ -53,7 +53,7 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
     if (distance < kEpsilon || distance > its.distance())
         return;
 
-    if (!(*material_)->twosided())
+    if (!(*bsdf_)->twosided())
     {
         if (flip_normals_)
         {
@@ -76,10 +76,10 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
     Float alpha = 1.0 - u - v, beta = u, gamma = v;
     vec3 normal = alpha * v_[0].normal + beta * v_[1].normal + gamma * v_[2].normal;
     auto texcoord = vec2(0);
-    if ((*material_)->TextureMapping())
+    if ((*bsdf_)->TextureMapping())
     {
         texcoord = alpha * v_[0].texcoord + beta * v_[1].texcoord + gamma * v_[2].texcoord;
-        if ((*material_)->BumpMapping())
+        if ((*bsdf_)->BumpMapping())
         {
             vec3 tangent = myvec::normalize(alpha * v_[0].tangent +
                                             beta * v_[1].tangent +
@@ -87,10 +87,10 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
             vec3 bitangent = myvec::normalize(alpha * v_[0].bitangent +
                                               beta * v_[1].bitangent +
                                               gamma * v_[2].bitangent);
-            normal = (*material_)->PerturbNormal(normal, tangent, bitangent, texcoord);
+            normal = (*bsdf_)->PerturbNormal(normal, tangent, bitangent, texcoord);
         }
     }
-    if ((*material_)->Transparent(texcoord, sample))
+    if ((*bsdf_)->Transparent(texcoord, sample))
         return;
     vec3 pos = alpha * v_[0].position + beta * v_[1].position + gamma * v_[2].position;
     int inside = -1;
@@ -104,7 +104,7 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
         normal = -normal;
         inside = -inside;
     }
-    its = Intersection(pos, normal, texcoord, inside, distance, material_, pdf_area_);
+    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, pdf_area_);
 }
 
 __device__ void Mesh::SampleP(Intersection &its, const vec3 &sample) const
@@ -117,5 +117,5 @@ __device__ void Mesh::SampleP(Intersection &its, const vec3 &sample) const
     auto pos = alpha * v_[0].position + beta * v_[1].position + gamma * v_[2].position;
     auto normal = alpha * v_[0].normal + beta * v_[1].normal + gamma * v_[2].normal;
 
-    its = Intersection(pos, normal, vec2(-1), false, INFINITY, material_, pdf_area_);
+    its = Intersection(pos, normal, vec2(-1), false, INFINITY, bsdf_, pdf_area_);
 }

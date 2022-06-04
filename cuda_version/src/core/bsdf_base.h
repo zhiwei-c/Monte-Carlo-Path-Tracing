@@ -1,11 +1,11 @@
 #pragma once
 
-#include "material_info.h"
+#include "bsdf_info.h"
 
-class Material
+class Bsdf
 {
 public:
-    virtual __device__ ~Material() {}
+    virtual __device__ ~Bsdf() {}
 
     /**
      * \brief 根据光线出射方向和表面法线方向，抽样光线入射方向
@@ -15,29 +15,10 @@ public:
      * \param inside 表面法线方向是否朝向表面内侧
      * \return 由 vec3 类型和 BsdfSamplingType 类型构成的 pair，分别代表抽样所得光线入射方向，和入射光线与出射光线之间的关系
      */
-    virtual __device__ void Sample(BsdfSampling &bs, const vec3 &sample) const {}
+    virtual __device__ void Sample(SamplingRecord &rec, const vec3 &sample) const {}
 
-    /**
-     * \brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
-     * \param wi 光线入射方向
-     * \param wo 光线出射方向
-     * \param normal 表面法线方向
-     * \param texcoord 表面纹理坐标，可选
-     * \param inside 表面法线方向是否朝向表面内侧
-     * \return BSDF 光能衰减系数
-     */
-    virtual __device__ vec3 Eval(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const { return vec3(0); }
-
-    /**
-     * \brief 根据光线入射方向、出射方向和法线方向，计算光线因从入射方向入射，而从出射方向出射的概率
-     * \param wi 光线入射方向
-     * \param wo 光线出射方向
-     * \param normal 表面法线方向
-     * \param texcoord 表面纹理坐标，可选
-     * \param inside 表面法线方向是否朝向表面内侧
-     * \return 光线因从入射方向入射，而从出射方向出射的概率
-     */
-    virtual __device__ Float Pdf(const vec3 &wi, const vec3 &wo, const vec3 &normal, const vec2 &texcoord, int inside) const { return 0; };
+    ///\brief 根据光线入射方向、出射方向和几何信息，计算光能衰减系数和相应的光线传播概率
+    virtual __device__ void Eval(SamplingRecord &rec) const {}
 
     ///\return 辐射亮度
     virtual __device__ vec3 radiance() const { return vec3(0); }
@@ -76,12 +57,12 @@ public:
     }
 
 protected:
-    __device__ Material(uint idx, MaterialType type, bool twosided, Texture *bump_map, Texture *opacity_map)
+    __device__ Bsdf(uint idx, BsdfType type, bool twosided, Texture *bump_map, Texture *opacity_map)
         : idx_(idx), type_(type), twosided_(twosided), bump_map_(bump_map), opacity_map_(opacity_map) {}
 
 private:
     uint idx_;
-    MaterialType type_;
+    BsdfType type_;
     bool twosided_;
     Texture *bump_map_;
     Texture *opacity_map_;

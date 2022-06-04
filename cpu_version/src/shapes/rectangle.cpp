@@ -10,10 +10,10 @@ constexpr float RectangleTexcoords[][2] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
 
 constexpr uint32_t RectangleTriangles[][3] = {{0, 1, 2}, {2, 3, 0}};
 
-Rectangle::Rectangle(Material *material,
+Rectangle::Rectangle(Bsdf *bsdf,
                      std::unique_ptr<Mat4> to_world,
                      bool flip_normals)
-    : Shape(ShapeType::kRectangle, material, flip_normals)
+    : Shape(ShapeType::kRectangle, bsdf, flip_normals)
 {
     auto to_world_p = Mat4(1),
          to_world_n = Mat4(1);
@@ -62,7 +62,7 @@ Rectangle::Rectangle(Material *material,
             vec[1] = RectangleTexcoords[indices[v]][1];
             texcoords.push_back(vec);
         }
-        meshes_.push_back(new Triangle(vertices, normals, texcoords, material, flip_normals));
+        meshes_.push_back(new Triangle(vertices, normals, texcoords, bsdf, flip_normals));
     }
     bvh_ = std::make_unique<BvhAccel>(meshes_);
     aabb_ = bvh_->aabb();

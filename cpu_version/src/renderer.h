@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/emitter.h"
-#include "core/material.h"
+#include "core/bsdf.h"
 #include "core/shape.h"
 #include "core/camera.h"
 
@@ -46,12 +46,12 @@ public:
 			}
 		}
 
-		for (auto &material : materials_)
+		for (auto &bsdf : bsdfs_)
 		{
-			if (material)
+			if (bsdf)
 			{
-				delete material;
-				material = nullptr;
+				delete bsdf;
+				bsdf = nullptr;
 			}
 		}
 	}
@@ -63,15 +63,15 @@ public:
 	}
 
 	///\brief 添加材质
-	void AddMaterial(Material *material)
+	void AddBsdf(Bsdf *bsdf)
 	{
-		materials_.push_back(material);
+		bsdfs_.push_back(bsdf);
 	}
 
 	///\brief 设置物体和材质
-	void AddShapesMaterials(const std::string &obj_path)
+	void AddShapesBsdfs(const std::string &obj_path)
 	{
-		ModelParser::Parse(obj_path, shapes_, materials_);
+		ModelParser::Parse(obj_path, shapes_, bsdfs_);
 	}
 
 	///\brief 设置天空盒
@@ -102,7 +102,7 @@ private:
 	Integrator *integrator_;			//全局光照模型
 	Envmap *envmap_;					//环境光映射
 	std::vector<Shape *> shapes_;		//场景包含的物体
-	std::vector<Material *> materials_; //场景包含的材质
+	std::vector<Bsdf *> bsdfs_; //场景包含的材质
 };
 
 NAMESPACE_END(raytracer)

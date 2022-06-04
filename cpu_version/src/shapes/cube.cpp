@@ -10,10 +10,10 @@ constexpr float CubeTexcoords[][2] = {{0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1
 
 constexpr uint32_t CubeTriangles[][3] = {{0, 1, 2}, {3, 0, 2}, {4, 5, 6}, {7, 4, 6}, {8, 9, 10}, {11, 8, 10}, {12, 13, 14}, {15, 12, 14}, {16, 17, 18}, {19, 16, 18}, {20, 21, 22}, {23, 20, 22}};
 
-Cube::Cube(Material *material,
+Cube::Cube(Bsdf *bsdf,
            std::unique_ptr<Mat4> to_world,
            bool flip_normals)
-    : Shape(ShapeType::kCube, material, flip_normals)
+    : Shape(ShapeType::kCube, bsdf, flip_normals)
 {
     auto to_world_p = Mat4(1),
          to_world_n = Mat4(1);
@@ -63,7 +63,7 @@ Cube::Cube(Material *material,
             texcoords.push_back(vec);
         }
 
-        meshes_.push_back(new Triangle(vertices, normals, texcoords, material, flip_normals));
+        meshes_.push_back(new Triangle(vertices, normals, texcoords, bsdf, flip_normals));
     }
     bvh_ = std::make_unique<BvhAccel>(meshes_);
     aabb_ = bvh_->aabb();

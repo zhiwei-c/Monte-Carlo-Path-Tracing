@@ -11,7 +11,7 @@
 
 NAMESPACE_BEGIN(raytracer)
 
-static std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &materials, const std::string &mtl_path);
+static std::vector<Bsdf *> ParseBsdf(const std::vector<tinyobj::material_t> &bsdfs, const std::string &mtl_path);
 
 static std::optional<Vector3> GetVec3(const std::map<std::string, std::string> &params, const std::string &name);
 
@@ -27,7 +27,7 @@ static std::optional<MicrofacetDistribType> GetDistrbType(const std::map<std::st
 
 static std::tuple<Vector3, Vector3> GetEtaK(const std::map<std::string, std::string> &params, const std::string &id);
 
-void ModelParser::Parse(const std::string &obj_path, std::vector<Shape *> &shapes, std::vector<Material *> &materials)
+void ModelParser::Parse(const std::string &obj_path, std::vector<Shape *> &shapes, std::vector<Bsdf *> &bsdfs)
 {
     std::cout << "[info] begin read model info...\t\t\t\r";
 
@@ -49,15 +49,15 @@ void ModelParser::Parse(const std::string &obj_path, std::vector<Shape *> &shape
     }
     auto &attrib = reader.GetAttrib();
     auto &shapes_raw = reader.GetShapes();
-    auto &materials_raw = reader.GetMaterials();
+    auto &bsdfs_raw = reader.GetMaterials();
 
     std::cout << "[info] read model info finished.    \r";
-    std::cout << "[info] begin parse material...      \r";
+    std::cout << "[info] begin parse bsdf...      \r";
 
-    auto materials_new = ParseMaterial(materials_raw, mtl_path);
-    materials.insert(materials.end(), materials_new.begin(), materials_new.end());
+    auto bsdfs_new = ParseBsdf(bsdfs_raw, mtl_path);
+    bsdfs.insert(bsdfs.end(), bsdfs_new.begin(), bsdfs_new.end());
 
-    std::cout << "[info] parse material finished.     \r";
+    std::cout << "[info] parse bsdf finished.     \r";
     std::cout << "[info] begin parse geometry info... \r";
 
     for (int s = 0; s < shapes_raw.size(); s++)
@@ -65,8 +65,8 @@ void ModelParser::Parse(const std::string &obj_path, std::vector<Shape *> &shape
         auto m_now_id = shapes_raw[s].mesh.material_ids[0];
         if (m_now_id < 0)
             m_now_id = 0;
-        bool textre_mapping_ = materials_new[m_now_id]->TextureMapping() ||
-                               materials_new[m_now_id]->NormalPerturbing();
+        bool textre_mapping_ = bsdfs_new[m_now_id]->TextureMapping() ||
+                               bsdfs_new[m_now_id]->NormalPerturbing();
 
         std::vector<Shape *> meshes(shapes_raw[s].mesh.num_face_vertices.size());
 
@@ -101,22 +101,22 @@ void ModelParser::Parse(const std::string &obj_path, std::vector<Shape *> &shape
                     texcoords.emplace_back(Vector2(tx, 1 - ty));
                 }
             }
-            meshes[f] = new Triangle(vertices, normals, texcoords, materials_new[m_now_id], false);
+            meshes[f] = new Triangle(vertices, normals, texcoords, bsdfs_new[m_now_id], false);
         }
-        shapes.push_back(new Meshes(meshes, materials_new[m_now_id], false));
+        shapes.push_back(new Meshes(meshes, bsdfs_new[m_now_id], false));
     }
     std::cout << "[info] load model succeed\t\t\t\r";
 }
 
-std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &materials, const std::string &mtl_path)
+std::vector<Bsdf *> ParseBsdf(const std::vector<tinyobj::material_t> &bsdfs, const std::string &mtl_path)
 {
-    std::vector<Material *> result;
-    std::cout << "[info] begin parse material...\t\t\t\r";
-    for (size_t m = 0; m < materials.size(); m++)
+    std::vector<Bsdf *> result;
+    std::cout << "[info] begin parse bsdf...\t\t\t\r";
+    for (size_t m = 0; m < bsdfs.size(); m++)
     {
-        auto other_params = materials[m].unknown_parameter;
-        auto id = materials[m].name;
-        auto ke = Spectrum(materials[m].emission[0], materials[m].emission[1], materials[m].emission[2]);
+        auto other_params = bsdfs[m].unknown_parameter;
+        auto id = bsdfs[m].name;
+        auto ke = Spectrum(bsdfs[m].emission[0], bsdfs[m].emission[1], bsdfs[m].emission[2]);
         if (auto Le = GetVec3(other_params, "Le"); Le.has_value())
             ke = Le.value();
         if (ke.r + ke.g + ke.b > 0)
@@ -125,32 +125,32 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
             continue;
         }
 
-        auto kd = Spectrum(materials[m].diffuse[0], materials[m].diffuse[1], materials[m].diffuse[2]);
+        auto kd = Spectrum(bsdfs[m].diffuse[0], bsdfs[m].diffuse[1], bsdfs[m].diffuse[2]);
 
         std::unique_ptr<Texture> diffuse_map = nullptr;
-        if (auto diffuse_texname = materials[m].diffuse_texname; !diffuse_texname.empty())
+        if (auto diffuse_texname = bsdfs[m].diffuse_texname; !diffuse_texname.empty())
             diffuse_map.reset(new Bitmap(mtl_path + diffuse_texname, 2.2));
 
         std::unique_ptr<Texture> specular_map = nullptr;
-        if (auto specular_texname = materials[m].specular_texname; !specular_texname.empty())
+        if (auto specular_texname = bsdfs[m].specular_texname; !specular_texname.empty())
             specular_map.reset(new Bitmap(mtl_path + specular_texname, 2.2));
 
         std::unique_ptr<Texture> bump_map = nullptr;
-        if (auto bump_texname = materials[m].bump_texname; !bump_texname.empty())
+        if (auto bump_texname = bsdfs[m].bump_texname; !bump_texname.empty())
             bump_map.reset(new Bitmap(mtl_path + bump_texname, 1));
 
         std::unique_ptr<Texture> opacity_map = nullptr;
-        if (auto alpha_texname = materials[m].alpha_texname; !alpha_texname.empty())
+        if (auto alpha_texname = bsdfs[m].alpha_texname; !alpha_texname.empty())
             opacity_map.reset(new Bitmap(mtl_path + alpha_texname, 1));
         else
         {
-            auto opacity = materials[m].dissolve;
+            auto opacity = bsdfs[m].dissolve;
             if (opacity < 1)
                 opacity_map.reset(new ConstantTexture(opacity));
         }
 
-        auto ks = Spectrum(materials[m].specular[0], materials[m].specular[1], materials[m].specular[2]);
-        auto ns = materials[m].shininess;
+        auto ks = Spectrum(bsdfs[m].specular[0], bsdfs[m].specular[1], bsdfs[m].specular[2]);
+        auto ns = bsdfs[m].shininess;
 
         auto flag_parsed = false;
         if (auto it = other_params.find("type"); it != other_params.end())
@@ -317,7 +317,7 @@ std::vector<Material *> ParseMaterial(const std::vector<tinyobj::material_t> &ma
         result.back()->SetBumpMapping(std::move(bump_map));
         result.back()->SetOpacity(std::move(opacity_map));
     }
-    std::cout << "[info] parse material finished\t\t\t\r";
+    std::cout << "[info] parse bsdf finished\t\t\t\r";
     return result;
 }
 

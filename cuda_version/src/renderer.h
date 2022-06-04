@@ -85,7 +85,7 @@ class Renderer
 {
 public:
     Renderer() : texture_list_(nullptr),
-                 material_list_(nullptr),
+                 bsdf_list_(nullptr),
                  mesh_list_(nullptr),
                  shapebvh_list_(nullptr),
                  scenebvh_node_list_(nullptr),
@@ -126,13 +126,13 @@ public:
         for (auto &bvhnode : bvhnode_list_)
             CheckCudaErrors(cudaFree(bvhnode));
 
-        FreeMaterials<<<1, 1>>>(material_info_list_.size(), material_list_);
+        FreeBsdfs<<<1, 1>>>(bsdf_info_list_.size(), bsdf_list_);
         CheckCudaErrors(cudaGetLastError());
         CheckCudaErrors(cudaDeviceSynchronize());
 
         CheckCudaErrors(cudaFree(texture_list_));
         CheckCudaErrors(cudaFree(mesh_list_));
-        CheckCudaErrors(cudaFree(material_list_));
+        CheckCudaErrors(cudaFree(bsdf_list_));
         CheckCudaErrors(cudaFree(shapebvh_list_));
         CheckCudaErrors(cudaFree(scenebvh_node_list_));
         CheckCudaErrors(cudaFree(scenebvh_));
@@ -143,11 +143,11 @@ public:
         cudaDeviceReset();
     }
 
-    void AddMaterialInfo(const MaterialInfo &material_info)
+    void AddBsdfInfo(const BsdfInfo &bsdf_info)
     {
-        material_info_list_.push_back(material_info);
-        if (material_info.type == kAreaLight)
-            emitter_material_idx_list_.insert(material_info_list_.size() - 1);
+        bsdf_info_list_.push_back(bsdf_info);
+        if (bsdf_info.type == kAreaLight)
+            emitter_bsdf_idx_list_.insert(bsdf_info_list_.size() - 1);
     }
 
     void AddTextureInfo(TextureInfo *texture_info)
@@ -158,7 +158,7 @@ public:
     void AddShapeInfo(ShapeInfo *shape_info)
     {
         shape_info_list_.push_back(shape_info);
-        if (emitter_material_idx_list_.count(shape_info->material_idx))
+        if (emitter_bsdf_idx_list_.count(shape_info->bsdf_idx))
             emitter_shape_idx_list_.push_back(shape_info_list_.size() - 1);
     }
 
@@ -182,7 +182,7 @@ public:
 private:
     Timer timer_;
     Texture *texture_list_;
-    Material **material_list_;
+    Bsdf **bsdf_list_;
     Mesh *mesh_list_;
     ShapeBvh *shapebvh_list_;
     ShapeBvh *scenebvh_node_list_;
@@ -195,19 +195,19 @@ private:
     EnvMapInfo *env_map_info_;
     EnvMap *env_map_;
     CameraInfo camera_info_;
-    std::vector<MaterialInfo> material_info_list_;
+    std::vector<BsdfInfo> bsdf_info_list_;
     std::vector<TextureInfo *> texture_info_list_;
     std::vector<ShapeInfo *> shape_info_list_;
-    std::unordered_set<uint> emitter_material_idx_list_;
+    std::unordered_set<uint> emitter_bsdf_idx_list_;
     std::vector<uint> emitter_shape_idx_list_;
     std::vector<BvhNode *> bvhnode_list_;
     std::vector<float *> texture_bitmap_data_;
 
     void InitTextureList();
 
-    void InitMaterialList();
+    void InitBsdfList();
 
-    void InitVertexIndexBuffer(Vertex *&vertex_list, uvec3 *&mesh_idx_list, uint *&mesh_material_idx_list, uint &mesh_num, std::vector<uvec2> &mesh_idx_range_list);
+    void InitVertexIndexBuffer(Vertex *&vertex_list, uvec3 *&mesh_idx_list, uint *&mesh_bsdf_idx_list, uint &mesh_num, std::vector<uvec2> &mesh_idx_range_list);
 
     void InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list, std::vector<AABB> &mesh_aabb_list, std::vector<Float> &mesh_area_list);
 
@@ -261,44 +261,44 @@ void Renderer::InitTextureList()
     }
 }
 
-void Renderer::InitMaterialList()
+void Renderer::InitBsdfList()
 {
-    auto material_num = material_info_list_.size();
-    material_list_ = nullptr;
-    CheckCudaErrors(cudaMalloc(&material_list_, material_num * sizeof(Material *)));
-    MaterialInfo *local_material_info_list = nullptr;
-    CheckCudaErrors(cudaMallocManaged(&local_material_info_list, material_num * sizeof(MaterialInfo)));
-    cudaMemcpy(local_material_info_list, material_info_list_.data(), material_num * sizeof(MaterialInfo), cudaMemcpyHostToDevice);
+    auto bsdf_num = bsdf_info_list_.size();
+    bsdf_list_ = nullptr;
+    CheckCudaErrors(cudaMalloc(&bsdf_list_, bsdf_num * sizeof(Bsdf *)));
+    BsdfInfo *local_bsdf_info_list = nullptr;
+    CheckCudaErrors(cudaMallocManaged(&local_bsdf_info_list, bsdf_num * sizeof(BsdfInfo)));
+    cudaMemcpy(local_bsdf_info_list, bsdf_info_list_.data(), bsdf_num * sizeof(BsdfInfo), cudaMemcpyHostToDevice);
 
-    CreateMaterials<<<1, 1>>>(material_num, local_material_info_list, texture_list_, material_list_);
+    CreateBsdfs<<<1, 1>>>(bsdf_num, local_bsdf_info_list, texture_list_, bsdf_list_);
     CheckCudaErrors(cudaGetLastError());
     CheckCudaErrors(cudaDeviceSynchronize());
 
     CheckCudaErrors(cudaGetLastError());
-    CheckCudaErrors(cudaFree(local_material_info_list));
-    local_material_info_list = nullptr;
+    CheckCudaErrors(cudaFree(local_bsdf_info_list));
+    local_bsdf_info_list = nullptr;
 }
 
 void Renderer::InitVertexIndexBuffer(Vertex *&vertex_list,
                                      uvec3 *&mesh_idx_list,
-                                     uint *&mesh_material_idx_list,
+                                     uint *&mesh_bsdf_idx_list,
                                      uint &mesh_num,
                                      std::vector<uvec2> &mesh_idx_range_list)
 {
     std::cerr << "[info] load shapes ..." << std::endl;
     auto local_vertex_list = std::vector<Vertex>();
     auto local_mesh_idx_list = std::vector<uvec3>();
-    auto local_mesh_material_idx_list = std::vector<uint>();
+    auto local_mesh_bsdf_idx_list = std::vector<uint>();
     mesh_idx_range_list = std::vector<uvec2>();
     for (auto &shape_info : shape_info_list_)
     {
         auto old_i_num = local_mesh_idx_list.size();
-        auto bump_mapping = (material_info_list_[shape_info->material_idx].bump_map_idx != kUintMax);
+        auto bump_mapping = (bsdf_info_list_[shape_info->bsdf_idx].bump_map_idx != kUintMax);
         switch (shape_info->type)
         {
         case kCube:
             LoadCube(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
-            material_info_list_[shape_info->material_idx].twosided = true;
+            bsdf_info_list_[shape_info->bsdf_idx].twosided = true;
             break;
         case kDisk:
             LoadDisk(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
@@ -311,15 +311,15 @@ void Renderer::InitVertexIndexBuffer(Vertex *&vertex_list,
             break;
         case kSphere:
             LoadSphere(shape_info, bump_mapping, local_vertex_list, local_mesh_idx_list);
-            material_info_list_[shape_info->material_idx].twosided = true;
+            bsdf_info_list_[shape_info->bsdf_idx].twosided = true;
             break;
         default:
             PrintExcuError();
             break;
         }
         auto new_i_num = local_mesh_idx_list.size();
-        local_mesh_material_idx_list.reserve(new_i_num);
-        local_mesh_material_idx_list.insert(local_mesh_material_idx_list.end(), new_i_num - old_i_num, shape_info->material_idx);
+        local_mesh_bsdf_idx_list.reserve(new_i_num);
+        local_mesh_bsdf_idx_list.insert(local_mesh_bsdf_idx_list.end(), new_i_num - old_i_num, shape_info->bsdf_idx);
         mesh_idx_range_list.emplace_back(old_i_num, new_i_num);
     }
     mesh_num = local_mesh_idx_list.size();
@@ -329,9 +329,9 @@ void Renderer::InitVertexIndexBuffer(Vertex *&vertex_list,
     mesh_idx_list = nullptr;
     CheckCudaErrors(cudaMallocManaged((void **)&mesh_idx_list, mesh_num * sizeof(uvec3)));
     cudaMemcpy(mesh_idx_list, local_mesh_idx_list.data(), mesh_num * sizeof(uvec3), cudaMemcpyHostToDevice);
-    mesh_material_idx_list = nullptr;
-    CheckCudaErrors(cudaMallocManaged((void **)&mesh_material_idx_list, mesh_num * sizeof(uint)));
-    cudaMemcpy(mesh_material_idx_list, local_mesh_material_idx_list.data(), mesh_num * sizeof(uint), cudaMemcpyHostToDevice);
+    mesh_bsdf_idx_list = nullptr;
+    CheckCudaErrors(cudaMallocManaged((void **)&mesh_bsdf_idx_list, mesh_num * sizeof(uint)));
+    cudaMemcpy(mesh_bsdf_idx_list, local_mesh_bsdf_idx_list.data(), mesh_num * sizeof(uint), cudaMemcpyHostToDevice);
 
     timer_.PrintTimePassed("load shape");
 }
@@ -343,17 +343,17 @@ void Renderer::InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list,
     std::cerr << "[info] create mesh ..." << std::endl;
     Vertex* vertex_list = nullptr;
     uvec3* mesh_idx_list = nullptr;
-    uint* mesh_material_idx_list = nullptr;
+    uint* mesh_bsdf_idx_list = nullptr;
     uint mesh_num = 0;
     mesh_idx_range_list = std::vector<uvec2>();
     InitVertexIndexBuffer(vertex_list,
                           mesh_idx_list,
-                          mesh_material_idx_list,
+                          mesh_bsdf_idx_list,
                           mesh_num,
                           mesh_idx_range_list);
 
     InitTextureList();
-    InitMaterialList();
+    InitBsdfList();
     //
     mesh_list_ = nullptr;
     CheckCudaErrors(cudaMallocManaged(&mesh_list_, mesh_num * sizeof(Mesh)));
@@ -370,8 +370,8 @@ void Renderer::InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list,
                                       mesh_num,
                                       vertex_list,
                                       mesh_idx_list,
-                                      mesh_material_idx_list,
-                                      material_list_,
+                                      mesh_bsdf_idx_list,
+                                      bsdf_list_,
                                       local_mesh_aabbs,
                                       local_mesh_areas,
                                       mesh_list_);
@@ -387,12 +387,12 @@ void Renderer::InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list,
     CheckCudaErrors(cudaGetLastError());
     CheckCudaErrors(cudaFree(vertex_list));
     CheckCudaErrors(cudaFree(mesh_idx_list));
-    CheckCudaErrors(cudaFree(mesh_material_idx_list));
+    CheckCudaErrors(cudaFree(mesh_bsdf_idx_list));
     CheckCudaErrors(cudaFree(local_mesh_aabbs));
     CheckCudaErrors(cudaFree(local_mesh_areas));
     vertex_list = nullptr;
     mesh_idx_list = nullptr;
-    mesh_material_idx_list = nullptr;
+    mesh_bsdf_idx_list = nullptr;
     local_mesh_aabbs = nullptr;
     local_mesh_areas = nullptr;
 

@@ -2,10 +2,10 @@
 
 NAMESPACE_BEGIN(raytracer)
 
-Disk::Disk(Material *material,
+Disk::Disk(Bsdf *bsdf,
            std::unique_ptr<Mat4> to_world,
            bool flip_normals)
-    : Shape(ShapeType::kDisk, material, flip_normals),
+    : Shape(ShapeType::kDisk, bsdf, flip_normals),
       to_world_(std::move(to_world)),
       to_world_norm_(nullptr),
       to_local_(nullptr)
@@ -56,7 +56,7 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
         return;
 
     auto texcoord = Vector2(-1);
-    if (material_->TextureMapping())
+    if (bsdf_->TextureMapping())
     {
         Float theta = 0, phi = 0, r = 0;
         CartesianToSpherical(pos, theta, phi, r);
@@ -64,10 +64,10 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
         texcoord.x = std::min(1.0, r);
         texcoord.y = phi * 0.5 * kPiInv;
 
-        if (material_->Transparent(texcoord))
+        if (bsdf_->Transparent(texcoord))
             return;
 
-        if (material_->NormalPerturbing())
+        if (bsdf_->NormalPerturbing())
         {
             Float r_1 = r + kEpsilon < 1 ? r + kEpsilon : r - kEpsilon;
             Vector3 pos1 = SphericalToCartesian(theta, phi, r_1);
@@ -86,7 +86,7 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
             Vector3 tangent = glm::normalize(Vector3(delta_uv_1.y * v0v2 - delta_uv_2.y * v0v1) * r),
                     bitangent = glm::normalize(Vector3(delta_uv_2.x * v0v1 - delta_uv_1.x * v0v2) * r);
 
-            normal = material_->PerturbNormal(normal, tangent, bitangent, texcoord);
+            normal = bsdf_->PerturbNormal(normal, tangent, bitangent, texcoord);
         }
     }
     if (to_world_)
@@ -98,7 +98,7 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
     if (distance > its.distance())
         return;
 
-    if (!material_->Twosided() &&
+    if (!bsdf_->Twosided() &&
         (flip_normals_ && NotSameHemis(normal, ray_d) ||
          !flip_normals_ && SameHemis(normal, ray_d)))
     {
@@ -119,7 +119,7 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
         inside = !inside;
     }
 
-    its = Intersection(pos, normal, texcoord, inside, distance, material_, pdf_area_);
+    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, pdf_area_);
 }
 
 Intersection Disk::SampleP() const
@@ -132,7 +132,7 @@ Intersection Disk::SampleP() const
         pos = TransfromPt(*to_world_, pos);
         normal = TransfromDir(*to_world_norm_, normal);
     }
-    return Intersection(pos, normal, Vector2(-1), false, INFINITY, material_, pdf_area_);
+    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, pdf_area_);
 }
 
 NAMESPACE_END(raytracer)

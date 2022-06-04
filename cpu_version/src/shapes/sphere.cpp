@@ -2,12 +2,12 @@
 
 NAMESPACE_BEGIN(raytracer)
 
-Sphere::Sphere(Material *material,
+Sphere::Sphere(Bsdf *bsdf,
                const Vector3 &center,
                Float radius,
                std::unique_ptr<Mat4> to_world,
                bool flip_normals)
-    : Shape(ShapeType::kSphere, material, flip_normals),
+    : Shape(ShapeType::kSphere, bsdf, flip_normals),
       center_(center),
       radius_(radius),
       to_world_(std::move(to_world)),
@@ -63,15 +63,15 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
     Vector3 pos = ray_o + t_result * ray_d;
     Vector3 normal = glm::normalize(pos - center_);
     auto texcoord = Vector2(0);
-    if (material_->TextureMapping())
+    if (bsdf_->TextureMapping())
     {
         Float theta = 0, phi = 0;
         CartesianToSpherical(normal, theta, phi);
         texcoord.x = phi * 0.5 * kPiInv;
         texcoord.y = theta * kPiInv;
-        if (material_->Transparent(texcoord))
+        if (bsdf_->Transparent(texcoord))
             return;
-        if (material_->NormalPerturbing())
+        if (bsdf_->NormalPerturbing())
         {
             Float theta_1 = theta + kEpsilon < kPi ? theta + kEpsilon : theta - kEpsilon;
             Vector3 pos1 = SphericalToCartesian(theta_1, phi);
@@ -90,7 +90,7 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
             Vector3 tangent = glm::normalize(Vector3(delta_uv_1.y * v0v2 - delta_uv_2.y * v0v1) * r),
                     bitangent = glm::normalize(Vector3(delta_uv_2.x * v0v1 - delta_uv_1.x * v0v2) * r);
 
-            normal = material_->PerturbNormal(normal, tangent, bitangent, texcoord);
+            normal = bsdf_->PerturbNormal(normal, tangent, bitangent, texcoord);
         }
     }
 
@@ -103,7 +103,7 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
     if (distance > its.distance())
         return;
 
-    if (!material_->Twosided() &&
+    if (!bsdf_->Twosided() &&
         (!flip_normals_ && c < 0 ||
          flip_normals_ && c > 0))
     {
@@ -123,7 +123,7 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
         inside = !inside;
     }
 
-    its = Intersection(pos, normal, texcoord, inside, distance, material_, pdf_area_);
+    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, pdf_area_);
 }
 
 Intersection Sphere::SampleP() const
@@ -135,7 +135,7 @@ Intersection Sphere::SampleP() const
         pos = TransfromPt(*to_world_, pos);
         normal = TransfromDir(*to_world_norm_, normal);
     }
-    return Intersection(pos, normal, Vector2(-1), false, INFINITY, material_, pdf_area_);
+    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, pdf_area_);
 }
 
 NAMESPACE_END(raytracer)

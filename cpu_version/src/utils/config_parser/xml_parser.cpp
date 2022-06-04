@@ -28,7 +28,7 @@ Renderer *XmlParser::Parse(const std::string &path)
 	auto node_bsdf = node_scene->first_node("bsdf");
 	while (node_bsdf)
 	{
-		ParseMaterial(node_bsdf, renderer);
+		ParseBsdf(node_bsdf, renderer);
 		node_bsdf = node_bsdf->next_sibling("bsdf");
 	}
 
@@ -201,15 +201,15 @@ bool XmlParser::ParseCoating(const std::string &id, rapidxml::xml_node<> *&node_
 			exit(1);
 		}
 		auto ref_id = GetAttri(node_ref, "id").value();
-		if (!id_to_material_.count(ref_id))
+		if (!id_to_bsdf_.count(ref_id))
 		{
 			std::cerr << "[error] " << GetTreeName(node_ref) << std::endl
-					  << "\tcannot find existed material with id: " << ref_id << std::endl;
+					  << "\tcannot find existed bsdf with id: " << ref_id << std::endl;
 			exit(1);
 		}
 		else
 		{
-			id_to_material_[id] = id_to_material_[ref_id];
+			id_to_bsdf_[id] = id_to_bsdf_[ref_id];
 			return true;
 		}
 	}
@@ -224,7 +224,7 @@ bool XmlParser::ParseCoating(const std::string &id, rapidxml::xml_node<> *&node_
 	return false;
 }
 
-void XmlParser::ParseMaterial(rapidxml::xml_node<> *node_bsdf, Renderer *renderer, const std::string &id_default)
+void XmlParser::ParseBsdf(rapidxml::xml_node<> *node_bsdf, Renderer *renderer, const std::string &id_default)
 {
 	auto bsdf_type = GetAttri(node_bsdf, "type").value();
 	auto bump_map = ParseBumpMapping(node_bsdf, bsdf_type);
@@ -245,38 +245,38 @@ void XmlParser::ParseMaterial(rapidxml::xml_node<> *node_bsdf, Renderer *rendere
 	}
 	if (ParseCoating(id, node_bsdf, bsdf_type))
 		return;
-	Material *material = nullptr;
+	Bsdf *bsdf = nullptr;
 	switch (Hash(bsdf_type.c_str()))
 	{
 	case "diffuse"_hash:
-		material = ParseDiffuse(node_bsdf);
+		bsdf = ParseDiffuse(node_bsdf);
 		break;
 	case "roughdiffuse"_hash:
-		material = ParseRoughDiffuse(node_bsdf);
+		bsdf = ParseRoughDiffuse(node_bsdf);
 		break;
 	case "dielectric"_hash:
 		twsided = true;
-		material = ParseDielectric(node_bsdf);
+		bsdf = ParseDielectric(node_bsdf);
 		break;
 	case "roughdielectric"_hash:
 		twsided = true;
-		material = ParseRoughDielectric(node_bsdf);
+		bsdf = ParseRoughDielectric(node_bsdf);
 		break;
 	case "thindielectric"_hash:
 		twsided = true;
-		material = ParseDielectric(node_bsdf, true);
+		bsdf = ParseDielectric(node_bsdf, true);
 		break;
 	case "conductor"_hash:
-		material = ParseConductor(node_bsdf);
+		bsdf = ParseConductor(node_bsdf);
 		break;
 	case "roughconductor"_hash:
-		material = ParseRoughConductor(node_bsdf);
+		bsdf = ParseRoughConductor(node_bsdf);
 		break;
 	case "plastic"_hash:
-		material = ParsePlastic(node_bsdf);
+		bsdf = ParsePlastic(node_bsdf);
 		break;
 	case "roughplastic"_hash:
-		material = ParseRoughPlastic(node_bsdf);
+		bsdf = ParseRoughPlastic(node_bsdf);
 		break;
 	default:
 		std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
@@ -284,14 +284,14 @@ void XmlParser::ParseMaterial(rapidxml::xml_node<> *node_bsdf, Renderer *rendere
 		exit(1);
 	}
 
-	material->SetTwosided(twsided);
-	material->SetBumpMapping(std::move(bump_map));
-	material->SetOpacity(std::move(opacity_map));
-	id_to_material_[id] = material;
-	renderer->AddMaterial(material);
+	bsdf->SetTwosided(twsided);
+	bsdf->SetBumpMapping(std::move(bump_map));
+	bsdf->SetOpacity(std::move(opacity_map));
+	id_to_bsdf_[id] = bsdf;
+	renderer->AddBsdf(bsdf);
 }
 
-Material *XmlParser::ParseDiffuse(rapidxml::xml_node<> *node_diffuse)
+Bsdf *XmlParser::ParseDiffuse(rapidxml::xml_node<> *node_diffuse)
 {
 	auto reflectance = ParseTextureOrOther(node_diffuse, "reflectance");
 	if (!reflectance)
@@ -300,7 +300,7 @@ Material *XmlParser::ParseDiffuse(rapidxml::xml_node<> *node_diffuse)
 	return new Diffuse(std::move(reflectance));
 }
 
-Material *XmlParser::ParseRoughDiffuse(rapidxml::xml_node<> *node_rough_diffuse)
+Bsdf *XmlParser::ParseRoughDiffuse(rapidxml::xml_node<> *node_rough_diffuse)
 {
 	auto reflectance = ParseTextureOrOther(node_rough_diffuse, "reflectance");
 	if (!reflectance)
@@ -313,7 +313,7 @@ Material *XmlParser::ParseRoughDiffuse(rapidxml::xml_node<> *node_rough_diffuse)
 	return new RoughDiffuse(std::move(reflectance), std::move(alpha), use_fast_approx);
 }
 
-Material *XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, bool thin)
+Bsdf *XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, bool thin)
 {
 	auto int_ior = GetIor(node_dielectric, "intIOR", "bk7");
 	auto ext_ior = GetIor(node_dielectric, "extIOR", "air");
@@ -331,7 +331,7 @@ Material *XmlParser::ParseDielectric(rapidxml::xml_node<> *node_dielectric, bool
 							  std::move(specular_transmittance));
 }
 
-Material *XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric)
+Bsdf *XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric)
 {
 	auto int_ior = GetIor(node_rough_dielectric, "intIOR", "bk7");
 	auto ext_ior = GetIor(node_rough_dielectric, "extIOR", "air");
@@ -357,20 +357,20 @@ Material *XmlParser::ParseRoughDielectric(rapidxml::xml_node<> *node_rough_diele
 							   std::move(alpha_v));
 }
 
-Material *XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor)
+Bsdf *XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor)
 {
 	auto eta = Spectrum(0);
 	auto k = Spectrum(1);
 	auto ext_eta = GetIor(node_conductor, "extEta", "air");
-	auto node_material = GetChild(node_conductor, "material");
-	if (node_material)
+	auto node_bsdf = GetChild(node_conductor, "bsdf");
+	if (node_bsdf)
 	{
-		auto material_name = GetAttri(node_material, "value").value();
-		if (!LookupConductorIor(material_name, eta, k))
+		auto bsdf_name = GetAttri(node_bsdf, "value").value();
+		if (!LookupConductorIor(bsdf_name, eta, k))
 		{
-			std::cerr << "[error] " << GetTreeName(node_material) << std::endl
-					  << " unsupported material :" << material_name << ", "
-					  << "use default Conductor material instead." << std::endl;
+			std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
+					  << " unsupported bsdf :" << bsdf_name << ", "
+					  << "use default Conductor bsdf instead." << std::endl;
 			exit(1);
 		}
 	}
@@ -390,20 +390,20 @@ Material *XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor)
 						 std::move(specular_reflectance));
 }
 
-Material *XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor)
+Bsdf *XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor)
 {
 	auto eta = Spectrum(0);
 	auto k = Spectrum(1);
 	auto ext_eta = GetIor(node_rough_conductor, "extEta", "air");
-	auto node_material = GetChild(node_rough_conductor, "material");
-	if (node_material)
+	auto node_bsdf = GetChild(node_rough_conductor, "bsdf");
+	if (node_bsdf)
 	{
-		auto material_name = GetAttri(node_material, "value").value();
-		if (!LookupConductorIor(material_name, eta, k))
+		auto bsdf_name = GetAttri(node_bsdf, "value").value();
+		if (!LookupConductorIor(bsdf_name, eta, k))
 		{
-			std::cerr << "[error] " << GetTreeName(node_material) << std::endl
-					  << "unsupported material :" << material_name << ", "
-					  << "use default Conductor material instead." << std::endl;
+			std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
+					  << "unsupported bsdf :" << bsdf_name << ", "
+					  << "use default Conductor bsdf instead." << std::endl;
 			exit(1);
 		}
 	}
@@ -434,7 +434,7 @@ Material *XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conduc
 							  std::move(alpha_v));
 }
 
-Material *XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic)
+Bsdf *XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic)
 {
 	auto int_ior = GetIor(node_plastic, "intIOR", "polypropylene");
 	auto ext_ior = GetIor(node_plastic, "extIOR", "air");
@@ -451,7 +451,7 @@ Material *XmlParser::ParsePlastic(rapidxml::xml_node<> *node_plastic)
 					   nonlinear);
 }
 
-Material *XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic)
+Bsdf *XmlParser::ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic)
 {
 	auto int_ior = GetIor(node_rough_plastic, "intIOR", "polypropylene");
 	auto ext_ior = GetIor(node_rough_plastic, "extIOR", "air");
@@ -498,8 +498,8 @@ void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape, Renderer *renderer)
 		auto node_radiance = GetChild(node_emitter, "radiance");
 		auto radiance = GetSpectrum(node_radiance);
 		auto area_light = new AreaLight(radiance);
-		renderer->AddMaterial(area_light);
-		id_to_material_[ref] = area_light;
+		renderer->AddBsdf(area_light);
+		id_to_bsdf_[ref] = area_light;
 	}
 	else if (auto node_ref = node_shape->first_node("ref"); node_ref)
 	{
@@ -515,7 +515,7 @@ void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape, Renderer *renderer)
 	{
 		ref = "unnamed_" + std::to_string(bsdf_cnt_++);
 		if (auto node_bsdf = node_shape->first_node("bsdf"); node_bsdf)
-			ParseMaterial(node_bsdf, renderer, ref);
+			ParseBsdf(node_bsdf, renderer, ref);
 		else
 		{
 			std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
@@ -527,46 +527,46 @@ void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape, Renderer *renderer)
 	auto type = GetAttri(node_shape, "type").value();
 	auto flip_normals = GetBoolean(node_shape, "flipNormals").value_or(false);
 
-	if (!id_to_material_.count(ref))
+	if (!id_to_bsdf_.count(ref))
 	{
 		std::cerr << "[error] " << GetTreeName(node_shape) << std::endl
-				  << "\tcannot find material with name: \"" << ref << "\"" << std::endl;
+				  << "\tcannot find bsdf with name: \"" << ref << "\"" << std::endl;
 		exit(1);
 	}
 
-	auto material = id_to_material_[ref];
+	auto bsdf = id_to_bsdf_[ref];
 	Shape *shape = nullptr;
 	switch (Hash(type.c_str()))
 	{
 	case "disk"_hash:
-		shape = new Disk(material, std::move(to_world), flip_normals);
+		shape = new Disk(bsdf, std::move(to_world), flip_normals);
 		break;
 	case "sphere"_hash:
 	{
 		auto radius = GetFloat(node_shape, "radius").value_or(1);
 		auto center = GetPoint(node_shape, "center").value_or(Vector3(0));
-		shape = new Sphere(material, center, radius, std::move(to_world), flip_normals);
+		shape = new Sphere(bsdf, center, radius, std::move(to_world), flip_normals);
 		break;
 	}
 	case "cube"_hash:
-		shape = new Cube(material, std::move(to_world), flip_normals);
+		shape = new Cube(bsdf, std::move(to_world), flip_normals);
 		break;
 	case "rectangle"_hash:
-		shape = new Rectangle(material, std::move(to_world), flip_normals);
+		shape = new Rectangle(bsdf, std::move(to_world), flip_normals);
 		break;
 	case "obj"_hash:
 	{
 		auto face_normals = GetBoolean(node_shape, "faceNormals").value_or(false);
 		auto flip_tex_coords = GetBoolean(node_shape, "flipTexCoords").value_or(true);
 		auto model_path = xml_directory_ + GetAttri(GetChild(node_shape, "filename", false), "value").value();
-		shape = ModelParser::Parse(model_path, material, std::move(to_world), flip_normals, face_normals, flip_tex_coords);
+		shape = ModelParser::Parse(model_path, bsdf, std::move(to_world), flip_normals, face_normals, flip_tex_coords);
 		break;
 	}
 	case "ply"_hash:
 	{
 		auto face_normals = GetBoolean(node_shape, "faceNormals").value_or(false);
 		auto model_path = xml_directory_ + GetAttri(GetChild(node_shape, "filename", false), "value").value();
-		shape = ModelParser::Parse(model_path, material, std::move(to_world), flip_normals, face_normals);
+		shape = ModelParser::Parse(model_path, bsdf, std::move(to_world), flip_normals, face_normals);
 		break;
 	}
 	default:
@@ -883,12 +883,12 @@ std::optional<Float> XmlParser::GetFloat(rapidxml::xml_node<> *node_parent, std:
 	return std::stof(GetAttri(node_float, "value").value());
 }
 
-Float XmlParser::GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::string default_material_name)
+Float XmlParser::GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::string default_bsdf_name)
 {
 	Float ior = 0;
 	auto node_ior = GetChild(node_parent, ior_type);
 	if (!node_ior)
-		LookupDielectricIor(default_material_name, ior);
+		LookupDielectricIor(default_bsdf_name, ior);
 	else if (strcmp(node_ior->name(), "float") == 0)
 		ior = std::stof(GetAttri(node_ior, "value").value());
 	else
@@ -897,7 +897,7 @@ Float XmlParser::GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type,
 		if (!LookupDielectricIor(int_ior_name, ior))
 		{
 			std::cerr << "[error] " << GetTreeName(node_ior) << std::endl
-					  << "\tunsupported ior material " << int_ior_name << std::endl;
+					  << "\tunsupported ior bsdf " << int_ior_name << std::endl;
 			exit(1);
 		}
 	}

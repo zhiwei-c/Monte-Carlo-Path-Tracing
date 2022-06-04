@@ -20,7 +20,7 @@ struct ShapeInfo
     bool face_normals;
     bool flip_normals;
     bool flip_tex_coords;
-    uint material_idx;
+    uint bsdf_idx;
     Float radius;
     vec3 center;
     std::string filename;
@@ -31,35 +31,35 @@ struct ShapeInfo
               bool flip_normals,
               bool flip_tex_coords,
               gmat4 *to_world,
-              uint material_idx)
+              uint bsdf_idx)
         : type(kMeshes),
           filename(filename),
           face_normals(face_normals),
           flip_normals(flip_normals),
           flip_tex_coords(flip_tex_coords),
           to_world(to_world),
-          material_idx(material_idx) {}
+          bsdf_idx(bsdf_idx) {}
 
     ShapeInfo(vec3 center,
               Float radius,
               bool flip_normals,
               gmat4 *to_world,
-              uint material_idx)
+              uint bsdf_idx)
         : type(kSphere),
           center(center),
           radius(radius),
           flip_normals(flip_normals),
           to_world(to_world),
-          material_idx(material_idx) {}
+          bsdf_idx(bsdf_idx) {}
 
     ShapeInfo(ShapeType type,
               bool flip_normals,
               gmat4 *to_world,
-              uint material_idx)
+              uint bsdf_idx)
         : type(type),
           flip_normals(flip_normals),
           to_world(to_world),
-          material_idx(material_idx) {}
+          bsdf_idx(bsdf_idx) {}
 
     ~ShapeInfo()
     {

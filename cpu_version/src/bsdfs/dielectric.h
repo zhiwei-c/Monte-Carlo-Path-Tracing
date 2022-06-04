@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../core/material_base.h"
+#include "../core/bsdf_base.h"
 
 NAMESPACE_BEGIN(raytracer)
 
 ///\brief 平滑的电介质派生类
-class Dielectric : public Material
+class Dielectric : public Bsdf
 {
 public:
     ///\brief 平滑的电介质材质
@@ -13,92 +13,82 @@ public:
     ///\param ext_ior 外折射率
     ///\param specular_reflectance 镜面反射系数 （注意：对于物理真实感绘制，默认为 1，表示为空指针）
     ///\param specular_transmittance 镜面透射系数 （注意：对于物理真实感绘制，默认为 1，表示为空指针）
-    Dielectric(Float int_ior, Float ext_ior,
-               std::unique_ptr<Texture> specular_reflectance,
+    Dielectric(Float int_ior, Float ext_ior, std::unique_ptr<Texture> specular_reflectance,
                std::unique_ptr<Texture> specular_transmittance)
-        : Material(MaterialType::kDielectric),
-          eta_(int_ior / ext_ior), eta_inv_(ext_ior / int_ior),
-          specular_reflectance_(std::move(specular_reflectance)),
-          specular_transmittance_(std::move(specular_transmittance))
+        : Bsdf(BsdfType::kDielectric), eta_(int_ior / ext_ior), eta_inv_(ext_ior / int_ior),
+          specular_reflectance_(std::move(specular_reflectance)), specular_transmittance_(std::move(specular_transmittance))
     {
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    void Sample(BsdfSampling &bs) const override
+    void Sample(SamplingRecord &rec) const override
     {
-        Float eta = bs.inside ? eta_inv_ : eta_,      //相对折射率，即光线透射侧介质折射率与入透射侧介质折射率之比
-            eta_inv = bs.inside ? eta_ : eta_inv_,    //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
-            kr = Fresnel(-bs.wo, bs.normal, eta_inv); //菲涅尔项
+        Float eta = rec.inside ? eta_inv_ : eta_,       //相对折射率，即光线透射侧介质折射率与入透射侧介质折射率之比
+            eta_inv = rec.inside ? eta_ : eta_inv_,     //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+            kr = Fresnel(-rec.wo, rec.normal, eta_inv); //菲涅尔项
         if (UniformFloat() < kr)
         { //抽样反射光线
-            bs.wi = -Reflect(-bs.wo, bs.normal);
-            bs.pdf = kr;
-            if (!bs.get_attenuation)
+            rec.wi = -Reflect(-rec.wo, rec.normal);
+            rec.pdf = kr;
+            if (rec.pdf < kEpsilonPdf)
                 return;
-            bs.attenuation = Spectrum(kr);
+            rec.type = ScatteringType::kReflect;
+            rec.attenuation = Spectrum(kr) * glm::dot(-rec.wi, rec.normal);
             if (specular_reflectance_)
-                bs.attenuation *= specular_reflectance_->Color(bs.texcoord);
+                rec.attenuation *= specular_reflectance_->Color(rec.texcoord);
         }
         else
         { //抽样折射光线
-            bs.wi = -Refract(-bs.wo, bs.normal, eta_inv);
-            kr = Fresnel(bs.wi, -bs.normal, eta);
-            bs.pdf = 1.0 - kr;
-            if (!bs.get_attenuation)
+            rec.wi = -Refract(-rec.wo, rec.normal, eta_inv);
+            { //光线折射时穿过了介质，为了使光线入射方向和表面法线方向夹角的余弦仍小于零，需做一些相应处理
+                rec.normal = -rec.normal;
+                rec.inside = !rec.inside;
+                eta_inv = eta;
+            }
+            kr = Fresnel(rec.wi, rec.normal, eta_inv);
+            rec.pdf = 1.0 - kr;
+            if (rec.pdf < kEpsilonPdf)
                 return;
-            bs.attenuation = Spectrum(1.0 - kr);
+            rec.type = ScatteringType::kTransimission;
+            rec.attenuation = Spectrum(1.0 - kr) * glm::dot(-rec.wi, rec.normal);
             if (specular_transmittance_)
-                bs.attenuation *= specular_transmittance_->Color(bs.texcoord);
+                rec.attenuation *= specular_transmittance_->Color(rec.texcoord);
             //光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
-            bs.attenuation *= Sqr(eta);
+            rec.attenuation *= Sqr(eta_inv);
         }
     }
 
-    ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
-    Spectrum Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord,
-                  bool inside) const override
+    ///\brief 根据光线入射方向、出射方向和几何信息，计算光能衰减系数和相应的光线传播概率
+    void Eval(SamplingRecord &rec) const override
     {
-        Float eta_inv = inside ? eta_ : eta_inv_, //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
-            kr = Fresnel(wi, normal, eta_inv);
-        if (SameDirection(wo, Reflect(wi, normal)))
-        {
-            auto albedo = Spectrum(kr);
+        Float eta_inv = rec.inside ? eta_ : eta_inv_,  //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+            kr = Fresnel(rec.wi, rec.normal, eta_inv); //菲涅尔项
+        if (SameDirection(rec.wo, Reflect(rec.wi, rec.normal)))
+        { //处理镜面反射
+            rec.pdf = kr;
+            rec.type = ScatteringType::kReflect;
+            rec.attenuation = Spectrum(kr) * glm::dot(-rec.wi, rec.normal);
             if (specular_reflectance_)
-                albedo *= specular_reflectance_->Color(texcoord);
-            return albedo;
+                rec.attenuation *= specular_reflectance_->Color(rec.texcoord);
         }
-        else if (SameDirection(wo, Refract(wi, normal, eta_inv)))
-        {
-            auto attenuation = Spectrum(1 - kr);
+        else if (SameDirection(rec.wo, Refract(rec.wi, rec.normal, eta_inv)))
+        { //处理折射
+            rec.pdf = 1.0 - kr;
+            rec.type = ScatteringType::kTransimission;
+            rec.attenuation = Spectrum(1.0 - kr) * glm::dot(-rec.wi, rec.normal);
             if (specular_transmittance_)
-                attenuation *= specular_transmittance_->Color(texcoord);
+                rec.attenuation *= specular_transmittance_->Color(rec.texcoord);
             //光线折射后，光路可能覆盖的立体角范围发生了改变，对辐射亮度进行积分需要进行相应的处理
-            attenuation *= Sqr(eta_inv);
-            return attenuation;
+            rec.attenuation *= Sqr(eta_inv);
         }
         else
-            return Spectrum(0);
-    }
-
-    ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
-    Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord,
-              bool inside) const override
-    {
-        Float eta_inv = inside ? eta_ : eta_inv_, //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
-            kr = Fresnel(wi, normal, eta_inv);
-        if (SameDirection(wo, Reflect(wi, normal)))
-            return kr;
-        else if (SameDirection(wo, Refract(wi, normal, eta_inv)))
-            return 1 - kr;
-        else
-            return 0;
+            return;
     }
 
     ///\brief 是否映射纹理
     bool TextureMapping() const override
     {
-        return Material::TextureMapping() ||
-               specular_reflectance_ && !specular_reflectance_->Constant() ||
+        return Bsdf::TextureMapping() || specular_reflectance_ && !specular_reflectance_->Constant() ||
                specular_transmittance_ && !specular_transmittance_->Constant();
     }
 

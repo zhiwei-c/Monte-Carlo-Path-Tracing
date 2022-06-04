@@ -15,7 +15,7 @@ public:
 	 * \param texcoords 顶点纹理坐标
 	 * \param tangents 切线
 	 * \param bitangents 副切线
-	 * \param material 材质
+	 * \param bsdf 材质
 	 * \param flip_normals 法线方向是否翻转
 	 */
 	Triangle(const std::vector<Vector3> &vertices,
@@ -23,7 +23,7 @@ public:
 			 const std::vector<Vector2> &texcoords,
 			 const std::vector<Vector3> &tangents,
 			 const std::vector<Vector3> &bitangents,
-			 Material *material,
+			 Bsdf *bsdf,
 			 bool flip_normals);
 
 	/**
@@ -31,13 +31,13 @@ public:
 	 * \param vertices 顶点
 	 * \param normals 顶点法向量
 	 * \param texcoords 顶点纹理坐标
-	 * \param material 材质
+	 * \param bsdf 材质
 	 * \param flip_normals 法线方向是否翻转
 	 */
 	Triangle(const std::vector<Vector3> &vertices,
 			 const std::vector<Vector3> &normals,
 			 const std::vector<Vector2> &texcoords,
-			 Material *material,
+			 Bsdf *bsdf,
 			 bool flip_normals);
 
 	// Intersection Intersect(const Ray &ray) const override;

@@ -3,9 +3,9 @@
 #include "emitter.h"
 #include "kulla_conty.h"
 
-enum MaterialType
+enum BsdfType
 {
-  kNoneMaterial,    //空材质
+  kNoneBsdf,    //空材质
   kAreaLight,       //面光源
   kDiffuse,         //漫反射
   kDielectric,      //平滑的电介质
@@ -17,24 +17,26 @@ enum MaterialType
   kRoughPlastic,    //粗糙的塑料
 };
 
-struct BsdfSampling
+struct SamplingRecord
 {
-    bool valid;
-    int inside;       //表面法线方向是否朝向表面内侧
-    Float pdf;        //光线从该方向入射的概率
-    vec2 texcoord;    //表面纹理坐标，可选
-    vec3 wi;          //光线入射方向
-    vec3 wo;          //光线出射方向
-    vec3 normal;      //表面法线方向
-    vec3 attenuation; // BSDF 光能衰减系数
+  bool valid;
+  int inside;       //表面法线方向是否朝向表面内侧
+  Float pdf;        //光线从该方向入射的概率
+  vec2 texcoord;    //表面纹理坐标，可选
+  vec3 normal;      //表面法线方向
+  vec3 pos;         //表面法线方向
+  vec3 wi;          //光线入射方向
+  vec3 wo;          //光线出射方向
+  vec3 attenuation; // BSDF 光能衰减系数
 
-    __device__ BsdfSampling()
-        : valid(false), inside(0), pdf(0), texcoord(vec2(0)), wi(vec3(0)), wo(vec3(0)), normal(vec3(0)), attenuation(vec3(0)) {}
+  __device__ SamplingRecord()
+      : valid(false), inside(0), pdf(0), texcoord(vec2(0)), wi(vec3(0)), wo(vec3(0)),
+        pos(vec3(0)), normal(vec3(0)), attenuation(vec3(0)) {}
 };
 
-struct MaterialInfo
+struct BsdfInfo
 {
-  MaterialType type;
+  BsdfType type;
   bool twosided;
   uint bump_map_idx;
   uint opacity_idx;
@@ -50,8 +52,8 @@ struct MaterialInfo
   uint alpha_v_idx;
   bool nonlinear;
 
-  __host__ __device__ MaterialInfo()
-      : type(kNoneMaterial),
+  __host__ __device__ BsdfInfo()
+      : type(kNoneBsdf),
         twosided(false),
         bump_map_idx(kUintMax),
         opacity_idx(kUintMax),

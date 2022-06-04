@@ -23,7 +23,7 @@ Renderer *ParseJsonCfg(const std::string &file_path)
 	auto renderer = new Renderer();
 
 	auto model_name = GetString(json_data, "scene", false).value();
-	renderer->AddShapesMaterials(dir_path + model_name);
+	renderer->AddShapesBsdfs(dir_path + model_name);
 
 	auto envmap = InitEnvmap(dir_path, json_data);
 	renderer->SetEnvmap(envmap);

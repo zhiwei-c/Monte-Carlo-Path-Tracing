@@ -75,18 +75,17 @@ protected:
         Float cos_theta_prime = glm::dot(wi, its_pre.normal());
         if (cos_theta_prime < 0)
             return false;
-        Float pdf_bsdf = its.Pdf(wi, wo);
-        if (pdf_bsdf < kEpsilonPdf)
+
+        SamplingRecord rec = its.Eval(wi, wo);
+        if (rec.pdf < kEpsilonPdf)
             return false;
         Float pdf_area = its_pre.pdf_area() / this->emitters_.size(),
               pdf_direct = pdf_area * distance_sqr / cos_theta_prime,
-              weight_direct = MisWeight(pdf_direct, pdf_bsdf);
-        Spectrum bsdf = its.Eval(wi, wo);
-        auto cos_theta = std::abs(glm::dot(wi, its.normal()));
+              weight_direct = MisWeight(pdf_direct, rec.pdf);
         if (attenuation)
-            value += *attenuation * weight_direct * its_pre.radiance() * bsdf * cos_theta / pdf_direct;
+            value += *attenuation * weight_direct * its_pre.radiance() * rec.attenuation / pdf_direct;
         else
-            value += weight_direct * its_pre.radiance() * bsdf * cos_theta / pdf_direct;
+            value += weight_direct * its_pre.radiance() * rec.attenuation / pdf_direct;
         return true;
     }
 

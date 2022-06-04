@@ -13,7 +13,7 @@ static void ProcessNode(aiNode *node,
                         Mat4 *to_world_p,
                         Mat4 *to_world_n,
                         std::vector<Shape *> &shapes,
-                        Material *material,
+                        Bsdf *bsdf,
                         bool flip_normals,
                         bool face_normals);
 
@@ -21,12 +21,12 @@ static void ProcessMesh(aiMesh *mesh,
                         Mat4 *to_world_p,
                         Mat4 *to_world_n,
                         std::vector<Shape *> &shapes,
-                        Material *material,
+                        Bsdf *bsdf,
                         bool flip_normals,
                         bool face_normals);
 
 Meshes *ModelParser::Parse(std::string filename,
-                         Material *material,
+                         Bsdf *bsdf,
                          std::unique_ptr<Mat4> to_world,
                          bool flip_normals,
                          bool face_normals,
@@ -45,7 +45,7 @@ Meshes *ModelParser::Parse(std::string filename,
     auto option = aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_GenUVCoords;
     if (flip_tex_coords)
         option = option | aiProcess_FlipUVs;
-    if (material->NormalPerturbing())
+    if (bsdf->NormalPerturbing())
         option = option | aiProcess_CalcTangentSpace;
 
     auto scene = importer.ReadFile(filename, option);
@@ -57,7 +57,7 @@ Meshes *ModelParser::Parse(std::string filename,
     }
 
     std::vector<Shape *> triangles;
-    ProcessNode(scene->mRootNode, scene, to_world_p, to_world_n, triangles, material, flip_normals, face_normals);
+    ProcessNode(scene->mRootNode, scene, to_world_p, to_world_n, triangles, bsdf, flip_normals, face_normals);
 
     if (to_world)
     {
@@ -65,7 +65,7 @@ Meshes *ModelParser::Parse(std::string filename,
         delete to_world_n;
     }
     std::cout << "[info] load " << filename << " finished\n";
-    return new Meshes(triangles, material, flip_normals);
+    return new Meshes(triangles, bsdf, flip_normals);
 }
 
 void ProcessNode(aiNode *node,
@@ -73,18 +73,18 @@ void ProcessNode(aiNode *node,
                  Mat4 *to_world_p,
                  Mat4 *to_world_n,
                  std::vector<Shape *> &shapes,
-                 Material *material,
+                 Bsdf *bsdf,
                  bool flip_normals,
                  bool face_normals)
 {
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-        ProcessMesh(mesh, to_world_p, to_world_n, shapes, material, flip_normals, face_normals);
+        ProcessMesh(mesh, to_world_p, to_world_n, shapes, bsdf, flip_normals, face_normals);
     }
     for (unsigned int i = 0; i < node->mNumChildren; i++)
     {
-        ProcessNode(node->mChildren[i], scene, to_world_p, to_world_n, shapes, material, flip_normals, face_normals);
+        ProcessNode(node->mChildren[i], scene, to_world_p, to_world_n, shapes, bsdf, flip_normals, face_normals);
     }
 }
 
@@ -92,7 +92,7 @@ void ProcessMesh(aiMesh *mesh,
                  Mat4 *to_world_p,
                  Mat4 *to_world_n,
                  std::vector<Shape *> &shapes,
-                 Material *material,
+                 Bsdf *bsdf,
                  bool flip_normals,
                  bool face_normals)
 {
@@ -154,7 +154,7 @@ void ProcessMesh(aiMesh *mesh,
                 }
             }
         }
-        shapes.push_back(new Triangle(vertices, normals, texcoords, tangents, bitangents, material, flip_normals));
+        shapes.push_back(new Triangle(vertices, normals, texcoords, tangents, bitangents, bsdf, flip_normals));
     }
 }
 

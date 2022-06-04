@@ -12,7 +12,7 @@
 NAMESPACE_BEGIN(raytracer)
 
 // 材质类型（表面散射模型类型）
-enum class MaterialType
+enum class BsdfType
 {
     kAreaLight,       //面光源
     kDiffuse,         //平滑的理想漫反射的表面，由朗伯模型描述
@@ -27,58 +27,52 @@ enum class MaterialType
     kRoughPlastic,    //粗糙的塑料
 };
 
-//按 BSDF 采样记录
-struct BsdfSampling
+//光线散射类型
+enum class ScatteringType
 {
+    kNone,          //无效
+    kReflect,       //反射
+    kTransimission, //透射
+};
+
+//按 BSDF 采样记录
+struct SamplingRecord
+{
+    ScatteringType type;  //记录是否有效
     bool inside;          //表面法线方向是否朝向表面内侧
-    bool get_attenuation; //是否计算 BSDF 系数
-    Float pdf;            //光线从该方向入射的概率
+    bool get_attenuation; //是否计算光能衰减系数
+    Float pdf;            //光线传播的概率
     Vector2 texcoord;     //表面纹理坐标
+    Vector3 normal;       //表面法线方向
+    Vector3 pos;          //散射位置
     Vector3 wi;           //光线入射方向
     Vector3 wo;           //光线出射方向
-    Vector3 normal;       //表面法线方向
-    Spectrum attenuation; // BSDF 系数
+    Spectrum attenuation; //光能衰减系数
 
-    BsdfSampling() : inside(false), get_attenuation(true), pdf(0), texcoord(Vector2(0)), wi(Vector3(0)), wo(Vector3(0)), normal(Vector3(0)), attenuation(Spectrum(0)) {}
+    SamplingRecord()
+        : type(ScatteringType::kNone), inside(false), get_attenuation(true), pdf(0), texcoord(Vector2(0)),
+          normal(Vector3(0)), pos(Vector3(0)), wi(Vector3(0)), wo(Vector3(0)), attenuation(Spectrum(0))
+    {
+    }
 };
 
 //材质基类
-class Material
+class Bsdf
 {
 public:
-    virtual ~Material() {}
+    virtual ~Bsdf() {}
 
-    ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    ///\param wo 光线出射方向
-    ///\param normal 表面法线方向
-    ///\param texcoord 表面纹理坐标，可选
-    ///\param inside 表面法线方向是否朝向表面内侧
-    ///\return 由 Vector3 类型和 BsdfSamplingType 类型构成的 pair，分别代表抽样所得光线入射方向，和入射光线与出射光线之间的关系
-    virtual void Sample(BsdfSampling &bs) const {};
+    ///\brief 根据光线出射方向和几何信息，抽样光线入射方向
+    virtual void Sample(SamplingRecord &rec) const {};
 
-    ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
-    ///\param wi 光线入射方向
-    ///\param wo 光线出射方向
-    ///\param normal 表面法线方向
-    ///\param texcoord 表面纹理坐标，可选
-    ///\param inside 表面法线方向是否朝向表面内侧
-    ///\return BSDF 权重
-    virtual Spectrum Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const { return Spectrum(0); }
-
-    ///\brief 根据光线入射方向、出射方向和法线方向，计算光线因从入射方向入射，而从出射方向出射的概率
-    ///\param wi 光线入射方向
-    ///\param wo 光线出射方向
-    ///\param normal 表面法线方向
-    ///\param texcoord 表面纹理坐标，可选
-    ///\param inside 表面法线方向是否朝向表面内侧
-    ///\return 光线因从入射方向入射，而从出射方向出射的概率
-    virtual Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord, bool inside) const { return 0; }
+    ///\brief 根据光线入射方向、出射方向和几何信息，计算光能衰减系数和相应的光线传播概率
+    virtual void Eval(SamplingRecord &rec) const {}
 
     ///\return 材质对应的散射波瓣是是否是 δ-函数
-    bool HarshLobe() const { return type_ == MaterialType::kConductor; }
+    bool HarshLobe() const { return type_ == BsdfType::kConductor; }
 
     ///\return 是否发光
-    virtual bool HasEmission() const { return type_ == MaterialType::kAreaLight; }
+    virtual bool HasEmission() const { return type_ == BsdfType::kAreaLight; }
 
     ///\return 辐射亮度
     virtual Spectrum radiance() const { return Spectrum(0); };
@@ -123,10 +117,10 @@ public:
 protected:
     ///\brief 材质基类
     ///\param type 材质类型
-    Material(MaterialType type) : type_(type), twosided_(false), opacity_(nullptr), bump_map_(nullptr){};
+    Bsdf(BsdfType type) : type_(type), twosided_(false), opacity_(nullptr), bump_map_(nullptr){};
 
 private:
-    MaterialType type_;                 // 材质类型（表面散射模型类型）
+    BsdfType type_;                     // 材质类型（表面散射模型类型）
     bool twosided_;                     // 材质两面都有效
     std::unique_ptr<Texture> opacity_;  // 不透明度纹理映射
     std::unique_ptr<Texture> bump_map_; // 凹凸映射

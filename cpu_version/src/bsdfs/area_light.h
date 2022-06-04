@@ -1,16 +1,16 @@
 #pragma once
 
-#include "../core/material_base.h"
+#include "../core/bsdf_base.h"
 
 NAMESPACE_BEGIN(raytracer)
 
 ///\brief 面光源派生类
-class AreaLight : public Material
+class AreaLight : public Bsdf
 {
 public:
 	///\brief 面光源
 	///\param radiance 辐射亮度
-	AreaLight(const Spectrum &radiance) : Material(MaterialType::kAreaLight), radiance_(radiance){};
+	AreaLight(const Spectrum &radiance) : Bsdf(BsdfType::kAreaLight), radiance_(radiance){};
 
 	///\return 辐射亮度
 	Spectrum radiance() const override { return radiance_; }

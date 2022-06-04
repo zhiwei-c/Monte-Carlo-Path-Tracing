@@ -10,11 +10,11 @@ class Cube : public Shape
 public:
     /**
      * \brief 标准立方体。在局部坐标下表示为：-1 < x < 1，-1 < y < 1，-1 < z < 1
-     * \param material 材质
+     * \param bsdf 材质
      * \param to_world 从局部坐标系到世界坐标系的变换矩阵
      * \param flip_normals 法线方向是否翻转
      */
-    Cube(Material *material,
+    Cube(Bsdf *bsdf,
          std::unique_ptr<Mat4> to_world,
          bool flip_normals);
 

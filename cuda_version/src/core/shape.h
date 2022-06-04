@@ -8,7 +8,7 @@ __global__ void CreateMeshes(uint max_x,
                              Vertex *v_buffer,
                              uvec3 *i_buffer,
                              uint *m_idx,
-                             Material **materials,
+                             Bsdf **bsdfs,
                              AABB *mesh_aabbs,
                              Float *mesh_areas,
                              Mesh *mesh_list)
@@ -40,7 +40,7 @@ __global__ void CreateMeshes(uint max_x,
 
     mesh_areas[idx] = myvec::length(myvec::cross(v[1].position - v[0].position, v[2].position - v[0].position)) * static_cast<Float>(0.5);
     mesh_list[idx].InitTriangle(v,
-                                materials + m_idx[idx],
+                                bsdfs + m_idx[idx],
                                 mesh_areas[idx],
                                 pre,
                                 next);

@@ -22,21 +22,21 @@ public:
 
 private:
 	std::string xml_directory_;
-	std::map<std::string, Material *> id_to_material_;
+	std::map<std::string, Bsdf *> id_to_bsdf_;
 	int bsdf_cnt_;
 	Float gamma_;
 
 	void Reset()
 	{
 		xml_directory_ = "";
-		id_to_material_.clear();
+		id_to_bsdf_.clear();
 		bsdf_cnt_ = 0;
 	}
 
 	Integrator *ParseIntegrator(rapidxml::xml_node<> *node_integrator);
 	Camera *ParseCamera(rapidxml::xml_node<> *node_sensor);
 	void ParseShape(rapidxml::xml_node<> *node_shape, Renderer *renderer);
-	void ParseMaterial(rapidxml::xml_node<> *node_bsdf, Renderer *renderer, const std::string &id_default = "");
+	void ParseBsdf(rapidxml::xml_node<> *node_bsdf, Renderer *renderer, const std::string &id_default = "");
 	Envmap *ParseEnvmap(rapidxml::xml_node<> *node_envmap);
 	Film ParseFilm(rapidxml::xml_node<> *node_sensor);
 
@@ -44,20 +44,20 @@ private:
 	std::unique_ptr<Texture> ParseOpacity(rapidxml::xml_node<> *&node_bsdf, std::string &bsdf_type);
 	bool ParseCoating(const std::string &id, rapidxml::xml_node<> *&node_bsdf, std::string &bsdf_type);
 
-	Material *ParseDiffuse(rapidxml::xml_node<> *node_diffuse);
-	Material *ParseRoughDiffuse(rapidxml::xml_node<> *node_rough_diffuse);
-	Material *ParseDielectric(rapidxml::xml_node<> *node_dielectric, bool thin = false);
-	Material *ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric);
-	Material *ParseConductor(rapidxml::xml_node<> *node_conductor);
-	Material *ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor);
-	Material *ParsePlastic(rapidxml::xml_node<> *node_plastic);
-	Material *ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic);
+	Bsdf *ParseDiffuse(rapidxml::xml_node<> *node_diffuse);
+	Bsdf *ParseRoughDiffuse(rapidxml::xml_node<> *node_rough_diffuse);
+	Bsdf *ParseDielectric(rapidxml::xml_node<> *node_dielectric, bool thin = false);
+	Bsdf *ParseRoughDielectric(rapidxml::xml_node<> *node_rough_dielectric);
+	Bsdf *ParseConductor(rapidxml::xml_node<> *node_conductor);
+	Bsdf *ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor);
+	Bsdf *ParsePlastic(rapidxml::xml_node<> *node_plastic);
+	Bsdf *ParseRoughPlastic(rapidxml::xml_node<> *node_rough_plastic);
 
 	std::unique_ptr<Texture> ParseTexture(rapidxml::xml_node<> *node_texture);
 	std::unique_ptr<Texture> ParseTextureOrOther(rapidxml::xml_node<> *node_parent, std::string name);
 
 	static std::unique_ptr<Mat4> GetToWorld(rapidxml::xml_node<> *node_parent);
-	static Float GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::string default_material_name);
+	static Float GetIor(rapidxml::xml_node<> *node_parent, std::string ior_type, std::string default_bsdf_name);
 	static MicrofacetDistribType GetDistrbType(const std::string &name);
 
 	static Spectrum GetSpectrum(rapidxml::xml_node<> *node_spectrum);

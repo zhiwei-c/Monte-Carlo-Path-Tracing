@@ -126,9 +126,9 @@ __device__ inline vec3 FresnelConductor(const vec3 &wi, const vec3 &normal, cons
 
 /**
  * \brief Computes the diffuse unpolarized Fresnel reflectance of a dielectric
- *		material (sometimes referred to as "Fdr").
+ *		bsdf (sometimes referred to as "Fdr").
  *		This value quantifies what fraction of diffuse incident illumination
- *		will, on average, be reflected at a dielectric material boundary
+ *		will, on average, be reflected at a dielectric bsdf boundary
  * \param eta Relative refraction coefficient
  * \return F, the unpolarized Fresnel coefficient.
  */

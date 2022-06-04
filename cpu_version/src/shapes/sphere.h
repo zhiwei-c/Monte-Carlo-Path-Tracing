@@ -9,13 +9,13 @@ class Sphere : public Shape
 public:
     /**
      * \brief 球
-     * \param material 材质
+     * \param bsdf 材质
      * \param center 球心
      * \param radius 半径
      * \param to_world 从局部坐标系到世界坐标系的变换矩阵
      * \param flip_normals 法线方向是否翻转
      */
-    Sphere(Material *material,
+    Sphere(Bsdf *bsdf,
            const Vector3 &center,
            Float radius,
            std::unique_ptr<Mat4> to_world,

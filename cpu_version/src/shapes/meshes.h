@@ -9,8 +9,8 @@ NAMESPACE_BEGIN(raytracer)
 class Meshes : public Shape
 {
 public:
-	Meshes(std::vector<Shape *> meshes, Material *material, bool flip_normals)
-		: Shape(ShapeType::kMeshes, material, flip_normals), meshes_(meshes), bvh_(std::make_unique<BvhAccel>(meshes))
+	Meshes(std::vector<Shape *> meshes, Bsdf *bsdf, bool flip_normals)
+		: Shape(ShapeType::kMeshes, bsdf, flip_normals), meshes_(meshes), bvh_(std::make_unique<BvhAccel>(meshes))
 	{
 		aabb_ = bvh_->aabb();
 		area_ = bvh_->area();

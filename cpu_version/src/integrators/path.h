@@ -46,18 +46,18 @@ public:
                 EmitterDirectArea(its, wo, L, &global_attenuation);
             }
 
-            std::unique_ptr<BsdfSampling> b_rec = its.Sample(wo);
-            if (!b_rec)
+            SamplingRecord b_rec = its.Sample(wo);
+            if (b_rec.type == ScatteringType::kNone)
             { //抽样次生光线失败，结束迭代
                 break;
             }
 
-            auto local_attenuation = b_rec->attenuation * glm::abs(glm::dot(b_rec->wi, its.normal())) / b_rec->pdf;
+            auto local_attenuation = b_rec.attenuation / b_rec.pdf;
             its_pre = Intersection();
-            if (!this->bvh_->Intersect(Ray(its.pos(), -b_rec->wi), its_pre))
+            if (!this->bvh_->Intersect(Ray(b_rec.pos, -b_rec.wi), its_pre))
             { //按 BSDF 采样来自环境的直接光照
                 if (envmap_ != nullptr)
-                    L += global_attenuation * envmap_->radiance(-b_rec->wi) * local_attenuation;
+                    L += global_attenuation * envmap_->radiance(-b_rec.wi) * local_attenuation;
                 break;
             }
             else if (its_pre.absorb())
@@ -70,8 +70,8 @@ public:
                     L += global_attenuation * its_pre.radiance() * local_attenuation;
                 else
                 {
-                    Float pdf_direct = PdfEmitterDirect(its_pre, b_rec->wi),
-                          weight_bsdf = MisWeight(b_rec->pdf, pdf_direct);
+                    Float pdf_direct = PdfEmitterDirect(its_pre, b_rec.wi),
+                          weight_bsdf = MisWeight(b_rec.pdf, pdf_direct);
                     L += global_attenuation * weight_bsdf * its_pre.radiance() * local_attenuation;
                 }
                 break;
@@ -86,7 +86,7 @@ public:
                 global_attenuation /= pdf_rr_;
             }
 
-            its = its_pre, wo = b_rec->wi, depth++;
+            its = its_pre, wo = b_rec.wi, depth++;
         }
         return L;
     }

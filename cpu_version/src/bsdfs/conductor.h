@@ -1,11 +1,11 @@
 #pragma once
 
-#include "../core/material_base.h"
+#include "../core/bsdf_base.h"
 
 NAMESPACE_BEGIN(raytracer)
 
 ///\brief 平滑的导体材质派生类
-class Conductor : public Material
+class Conductor : public Bsdf
 {
 public:
     ///\brief 平滑的导体材质
@@ -13,50 +13,43 @@ public:
     ///\param k 材质折射率的虚部（消光系数）
     ///\param ext_ior 外折射率
     ///\param specular_reflectance 镜面反射系数 （注意：对于物理真实感绘制，默认为 1，表示为空指针）
-    Conductor(const Spectrum &eta, const Spectrum &k, Float ext_ior,
-              std::unique_ptr<Texture> specular_reflectance)
-        : Material(MaterialType::kConductor),
-          eta_(eta / ext_ior), k_(k / ext_ior),
+    Conductor(const Spectrum &eta, const Spectrum &k, Float ext_ior, std::unique_ptr<Texture> specular_reflectance)
+        : Bsdf(BsdfType::kConductor), eta_(eta / ext_ior), k_(k / ext_ior),
           specular_reflectance_(std::move(specular_reflectance))
     {
     }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
-    void Sample(BsdfSampling &bs) const override
+    void Sample(SamplingRecord &rec) const override
     {
-        bs.wi = -Reflect(-bs.wo, bs.normal);
-        bs.pdf = 1;
-        if (!bs.get_attenuation)
+        rec.wi = -Reflect(-rec.wo, rec.normal);
+        rec.pdf = 1;
+        rec.type = ScatteringType::kReflect;
+        if (!rec.get_attenuation)
             return;
-        bs.attenuation = FresnelConductor(bs.wi, bs.normal, eta_, k_);
+        rec.attenuation = FresnelConductor(rec.wi, rec.normal, eta_, k_) * glm::dot(-rec.wi, rec.normal);
         if (specular_reflectance_)
-            bs.attenuation *= specular_reflectance_->Color(bs.texcoord);
+            rec.attenuation *= specular_reflectance_->Color(rec.texcoord);
     }
 
-    ///\brief 根据光线入射方向、出射方向和法线方向，计算 BSDF 权重
-    Spectrum Eval(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord,
-                  bool inside) const override
+    ///\brief 根据光线入射方向、出射方向和几何信息，计算光能衰减系数和相应的光线传播概率
+    void Eval(SamplingRecord &rec) const override
     {
-        if (!SameDirection(wo, Reflect(wi, normal)))
-            return Spectrum(0);
-        Spectrum albedo = FresnelConductor(wi, normal, eta_, k_);
+        if (!SameDirection(rec.wo, Reflect(rec.wi, rec.normal)))
+        {
+            return;
+        }
+        rec.pdf = 1;
+        rec.type = ScatteringType::kReflect;
+        rec.attenuation = FresnelConductor(rec.wi, rec.normal, eta_, k_) * glm::dot(-rec.wi, rec.normal);
         if (specular_reflectance_)
-            albedo *= specular_reflectance_->Color(texcoord);
-        return albedo;
-    }
-
-    ///\brief 根据光线入射方向和法线方向，计算光线从给定出射方向射出的概率
-    Float Pdf(const Vector3 &wi, const Vector3 &wo, const Vector3 &normal, const Vector2 &texcoord,
-              bool inside) const override
-    {
-        return SameDirection(wo, Reflect(wi, normal)) ? 1 : 0;
+            rec.attenuation *= specular_reflectance_->Color(rec.texcoord);
     }
 
     ///\brief 是否映射纹理
     bool TextureMapping() const override
     {
-        return Material::TextureMapping() ||
-               specular_reflectance_ && !specular_reflectance_->Constant();
+        return Bsdf::TextureMapping() || specular_reflectance_ && !specular_reflectance_->Constant();
     }
 
 private:

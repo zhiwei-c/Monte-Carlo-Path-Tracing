@@ -7,16 +7,15 @@ NAMESPACE_BEGIN(raytracer)
 //路径点
 struct PathVertex
 {
-    Intersection its;    //路径点对应的交点
-    Vector3 wi;          //在路径中的当前点，光线入射方向
-    Vector3 wo;          //在路径中的当前点，光线出射方向
-    Float cos_theta_abs; //在路径中的当前点，光线入射方向和当前点法线夹角余弦的绝对值
-    Float pdf;           //在路径中的当前点，光线入射并出射的概率
-    Spectrum bsdf;       //在路径中的当前点，光线入射并出射对应的 BSDF 数值
-    Spectrum L;          //在路径中的当前点，光线沿出射方向传递能量的数学期望
+    Intersection its;     //路径点对应的交点
+    Vector3 wi;           //在路径中的当前点，光线入射方向
+    Vector3 wo;           //在路径中的当前点，光线出射方向
+    Float pdf;            //在路径中的当前点，光线入射并出射的概率
+    Spectrum attenuation; //在路径中的当前点，光线入射并出射对应的光能衰减系数
+    Spectrum L;           //在路径中的当前点，光线沿出射方向传递能量的数学期望
 
     PathVertex(Intersection its, Vector3 wi, Vector3 wo)
-        : its(its), wi(wi), wo(wo), cos_theta_abs(2), pdf(-1), bsdf(Spectrum(0)), L(Spectrum(0))
+        : its(its), wi(wi), wo(wo), pdf(-1), attenuation(Spectrum(0)), L(Spectrum(0))
     {
     }
 };
@@ -57,7 +56,7 @@ public:
                 Float pdf_pre = 0;
                 if (c_idx < camera_path.size() - 1)
                 {
-                    L_indirect_pre = camera_path[c_idx + 1].L * c.bsdf * (c.cos_theta_abs / c.pdf);
+                    L_indirect_pre = camera_path[c_idx + 1].L * c.attenuation / c.pdf;
                     pdf_pre = c.pdf;
                     if (c_idx > rr_depth_)
                     {
@@ -65,9 +64,10 @@ public:
                         pdf_pre *= pdf_rr_;
                     }
                 }
-
                 if (c.its.HarshLobe())
-                    camera_path[c_idx].L = L_direct + L_indirect_pre; //当前照相机路径点总光照
+                { //当前照相机路径点总光照
+                    camera_path[c_idx].L = L_direct + L_indirect_pre;
+                }
                 else
                 {
                     auto L_indirects = std::vector<Spectrum>();
@@ -122,24 +122,22 @@ private:
         {
             PathVertex &e = emitter_path.back();
             its_next = Intersection();
-            if (!this->bvh_->Intersect(Ray(e.its.pos(), e.wo), its_next) ||
-                its_next.absorb() ||
+            if (!this->bvh_->Intersect(Ray(e.its.pos(), e.wo), its_next) || its_next.absorb() ||
                 its_next.HasEmission())
                 break;
             emitter_path.push_back({its_next, e.wo, Vector3(0)});
             depth += 1;
             PathVertex &e_next = emitter_path.back();
-            e_next.cos_theta_abs = std::fabs(glm::dot(e_next.wi, e_next.its.normal()));
-            std::unique_ptr<BsdfSampling> bs_next = e_next.its.Sample(-e_next.wi, false);
-            if (!bs_next)
+            SamplingRecord bs_next = e_next.its.Sample(-e_next.wi, false);
+            if (bs_next.type == ScatteringType::kNone)
                 break;
-            Vector3 wo_next = -bs_next->wi;
-            Float pdf_next = its_next.Pdf(e_next.wi, wo_next);
-            if (pdf_next < kEpsilonPdf2)
+            const Vector3 &wo_next = -bs_next.wi;
+            bs_next = its_next.Eval(e_next.wi, wo_next);
+            if (bs_next.pdf < kEpsilonPdf2)
                 break;
             e_next.wo = wo_next;
-            e_next.pdf = pdf_next;
-            e_next.bsdf = its_next.Eval(e_next.wi, e_next.wo);
+            e_next.pdf = bs_next.pdf;
+            e_next.attenuation = bs_next.attenuation;
         }
         PathVertex &e_first = emitter_path[0];
         e_first.L = e_first.its.radiance();
@@ -154,7 +152,7 @@ private:
         {
             PathVertex &e_pre = emitter_path[i - 1];
             PathVertex &e = emitter_path[i];
-            Spectrum L_indirect = e_pre.L * e.bsdf * (e.cos_theta_abs / e.pdf);
+            Spectrum L_indirect = e_pre.L * e.attenuation / e.pdf;
             if (i > rr_depth_)
                 L_indirect /= pdf_rr_;
             Spectrum L_direct_env = EmitterEnv2OneV(e, &e_first.its);
@@ -174,18 +172,16 @@ private:
                max_depth_ <= 0 && (depth <= rr_depth_ || UniformFloat() < pdf_rr_))
         {
             PathVertex &c = camera_path.back();
-            std::unique_ptr<BsdfSampling> b_rec = c.its.Sample(c.wo);
-            if (!b_rec)
+            SamplingRecord b_rec = c.its.Sample(c.wo);
+            if (b_rec.type == ScatteringType::kNone)
                 break;
             its_pre = Intersection();
-            if (!this->bvh_->Intersect(Ray(c.its.pos(), -b_rec->wi), its_pre) ||
-                its_pre.absorb() || its_pre.HasEmission())
+            if (!this->bvh_->Intersect(Ray(b_rec.pos, -b_rec.wi), its_pre) || its_pre.absorb() || its_pre.HasEmission())
                 break;
-            c.wi = b_rec->wi;
-            c.cos_theta_abs = std::fabs(glm::dot(b_rec->wi, c.its.normal()));
-            c.pdf = b_rec->pdf;
-            c.bsdf = b_rec->attenuation;
-            camera_path.push_back({its_pre, Vector3(0), b_rec->wi});
+            c.wi = b_rec.wi;
+            c.pdf = b_rec.pdf;
+            c.attenuation = b_rec.attenuation;
+            camera_path.push_back({its_pre, Vector3(0), b_rec.wi});
             depth += 1;
         }
         return camera_path;
@@ -207,26 +203,26 @@ private:
             else
                 EmitterDirectArea(v.its, wo, L_emitter);
         }
-        std::unique_ptr<BsdfSampling> b_rec = v.its.Sample(wo);
-        if (!b_rec)
+        SamplingRecord b_rec = v.its.Sample(wo);
+        if (b_rec.type == ScatteringType::kNone)
             return L_emitter;
-        Float cos_theta = std::abs(glm::dot(b_rec->wi, v.its.normal()));
+        Float cos_theta = std::abs(glm::dot(b_rec.wi, v.its.normal()));
         auto its_pre = Intersection();
 
-        if (!this->bvh_->Intersect(Ray(v.its.pos(), -b_rec->wi), its_pre))
+        if (!this->bvh_->Intersect(Ray(b_rec.pos, -b_rec.wi), its_pre))
         {
             if (envmap_ != nullptr) //按 BSDF 采样环境光
-                L_env = envmap_->radiance(-b_rec->wi) * b_rec->attenuation * (cos_theta / b_rec->pdf);
+                L_env = envmap_->radiance(-b_rec.wi) * b_rec.attenuation * (cos_theta / b_rec.pdf);
         }
         else if (!its_pre.absorb() && its_pre.HasEmission()) //按 BSDF 采样来自面光源的直接光照
         {
             if (v.its.HarshLobe())
-                L_emitter += its_pre.radiance() * b_rec->attenuation * (cos_theta / b_rec->pdf);
+                L_emitter += its_pre.radiance() * b_rec.attenuation * (cos_theta / b_rec.pdf);
             else
             {
-                Float pdf_direct = PdfEmitterDirect(its_pre, b_rec->wi),
-                      weight_bsdf = MisWeight(b_rec->pdf, pdf_direct);
-                L_emitter += weight_bsdf * its_pre.radiance() * b_rec->attenuation * (cos_theta / b_rec->pdf);
+                Float pdf_direct = PdfEmitterDirect(its_pre, b_rec.wi),
+                      weight_bsdf = MisWeight(b_rec.pdf, pdf_direct);
+                L_emitter += weight_bsdf * its_pre.radiance() * b_rec.attenuation * (cos_theta / b_rec.pdf);
             }
         }
         auto res = L_emitter + L_env;
@@ -247,8 +243,8 @@ private:
         e.wo = c.wi;
         if (Perpendicular(e.wo, e.its.normal()))
             return {Spectrum(0), 0};
-        c.pdf = c.its.Pdf(c.wi, c.wo);
-        if (c.pdf < kEpsilonPdf2)
+        SamplingRecord rec_now = c.its.Eval(c.wi, c.wo);
+        if (rec_now.pdf < kEpsilonPdf2)
             return {Spectrum(0), 0};
         //上一个点接收的直接光照
         auto L_pre = Spectrum(0);
@@ -257,11 +253,10 @@ private:
         //上一个点接收的间接光照
         if (e_index > 1)
         {
-            e.pdf = e.its.Pdf(e.wi, e.wo);
-            if (e.pdf > kEpsilonPdf2)
+            SamplingRecord rec_pre = e.its.Eval(e.wi, e.wo);
+            if (rec_pre.pdf > kEpsilonPdf2)
             {
-                e.bsdf = e.its.Eval(e.wi, e.wo);
-                auto L_pre_indirect = e_pre.L * e.bsdf * (e.cos_theta_abs / e.pdf);
+                auto L_pre_indirect = e_pre.L * rec_pre.attenuation / e.pdf;
                 if (e_index - 1 > rr_depth_)
                     L_pre_indirect /= pdf_rr_;
                 L_pre += L_pre_indirect;
@@ -269,16 +264,14 @@ private:
         }
         if (L_pre.r + L_pre.g + L_pre.b < kEpsilon)
             return {Spectrum(0), 0};
-        c.bsdf = c.its.Eval(c.wi, c.wo);
-        c.cos_theta_abs = std::abs(glm::dot(c.wi, c.its.normal()));
         //当前点接收的间接光照
-        auto L_indirect = L_pre * c.bsdf * (c.cos_theta_abs / c.pdf);
+        auto L_indirect = L_pre * rec_now.attenuation / rec_now.pdf;
         if (e_index > rr_depth_)
         {
             L_indirect /= pdf_rr_;
-            c.pdf *= pdf_rr_;
+            rec_now.pdf *= pdf_rr_;
         }
-        return {L_indirect, c.pdf};
+        return {L_indirect, rec_now.pdf};
     }
 };
 

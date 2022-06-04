@@ -10,9 +10,9 @@
 NAMESPACE_BEGIN(raytracer)
 
 constexpr int kResolution = 512; //预计算纹理贴图的精度
-constexpr Float step = 1.0 / kResolution;
-constexpr int sample_count = 1024;
-constexpr Float sample_count_inv = 1.0 / sample_count;
+constexpr Float kStep = 1.0 / kResolution;
+constexpr int kSampleCount = 1024;
+constexpr Float kSampleCountInv = 1.0 / kSampleCount;
 
 ///\brief 微表面模型基类
 class Microfacet
@@ -33,16 +33,12 @@ public:
         : distrib_type_(distrib_type), albedo_avg_(-1), alpha_u_(std::move(alpha_u)), alpha_v_(std::move(alpha_v))
     {
     }
+
     virtual ~Microfacet() {}
 
     virtual bool TextureMapping() const { return alpha_u_ != nullptr || alpha_v_ != nullptr; }
 
 protected:
-    MicrofacetDistribType distrib_type_; //微表面分布类型
-    std::unique_ptr<Texture> alpha_u_;   //沿切线（tangent）方向的粗糙度
-    std::unique_ptr<Texture> alpha_v_;   //沿副切线（bitangent）方向的粗糙度
-    Float albedo_avg_;                   //平均反照率
-
     ///\brief 给定表面纹理坐标，获取该点粗糙程度
     std::pair<Float, Float> GetAlpha(const Vector2 &texcoord) const
     {
@@ -75,11 +71,11 @@ protected:
         //预计算光线出射方向与法线方向夹角的余弦从0到1的一系列反照率
         for (size_t j = 0; j < kResolution; j++)
         {
-            Float cos_theta_o = step * (j + 0.5);
+            Float cos_theta_o = kStep * (j + 0.5);
             auto wo = Vector3(std::sqrt(1 - Sqr(cos_theta_o)), 0, cos_theta_o);
-            for (int i = 0; i < sample_count; i++)
+            for (int i = 0; i < kSampleCount; i++)
             {
-                auto [normal_micro, pdf] = distrib->Sample(normal, Hammersley(i + 1, sample_count + 1));
+                auto [normal_micro, pdf] = distrib->Sample(normal, Hammersley(i + 1, kSampleCount + 1));
                 Vector3 wi = -Reflect(-wo, normal_micro);
                 Float G = distrib->SmithG1(-wi, normal_micro, normal) *
                           distrib->SmithG1(wo, normal_micro, normal),
@@ -88,28 +84,33 @@ protected:
                 //重要性采样的微表面模型BSDF，并且菲涅尔项置为1（或0）
                 albedo_lut_[j] += (cos_m_o * G / (cos_theta_o * cos_m_n));
             }
-            albedo_lut_[j] = std::max(sample_count_inv * albedo_lut_[j], 0.0);
+            albedo_lut_[j] = std::max(kSampleCountInv * albedo_lut_[j], 0.0);
         }
 
         albedo_avg_ = 0;
         //积分，计算平均反照率
         for (size_t j = 0; j < kResolution; j++)
         {
-            Float avg_tmp = 0, cos_theta_o = step * (j + 0.5);
+            Float avg_tmp = 0, cos_theta_o = kStep * (j + 0.5);
             auto wo = Vector3(std::sqrt(1.0 - Sqr(cos_theta_o)), 0, cos_theta_o);
-            for (int i = 0; i < sample_count; i++)
+            for (int i = 0; i < kSampleCount; i++)
             {
-                auto [normal_micro, pdf] = distrib->Sample(normal, Hammersley(i + 1, sample_count + 1));
+                auto [normal_micro, pdf] = distrib->Sample(normal, Hammersley(i + 1, kSampleCount + 1));
                 Vector3 wi = -Reflect(-wo, normal_micro);
                 Float cos_theta_i = std::max(glm::dot(-wi, normal), static_cast<Float>(0));
                 avg_tmp += (albedo_lut_[j] * cos_theta_i);
             }
-            albedo_avg_ += (avg_tmp * 2 * sample_count_inv);
+            albedo_avg_ += (avg_tmp * 2 * kSampleCountInv);
         }
-        albedo_avg_ *= step;
+        albedo_avg_ *= kStep;
         if (albedo_avg_ > 1.0 - kEpsilon)
             albedo_avg_ = -1;
     }
+
+    MicrofacetDistribType distrib_type_; //微表面分布类型
+    Float albedo_avg_;                   //平均反照率
+    std::unique_ptr<Texture> alpha_u_;   //沿切线（tangent）方向的粗糙度
+    std::unique_ptr<Texture> alpha_v_;   //沿副切线（bitangent）方向的粗糙度
 
 private:
     std::array<Float, kResolution> albedo_lut_; //光线出射方向与法线方向夹角的余弦从0到1的一系列反照率

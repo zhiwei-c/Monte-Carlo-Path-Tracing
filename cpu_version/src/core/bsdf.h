@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../emitters/area_light.h"
+#include "../bsdfs/area_light.h"
 
 #include "../bsdfs/diffuse.h"
 #include "../bsdfs/rough_diffuse.h"
