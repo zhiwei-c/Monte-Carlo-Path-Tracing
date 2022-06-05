@@ -4,7 +4,7 @@
 
 NAMESPACE_BEGIN(raytracer)
 
-void XmlParser::ParseMedium(rapidxml::xml_node<> *node_medium, Renderer *renderer, const std::string &id_default)
+bool XmlParser::ParseMedium(rapidxml::xml_node<> *node_medium, Renderer *renderer, const std::string &id_default)
 {
     auto medium_type = GetAttri(node_medium, "type").value();
 
@@ -44,6 +44,8 @@ void XmlParser::ParseMedium(rapidxml::xml_node<> *node_medium, Renderer *rendere
 
     id_to_medium_[id] = medium;
     renderer->AddMedium(medium);
+
+    return GetAttri(node_medium, "name", true).value_or("interior") == "interior";;
 }
 
 std::unique_ptr<PhaseFunction> XmlParser::ParsePhaseFunction(rapidxml::xml_node<> *&node_medium)

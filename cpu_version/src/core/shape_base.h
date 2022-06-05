@@ -31,7 +31,7 @@ public:
     AABB aabb() const { return aabb_; }
 
     ///\return 物体是否发光
-    bool HasEmission() const { return bsdf_->HasEmission(); }
+    bool HasEmission() const { return bsdf_ && bsdf_->HasEmission(); }
 
     ///\return 物体的表面积
     Float area() const { return area_; }
@@ -44,17 +44,19 @@ protected:
     ///\param type 物体类型
     ///\param bsdf 材质
     ///\param flip_normals 默认法线方向是否翻转
-    Shape(ShapeType type, Bsdf *bsdf, Medium *medium, bool flip_normals)
-        : type_(type), bsdf_(bsdf), medium_(medium), flip_normals_(flip_normals), aabb_(AABB()), area_(0)
+    Shape(ShapeType type, Bsdf *bsdf, Medium *int_medium, Medium *ext_medium, bool flip_normals)
+        : type_(type), bsdf_(bsdf), int_medium_(int_medium), ext_medium_(ext_medium), flip_normals_(flip_normals),
+          aabb_(AABB()), area_(0)
     {
     }
 
-    bool flip_normals_; //默认法线方向是否翻转
-    Float area_;        //物体的表面积
-    Float pdf_area_;    //面元概率
-    AABB aabb_;         //物体的轴对齐包围盒
-    Bsdf *bsdf_;        //表面材质
-    Medium *medium_;    //内部介质
+    bool flip_normals_;  //默认法线方向是否翻转
+    Float area_;         //物体的表面积
+    Float pdf_area_;     //面元概率
+    AABB aabb_;          //物体的轴对齐包围盒
+    Bsdf *bsdf_;         //表面材质
+    Medium *int_medium_; //内部介质
+    Medium *ext_medium_; //外部介质
 
 private:
     ShapeType type_; //物体类型

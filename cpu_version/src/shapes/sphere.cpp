@@ -2,9 +2,9 @@
 
 NAMESPACE_BEGIN(raytracer)
 
-Sphere::Sphere(Bsdf *bsdf, Medium *medium, const Vector3 &center, Float radius, std::unique_ptr<Mat4> to_world,
-               bool flip_normals)
-    : Shape(ShapeType::kSphere, bsdf, medium, flip_normals), center_(center), radius_(radius), to_world_(std::move(to_world)),
+Sphere::Sphere(Bsdf *bsdf, Medium *int_medium, Medium *ext_medium, const Vector3 &center, Float radius,
+               std::unique_ptr<Mat4> to_world, bool flip_normals)
+    : Shape(ShapeType::kSphere, bsdf, int_medium, ext_medium, flip_normals), center_(center), radius_(radius), to_world_(std::move(to_world)),
       to_world_norm_(nullptr), to_local_(nullptr)
 {
     Vector3 center_world = center_;
@@ -56,7 +56,7 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
     Vector3 pos = ray_o + t_result * ray_d;
     Vector3 normal = glm::normalize(pos - center_);
     auto texcoord = Vector2(0);
-    if (bsdf_->TextureMapping())
+    if (bsdf_ && bsdf_->TextureMapping())
     {
         Float theta = 0, phi = 0;
         CartesianToSpherical(normal, theta, phi);
@@ -96,7 +96,7 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
     if (distance > its.distance())
         return;
 
-    if (!bsdf_->Twosided() &&
+    if (bsdf_ && !bsdf_->Twosided() &&
         (!flip_normals_ && c < 0 ||
          flip_normals_ && c > 0))
     {
@@ -116,7 +116,7 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
         inside = !inside;
     }
 
-    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, medium_, pdf_area_);
+    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, int_medium_, ext_medium_, pdf_area_);
 }
 
 Intersection Sphere::SampleP() const
@@ -128,7 +128,7 @@ Intersection Sphere::SampleP() const
         pos = TransfromPt(*to_world_, pos);
         normal = TransfromDir(*to_world_norm_, normal);
     }
-    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, medium_, pdf_area_);
+    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, int_medium_, ext_medium_, pdf_area_);
 }
 
 NAMESPACE_END(raytracer)

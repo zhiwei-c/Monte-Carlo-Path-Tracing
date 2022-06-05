@@ -14,7 +14,7 @@ public:
      * \param to_world 从局部坐标系到世界坐标系的变换矩阵
      * \param flip_normals 法线方向是否翻转
      */
-    Cube(Bsdf *bsdf, Medium *medium, std::unique_ptr<Mat4> to_world, bool flip_normals);
+    Cube(Bsdf *bsdf, Medium *int_medium, Medium *ext_medium, std::unique_ptr<Mat4> to_world, bool flip_normals);
 
     ~Cube()
     {

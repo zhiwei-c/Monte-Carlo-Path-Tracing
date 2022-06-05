@@ -9,13 +9,13 @@
 NAMESPACE_BEGIN(raytracer)
 
 static void ProcessNode(aiNode *node, const aiScene *scene, Mat4 *to_world_p, Mat4 *to_world_n, std::vector<Shape *> &shapes,
-                        Bsdf *bsdf, Medium *medium, bool flip_normals, bool face_normals);
+                        Bsdf *bsdf, Medium *int_medium, Medium *ext_medium, bool flip_normals, bool face_normals);
 
 static void ProcessMesh(aiMesh *mesh, Mat4 *to_world_p, Mat4 *to_world_n, std::vector<Shape *> &shapes,
-                        Bsdf *bsdf, Medium *medium, bool flip_normals, bool face_normals);
+                        Bsdf *bsdf, Medium *int_medium, Medium *ext_medium, bool flip_normals, bool face_normals);
 
-Meshes *ModelParser::Parse(std::string filename, Bsdf *bsdf, Medium *medium, std::unique_ptr<Mat4> to_world,
-                           bool flip_normals, bool face_normals, bool flip_tex_coords)
+Meshes *ModelParser::Parse(std::string filename, Bsdf *bsdf, Medium *int_medium, Medium *ext_medium,
+                           std::unique_ptr<Mat4> to_world, bool flip_normals, bool face_normals, bool flip_tex_coords)
 {
     std::cout << "[info] begin load " << filename << "\r";
 
@@ -42,7 +42,8 @@ Meshes *ModelParser::Parse(std::string filename, Bsdf *bsdf, Medium *medium, std
     }
 
     std::vector<Shape *> triangles;
-    ProcessNode(scene->mRootNode, scene, to_world_p, to_world_n, triangles, bsdf, medium, flip_normals, face_normals);
+    ProcessNode(scene->mRootNode, scene, to_world_p, to_world_n, triangles, bsdf, int_medium, ext_medium,
+                flip_normals, face_normals);
 
     if (to_world)
     {
@@ -50,25 +51,26 @@ Meshes *ModelParser::Parse(std::string filename, Bsdf *bsdf, Medium *medium, std
         delete to_world_n;
     }
     std::cout << "[info] load " << filename << " finished\n";
-    return new Meshes(triangles, bsdf, medium, flip_normals);
+    return new Meshes(triangles, bsdf, int_medium, ext_medium, flip_normals);
 }
 
 void ProcessNode(aiNode *node, const aiScene *scene, Mat4 *to_world_p, Mat4 *to_world_n, std::vector<Shape *> &shapes,
-                 Bsdf *bsdf, Medium *medium, bool flip_normals, bool face_normals)
+                 Bsdf *bsdf, Medium *int_medium, Medium *ext_medium, bool flip_normals, bool face_normals)
 {
     for (unsigned int i = 0; i < node->mNumMeshes; i++)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-        ProcessMesh(mesh, to_world_p, to_world_n, shapes, bsdf, medium, flip_normals, face_normals);
+        ProcessMesh(mesh, to_world_p, to_world_n, shapes, bsdf, int_medium, ext_medium, flip_normals, face_normals);
     }
     for (unsigned int i = 0; i < node->mNumChildren; i++)
     {
-        ProcessNode(node->mChildren[i], scene, to_world_p, to_world_n, shapes, bsdf, medium, flip_normals, face_normals);
+        ProcessNode(node->mChildren[i], scene, to_world_p, to_world_n, shapes, bsdf, int_medium, ext_medium,
+                    flip_normals, face_normals);
     }
 }
 
-void ProcessMesh(aiMesh *mesh, Mat4 *to_world_p, Mat4 *to_world_n, std::vector<Shape *> &shapes, Bsdf *bsdf, Medium *medium,
-                 bool flip_normals, bool face_normals)
+void ProcessMesh(aiMesh *mesh, Mat4 *to_world_p, Mat4 *to_world_n, std::vector<Shape *> &shapes, Bsdf *bsdf,
+                 Medium *int_medium, Medium *ext_medium, bool flip_normals, bool face_normals)
 {
     Vector3 vector;
     Vector2 vec;
@@ -128,7 +130,8 @@ void ProcessMesh(aiMesh *mesh, Mat4 *to_world_p, Mat4 *to_world_n, std::vector<S
                 }
             }
         }
-        shapes.push_back(new Triangle(vertices, normals, texcoords, tangents, bitangents, bsdf, medium, flip_normals));
+        shapes.push_back(new Triangle(vertices, normals, texcoords, tangents, bitangents, bsdf,
+                                      int_medium, ext_medium, flip_normals));
     }
 }
 

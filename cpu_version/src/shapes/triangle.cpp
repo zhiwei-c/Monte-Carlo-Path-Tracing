@@ -3,11 +3,13 @@
 NAMESPACE_BEGIN(raytracer)
 
 Triangle::Triangle(const std::vector<Vector3> &vertices, const std::vector<Vector3> &normals,
-                   const std::vector<Vector2> &texcoords, Bsdf *bsdf, Medium *medium, bool flip_normals)
-    : Shape(ShapeType::kTriangle, bsdf, medium, flip_normals), vertices_(vertices), texcoords_(texcoords)
+                   const std::vector<Vector2> &texcoords, Bsdf *bsdf, Medium *int_medium,
+                   Medium *ext_medium, bool flip_normals)
+    : Shape(ShapeType::kTriangle, bsdf, int_medium, ext_medium, flip_normals), vertices_(vertices),
+      texcoords_(texcoords)
 {
     Setup(vertices, normals);
-    if (bsdf->NormalPerturbing())
+    if (bsdf && bsdf->NormalPerturbing())
     {
         auto delta_uv_1 = texcoords[1] - texcoords[0];
         auto delta_uv_2 = texcoords[2] - texcoords[0];
@@ -21,8 +23,9 @@ Triangle::Triangle(const std::vector<Vector3> &vertices, const std::vector<Vecto
 
 Triangle::Triangle(const std::vector<Vector3> &vertices, const std::vector<Vector3> &normals,
                    const std::vector<Vector2> &texcoords, const std::vector<Vector3> &tangents,
-                   const std::vector<Vector3> &bitangents, Bsdf *bsdf, Medium *medium, bool flip_normals)
-    : Shape(ShapeType::kTriangle, bsdf, medium, flip_normals), vertices_(vertices), texcoords_(texcoords),
+                   const std::vector<Vector3> &bitangents, Bsdf *bsdf, Medium *int_medium,
+                   Medium *ext_medium, bool flip_normals)
+    : Shape(ShapeType::kTriangle, bsdf, int_medium, ext_medium, flip_normals), vertices_(vertices), texcoords_(texcoords),
       tangents_(tangents), bitangents_(bitangents)
 {
     Setup(vertices, normals);
@@ -71,7 +74,7 @@ void Triangle::Intersect(const Ray &ray, Intersection &its) const
     Float distance = glm::dot(v0v2_, Q) * det_inv;
     if (distance < kEpsilon || distance > its.distance())
         return;
-    if (!bsdf_->Twosided() &&
+    if (bsdf_ && !bsdf_->Twosided() &&
         (flip_normals_ && det > -kEpsilon ||
          !flip_normals_ && det < kEpsilon))
     { //丢弃与单面材质的三角面片交于背面的光线
@@ -81,7 +84,7 @@ void Triangle::Intersect(const Ray &ray, Intersection &its) const
     Float alpha = 1.0 - u - v, beta = u, gamma = v;
     Vector3 normal = alpha * normals_[0] + beta * normals_[1] + gamma * normals_[2];
     auto texcoord = Vector2(-1);
-    if (bsdf_->TextureMapping())
+    if (bsdf_ && bsdf_->TextureMapping())
     {
         texcoord = alpha * texcoords_[0] + beta * texcoords_[1] + gamma * texcoords_[2];
         if (bsdf_->Transparent(texcoord))
@@ -106,7 +109,7 @@ void Triangle::Intersect(const Ray &ray, Intersection &its) const
         normal = -normal;
         inside = !inside;
     }
-    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, medium_, pdf_area_);
+    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, int_medium_, ext_medium_, pdf_area_);
 }
 
 Intersection Triangle::SampleP() const
@@ -115,7 +118,7 @@ Intersection Triangle::SampleP() const
     Float alpha = 1.0 - u - v, beta = u, gamma = v;
     Vector3 pos = alpha * vertices_[0] + beta * vertices_[1] + gamma * vertices_[2],
             normal = alpha * normals_[0] + beta * normals_[1] + gamma * normals_[2];
-    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, medium_, pdf_area_);
+    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, int_medium_, ext_medium_, pdf_area_);
 }
 
 NAMESPACE_END(raytracer)

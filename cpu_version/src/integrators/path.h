@@ -23,7 +23,7 @@ public:
             global_attenuation = Spectrum(1);      //光能因被物体吸收而衰减的系数
         size_t depth = 1;                          //光线溯源深度
         Vector3 wo = -look_dir;                    //当前出射光线方向
-        auto its = Intersection(eye_pos, nullptr); //当前散射点
+        auto its = Intersection(eye_pos); //当前散射点
         while (depth < static_cast<size_t>(max_depth_) && (depth <= rr_depth_ || UniformFloat() < pdf_rr_))
         { //迭代地溯源光线
             if (!its.HarshLobe())
@@ -41,18 +41,15 @@ public:
             else
                 global_attenuation *= b_rec.attenuation / b_rec.pdf;
 
+            Medium *medium_now = its.medium(-b_rec.wi); //当前散射点是否在某个物体内部
             its = Intersection();
-            bool hit_surface = this->bvh_ && this->bvh_->Intersect(Ray(b_rec.pos, -b_rec.wi), its), //光线是否可能源于景物表面
-                inside = false;                                                                     //当前散射点是否在某个物体的内部
-            Medium *medium_now = global_medium_;                                                    //当前散射点是否在某个物体内部
+            bool hit_surface = this->bvh_ && this->bvh_->Intersect(Ray(b_rec.pos, -b_rec.wi), its); //光线是否可能源于景物表面
             auto max_distance = std::numeric_limits<Float>::infinity();                             //当前散射点距离可能的景物表面光线源头的距离
             if (hit_surface)
             {
                 max_distance = its.distance();
-                if (depth != 1)
-                    inside = its.Inner(b_rec.wi);
-                if (inside)
-                    medium_now = its.medium();
+                if (!medium_now)
+                    medium_now = its.medium(b_rec.wi);
             }
 
             if (medium_now != nullptr)
@@ -64,14 +61,11 @@ public:
                 if (scattered)
                 { //光线在传播时发生了散射，实际上来源于更近的地方
                     its = Intersection(b_rec.pos - actual_distance * b_rec.wi, medium_now);
-                    if (!inside)
-                    { //只对外部光线计数深度，确保物体内部的光线散射出去了
-                        if (depth > rr_depth_)
-                        { //处理俄罗斯轮盘赌算法
-                            global_attenuation /= pdf_rr_;
-                        }
-                        depth++;
+                    if (depth > rr_depth_)
+                    { //处理俄罗斯轮盘赌算法
+                        global_attenuation /= pdf_rr_;
                     }
+                    depth++;
                     wo = b_rec.wi;
                     continue;
                 }

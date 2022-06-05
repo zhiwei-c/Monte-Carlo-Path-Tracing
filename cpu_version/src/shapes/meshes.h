@@ -9,8 +9,9 @@ NAMESPACE_BEGIN(raytracer)
 class Meshes : public Shape
 {
 public:
-	Meshes(std::vector<Shape *> meshes, Bsdf *bsdf, Medium *medium, bool flip_normals)
-		: Shape(ShapeType::kMeshes, bsdf, medium, flip_normals), meshes_(meshes), bvh_(std::make_unique<BvhAccel>(meshes))
+	Meshes(std::vector<Shape *> meshes, Bsdf *bsdf, Medium *int_medium, Medium *ext_medium, bool flip_normals)
+		: Shape(ShapeType::kMeshes, bsdf, int_medium_, ext_medium_, flip_normals), meshes_(meshes),
+		  bvh_(std::make_unique<BvhAccel>(meshes))
 	{
 		aabb_ = bvh_->aabb();
 		area_ = bvh_->area();
@@ -32,8 +33,8 @@ public:
 			}
 		}
 	}
-	
-	void Intersect(const Ray &ray, Intersection& its) const override
+
+	void Intersect(const Ray &ray, Intersection &its) const override
 	{
 		this->bvh_->Intersect(ray, its);
 	}

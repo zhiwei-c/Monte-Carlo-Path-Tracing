@@ -2,8 +2,8 @@
 
 NAMESPACE_BEGIN(raytracer)
 
-Disk::Disk(Bsdf *bsdf, Medium *medium, std::unique_ptr<Mat4> to_world, bool flip_normals)
-    : Shape(ShapeType::kDisk, bsdf, medium, flip_normals), to_world_(std::move(to_world)),
+Disk::Disk(Bsdf *bsdf, Medium *int_medium, Medium *ext_medium, std::unique_ptr<Mat4> to_world, bool flip_normals)
+    : Shape(ShapeType::kDisk, bsdf, int_medium, ext_medium, flip_normals), to_world_(std::move(to_world)),
       to_world_norm_(nullptr), to_local_(nullptr)
 {
     auto center = Vector3(0, 0, 0);
@@ -52,7 +52,7 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
         return;
 
     auto texcoord = Vector2(-1);
-    if (bsdf_->TextureMapping())
+    if (bsdf_ && bsdf_->TextureMapping())
     {
         Float theta = 0, phi = 0, r = 0;
         CartesianToSpherical(pos, theta, phi, r);
@@ -94,7 +94,7 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
     if (distance > its.distance())
         return;
 
-    if (!bsdf_->Twosided() &&
+    if (bsdf_ && !bsdf_->Twosided() &&
         (flip_normals_ && NotSameHemis(normal, ray_d) ||
          !flip_normals_ && SameHemis(normal, ray_d)))
     {
@@ -115,7 +115,7 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
         inside = !inside;
     }
 
-    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, medium_, pdf_area_);
+    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, int_medium_, ext_medium_, pdf_area_);
 }
 
 Intersection Disk::SampleP() const
@@ -128,7 +128,7 @@ Intersection Disk::SampleP() const
         pos = TransfromPt(*to_world_, pos);
         normal = TransfromDir(*to_world_norm_, normal);
     }
-    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, medium_, pdf_area_);
+    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, int_medium_, ext_medium_, pdf_area_);
 }
 
 NAMESPACE_END(raytracer)

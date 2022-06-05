@@ -30,14 +30,6 @@ Renderer *XmlParser::Parse(const std::string &path)
 		node_bsdf = node_bsdf->next_sibling("bsdf");
 	}
 
-	if (auto node_medium = node_scene->first_node("medium"); node_medium)
-	{
-		std::string medium_id = "unnamed_medium_" + std::to_string(media_cnt_++);
-		ParseMedium(node_medium, renderer, medium_id);
-		Medium *global_medium = id_to_medium_[medium_id];
-		renderer->SetGlobalMedium(global_medium);
-	}
-
 	std::cout << "[info] load shapes..." << std::endl;
 	auto node_shape = node_scene->first_node("shape");
 	while (node_shape)
@@ -175,33 +167,32 @@ void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape, Renderer *renderer)
 		ref = "unnamed_" + std::to_string(bsdf_cnt_++);
 		if (auto node_bsdf = node_shape->first_node("bsdf"); node_bsdf)
 			ParseBsdf(node_bsdf, renderer, ref);
-		else
-		{
-			std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
-					  << "\tcannot find supported bsdf info" << std::endl;
-			exit(1);
-		}
 	}
 	auto to_world = GetToWorld(node_shape);
 	auto type = GetAttri(node_shape, "type").value();
 	auto flip_normals = GetBoolean(node_shape, "flipNormals").value_or(false);
 
-	if (!id_to_bsdf_.count(ref))
+	Bsdf *bsdf = nullptr;
+	if (id_to_bsdf_.count(ref))
 	{
-		std::cerr << "[error] " << GetTreeName(node_shape) << std::endl
-				  << "\tcannot find bsdf with name: \"" << ref << "\"" << std::endl;
-		exit(1);
+		bsdf = id_to_bsdf_[ref];
 	}
-	Bsdf *bsdf = id_to_bsdf_[ref];
 
-	Medium *medium = nullptr;
-	if (auto node_medium = node_shape->first_node("medium"); node_medium)
+	Medium *int_medium = nullptr, *ext_medium = nullptr;
+	auto node_medium = node_shape->first_node("medium");
+	while (node_medium)
 	{
 		std::string medium_id = "unnamed_medium_" + std::to_string(media_cnt_++);
-		ParseMedium(node_medium, renderer, medium_id);
-		medium = id_to_medium_[medium_id];
+
+		bool interior = ParseMedium(node_medium, renderer, medium_id);
+		if (interior)
+			int_medium = id_to_medium_[medium_id];
+		else
+			ext_medium = id_to_medium_[medium_id];
+		node_medium = node_medium->next_sibling("medium");
 	}
-	if (ref.empty() && !medium)
+
+	if (ref.empty() && !int_medium && !ext_medium)
 	{
 		std::cerr << "[error] " << GetTreeName(node_shape) << std::endl
 				  << "\tcannot find supported bsdf or medium info" << std::endl;
@@ -211,34 +202,34 @@ void XmlParser::ParseShape(rapidxml::xml_node<> *node_shape, Renderer *renderer)
 	switch (Hash(type.c_str()))
 	{
 	case "disk"_hash:
-		shape = new Disk(bsdf, medium, std::move(to_world), flip_normals);
+		shape = new Disk(bsdf, int_medium, ext_medium, std::move(to_world), flip_normals);
 		break;
 	case "sphere"_hash:
 	{
 		auto radius = GetFloat(node_shape, "radius").value_or(1);
 		auto center = GetPoint(node_shape, "center").value_or(Vector3(0));
-		shape = new Sphere(bsdf, medium, center, radius, std::move(to_world), flip_normals);
+		shape = new Sphere(bsdf, int_medium, ext_medium, center, radius, std::move(to_world), flip_normals);
 		break;
 	}
 	case "cube"_hash:
-		shape = new Cube(bsdf, medium, std::move(to_world), flip_normals);
+		shape = new Cube(bsdf, int_medium, ext_medium, std::move(to_world), flip_normals);
 		break;
 	case "rectangle"_hash:
-		shape = new Rectangle(bsdf, medium, std::move(to_world), flip_normals);
+		shape = new Rectangle(bsdf, int_medium, ext_medium, std::move(to_world), flip_normals);
 		break;
 	case "obj"_hash:
 	{
 		auto face_normals = GetBoolean(node_shape, "faceNormals").value_or(false);
 		auto flip_tex_coords = GetBoolean(node_shape, "flipTexCoords").value_or(true);
 		auto model_path = xml_directory_ + GetAttri(GetChild(node_shape, "filename", false), "value").value();
-		shape = ModelParser::Parse(model_path, bsdf, medium, std::move(to_world), flip_normals, face_normals, flip_tex_coords);
+		shape = ModelParser::Parse(model_path, bsdf, int_medium, ext_medium, std::move(to_world), flip_normals, face_normals, flip_tex_coords);
 		break;
 	}
 	case "ply"_hash:
 	{
 		auto face_normals = GetBoolean(node_shape, "faceNormals").value_or(false);
 		auto model_path = xml_directory_ + GetAttri(GetChild(node_shape, "filename", false), "value").value();
-		shape = ModelParser::Parse(model_path, bsdf, medium, std::move(to_world), flip_normals, face_normals);
+		shape = ModelParser::Parse(model_path, bsdf, int_medium, ext_medium, std::move(to_world), flip_normals, face_normals);
 		break;
 	}
 	default:

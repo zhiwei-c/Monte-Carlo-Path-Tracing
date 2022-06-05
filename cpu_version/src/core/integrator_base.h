@@ -21,7 +21,7 @@ public:
     ///\param max_depth 递归地追踪光线的最大深度
     ///\param rr_depth 最小的光线追踪深度，超过该深度后进行俄罗斯轮盘赌抽样控制光线追踪深度
     Integrator(IntegratorType type, int max_depth, int rr_depth)
-        : type_(type), max_depth_(max_depth), rr_depth_(rr_depth), pdf_rr_(0.95), global_medium_(nullptr)
+        : type_(type), max_depth_(max_depth), rr_depth_(rr_depth), pdf_rr_(0.95)
     {
     }
 
@@ -30,9 +30,8 @@ public:
     }
 
     ///\brief 初始化全局光照模型
-    void InitIntegrator(std::vector<Shape *> &shapes, Envmap *envmap, Medium *global_medium)
+    void InitIntegrator(std::vector<Shape *> &shapes, Envmap *envmap)
     {
-        global_medium_ = global_medium;
         envmap_ = envmap;
         emitters_.clear();
         for (auto shape : shapes)
@@ -81,7 +80,7 @@ protected:
             return false;
 
         Vector3 wi = glm::normalize(its.pos() - its_pre.pos());
-        if (!its.IsScattered() && Perpendicular(-wi, its.normal()))
+        if (its.SurfaceScattering() && Perpendicular(-wi, its.normal()))
             return false;
 
         Float cos_theta_prime = glm::dot(wi, its_pre.normal());
@@ -89,9 +88,9 @@ protected:
             return false;
 
         auto medium_attenuation = Spectrum(1);
-        Medium *medium_now = global_medium_;
-        if (its.IsScattered() || its.Inner(-wi))
-            medium_now = its.medium();
+        Medium *medium_now = its.medium(-wi);
+        if (!medium_now)
+            medium_now = its_pre.medium(wi);
         if (medium_now)
         {
             Float pdf_scatter = 0;
@@ -157,7 +156,6 @@ protected:
     int rr_depth_;                  //最小的光线追踪深度，超过该深度后进行俄罗斯轮盘赌抽样控制光线追踪深度
     Float pdf_rr_;                  //递归地追踪光线俄罗斯轮盘赌的概率
     Envmap *envmap_;                //用于绘制的天空盒
-    Medium *global_medium_;         //场景中弥漫的介质
     std::unique_ptr<BvhAccel> bvh_; //层次包围盒
     std::vector<Shape *> emitters_; //包含的发光物体
 };

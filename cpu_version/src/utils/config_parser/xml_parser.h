@@ -41,7 +41,7 @@ private:
 	Camera *ParseCamera(rapidxml::xml_node<> *node_sensor);
 	void ParseShape(rapidxml::xml_node<> *node_shape, Renderer *renderer);
 	void ParseBsdf(rapidxml::xml_node<> *node_bsdf, Renderer *renderer, const std::string &id_default = "");
-	void ParseMedium(rapidxml::xml_node<> *node_medium, Renderer *renderer, const std::string &id_default = "");
+	bool ParseMedium(rapidxml::xml_node<> *node_medium, Renderer *renderer, const std::string &id_default = "");
 	Envmap *ParseEnvmap(rapidxml::xml_node<> *node_envmap);
 	Film ParseFilm(rapidxml::xml_node<> *node_sensor);
 

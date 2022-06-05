@@ -19,8 +19,8 @@ public:
 	 * \param flip_normals 法线方向是否翻转
 	 */
 	Triangle(const std::vector<Vector3> &vertices, const std::vector<Vector3> &normals, const std::vector<Vector2> &texcoords,
-			 const std::vector<Vector3> &tangents, const std::vector<Vector3> &bitangents, Bsdf *bsdf, Medium *medium,
-			 bool flip_normals);
+			 const std::vector<Vector3> &tangents, const std::vector<Vector3> &bitangents, Bsdf *bsdf, Medium *int_medium,
+			 Medium *ext_medium, bool flip_normals);
 
 	/**
 	 * \brief 三角面片
@@ -31,7 +31,7 @@ public:
 	 * \param flip_normals 法线方向是否翻转
 	 */
 	Triangle(const std::vector<Vector3> &vertices, const std::vector<Vector3> &normals, const std::vector<Vector2> &texcoords,
-			 Bsdf *bsdf, Medium *medium, bool flip_normals);
+			 Bsdf *bsdf, Medium *int_medium, Medium *ext_medium, bool flip_normals);
 
 	void Intersect(const Ray &ray, Intersection &its) const override;
 
