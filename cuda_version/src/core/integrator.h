@@ -48,7 +48,7 @@ public:
     __device__ vec3 Shade(const vec3 &eye_pos, const vec3 &look_dir, curandState *local_rand_state) const;
 
 private:
-    __device__ bool EmitterDirectArea(const Intersection &its, const vec3 &wo, const vec3 &history_attenuation, curandState *local_rand_state, vec3 &L) const;
+    __device__ vec3 EmitterDirectArea(const Intersection &its, const vec3 &wo, curandState *local_rand_state) const;
 
     __device__ Float PdfEmitterDirect(const Intersection &its_pre, const vec3 &wi) const;
 
@@ -72,71 +72,63 @@ private:
  */
 __device__ vec3 Integrator::Shade(const vec3 &eye_pos, const vec3 &look_dir, curandState *local_rand_state) const
 {
-    auto its = Intersection();
-
-    //原初光线源于环境
-    if (!scenebvh_->Intersect(Ray(eye_pos, look_dir), RandomVec2(local_rand_state), its))
-        return env_map_ ? env_map_->radiance(-look_dir) : vec3(0);
-
-    ///单面材质物体的背面，只吸收而不反射或折射光线
-    if (its.absorb())
-        return vec3(0);
-
-    //原初光线源于发光物体
-    if (its.HasEmission())
-        return its.radiance();
-
-    vec3 wo = -look_dir;
-    auto its_pre = Intersection();
-    uint depth = 1;            //光线溯源深度
     auto L = vec3(0),          //着色结果
         attenuation = vec3(1); //光能因被物体吸收而衰减的系数
-    //迭代地溯源光线
+    uint depth = 1;            //光线溯源深度
+    vec3 wo = -look_dir;
+    auto its = Intersection(eye_pos);
     while (depth < max_depth_ && (depth <= rr_depth_ || curand_uniform(local_rand_state) < pdf_rr_))
     {
         //按发光物体表面积采样来自面光源的直接光照
         if (!its.HashLobe())
-            EmitterDirectArea(its, wo, attenuation, local_rand_state, L);
+            L += attenuation * EmitterDirectArea(its, wo, local_rand_state);
 
         SamplingRecord b_rec = its.Sample(wo, RandomVec3(local_rand_state));
         if (!b_rec.valid)
             break;
-        its_pre = Intersection();
-
-        //按 BSDF 采样来自环境的直接光照
-        if (!scenebvh_->Intersect(Ray(its.pos(), -b_rec.wi), RandomVec2(local_rand_state), its_pre))
+        else
         {
+            attenuation *= b_rec.attenuation / b_rec.pdf;
+        }
+
+        its = Intersection();
+        bool hit_surface = scenebvh_->Intersect(Ray(b_rec.pos, -b_rec.wi), RandomVec2(local_rand_state), its);
+
+        if (!hit_surface)
+        {
+            //按 BSDF 采样来自环境的直接光照
             if (env_map_ != nullptr)
                 L += attenuation * env_map_->radiance(b_rec.wi) * b_rec.attenuation / b_rec.attenuation;
             break;
         }
-
-        //光线与单面材质的物体交于物体背面而被吸收
-        if (its_pre.absorb())
-            break;
-
-        //按 BSDF 采样来自面光源的直接光照
-        if (its_pre.HasEmission())
-        {
-            if (its.HashLobe())
-                L += attenuation * its_pre.radiance() * b_rec.attenuation / b_rec.pdf;
-            else
-            {
-                Float pdf_direct = PdfEmitterDirect(its_pre, b_rec.wi),
-                      weight_bsdf = MisWeight(b_rec.pdf, pdf_direct);
-                L += attenuation * weight_bsdf * its_pre.radiance() * b_rec.attenuation / b_rec.pdf;
+        else
+        { //光线来自景物表面
+            if (its.absorb())
+            { //光线与单面材质的物体交于物体背面而被吸收
+                break;
             }
-            break;
+            else if (its.HasEmission())
+            { //按 BSDF 采样来自面光源的直接光照
+                if (depth == 1 || its.HashLobe())
+                    L += attenuation * its.radiance();
+                else
+                {
+                    Float pdf_direct = PdfEmitterDirect(its, b_rec.wi),
+                          weight_bsdf = MisWeight(b_rec.pdf, pdf_direct);
+                    L += attenuation * weight_bsdf * its.radiance();
+                }
+                break;
+            }
+            else
+            { //光线来自非发光物体的表面
+                if (depth >= rr_depth_)
+                { //处理俄罗斯轮盘赌算法
+                    attenuation /= pdf_rr_;
+                }
+                wo = b_rec.wi,
+                depth++;
+            }
         }
-
-        //按 BSDF 采样间接光照更新衰减系数
-        attenuation *= b_rec.attenuation / b_rec.pdf;
-        if (depth >= rr_depth_)
-            attenuation /= pdf_rr_;
-
-        its = its_pre,
-        wo = b_rec.wi,
-        depth++;
     }
     return L;
 }
@@ -159,11 +151,10 @@ __device__ Float Integrator::PdfEmitterDirect(const Intersection &its_pre, const
 }
 
 ///\brief 按面积直接采样发光物体上一点，累计多重重要性采样下直接来自光源的辐射亮度
-__device__ bool Integrator::EmitterDirectArea(const Intersection &its, const vec3 &wo, const vec3 &history_attenuation,
-                                              curandState *local_rand_state, vec3 &L) const
+__device__ vec3 Integrator::EmitterDirectArea(const Intersection &its, const vec3 &wo, curandState *local_rand_state) const
 {
     if (emitter_num_ == 0)
-        return false;
+        return vec3(0);
 
     auto index = static_cast<uint>(curand_uniform(local_rand_state) * emitter_num_);
     if (index == emitter_num_)
@@ -179,24 +170,23 @@ __device__ bool Integrator::EmitterDirectArea(const Intersection &its, const vec
     auto its_test = Intersection();
     scenebvh_->Intersect(ray, RandomVec2(local_rand_state), its_test);
     if (its_test.distance() + kEpsilonDistance < d_vec.length())
-        return false;
+        return vec3(0);
 
     vec3 wi = myvec::normalize(its.pos() - its_pre.pos());
     Float cos_theta_prime = myvec::dot(wi, its_pre.normal());
     if (cos_theta_prime < 0)
-        return false;
+        return vec3(0);
 
     if (Perpendicular(-wi, its.normal()))
-        return false;
+        return vec3(0);
 
     SamplingRecord b_rec = its.Eval(wi, wo);
     if (b_rec.pdf < kEpsilonPdf)
-        return false;
+        return vec3(0);
 
     Float pdf_direct = pdf_area * d_vec.squared_length() / cos_theta_prime,
           weight_direct = MisWeight(pdf_direct, b_rec.pdf);
-    L += history_attenuation * weight_direct * its_pre.radiance() * b_rec.attenuation / pdf_direct;
-    return true;
+    return weight_direct * its_pre.radiance() * b_rec.attenuation / pdf_direct;
 }
 
 __global__ void InitIntegrator(IntegratorInfo info, SceneBvh *scenebvh, ShapeBvh *shapebvh_list, uint *emitter_idx_list,

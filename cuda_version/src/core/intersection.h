@@ -9,18 +9,27 @@ class Intersection
 public:
     ///\brief 光线与物体模型面片交点，光线与物体没有相交
     __device__ Intersection()
-        : valid_(false), absorb_(false), pos_(vec3(0)), normal_(vec3(0)), inside_(0),
+        : valid_(false), absorb_(false), pos_(vec3(0)), normal_(vec3(0)), inside_(false),
           distance_(INFINITY), texcoord_(vec2(0)), bsdf_(nullptr), pdf_area_(INFINITY)
     {
     }
 
     __device__ Intersection(Float distance)
-        : valid_(true), absorb_(true), pos_(vec3(0)), normal_(vec3(0)), inside_(0),
+        : valid_(true), absorb_(true), pos_(vec3(0)), normal_(vec3(0)), inside_(false),
           distance_(distance), texcoord_(vec2(0)), bsdf_(nullptr), pdf_area_(INFINITY)
     {
     }
 
-    __device__ Intersection(const vec3 &pos, const vec3 &normal, const vec2 &texcoord, int inside,
+    ///\brief 视点或散射点
+    ///\param pos 视点或散射点的位置
+    ///\param medium 视点或散射点的所处的介质
+    __device__ Intersection(const vec3 &pos)
+        : valid_(true), absorb_(false), pos_(pos), normal_(vec3(0)), inside_(false),
+          distance_(INFINITY), texcoord_(vec2(0)), bsdf_(nullptr), pdf_area_(INFINITY)
+    {
+    }
+
+    __device__ Intersection(const vec3 &pos, const vec3 &normal, const vec2 &texcoord, bool inside,
                             Float distance, Bsdf **bsdf, Float pdf_area)
         : valid_(true), absorb_(false), pos_(pos), normal_(normal), inside_(inside),
           distance_(distance), texcoord_(texcoord), bsdf_(bsdf), pdf_area_(pdf_area)
@@ -47,7 +56,7 @@ public:
     ///\return 交点处的物体表面的辐射亮度
     __device__ vec3 radiance() const { return (*bsdf_)->radiance(); }
 
-    __device__ bool HashLobe() const { return (*bsdf_)->HarshLobe(); }
+    __device__ bool HashLobe() const { return bsdf_ && (*bsdf_)->HarshLobe(); }
 
     ///\brief 面元概率
     __device__ Float pdf_area() const { return pdf_area_; }
@@ -61,14 +70,22 @@ public:
     {
         auto one_side = myvec::dot(wo, normal_) > 0; //光线与交点法线是否同侧
         auto rec = SamplingRecord();
-        rec.inside = inside_;
-        if (!one_side)
-            rec.inside = (rec.inside == kTrue) ? kFalse : kTrue;
-        rec.texcoord = texcoord_;
-        rec.normal = one_side ? normal_ : -normal_;
         rec.pos = pos_;
         rec.wo = wo;
-        (*bsdf_)->Sample(rec, sample);
+        if (bsdf_)
+        {
+            rec.inside = one_side ? inside_ : !inside_;
+            rec.normal = one_side ? normal_ : -normal_;
+            rec.texcoord = texcoord_;
+            (*bsdf_)->Sample(rec, sample);
+        }
+        else
+        {
+            rec.wi = wo;
+            rec.pdf = 1;
+            rec.attenuation = vec3(1);
+            rec.valid = true;
+        }
         return rec;
     }
 
@@ -81,28 +98,43 @@ public:
      */
     __device__ SamplingRecord Eval(const vec3 &wi, const vec3 &wo) const
     {
-        auto one_side = myvec::dot(wi, normal_) < 0; //入射光线与法线是否同侧
         auto rec = SamplingRecord();
-        rec.inside = inside_;
-        if (!one_side)
-            rec.inside = (rec.inside == kTrue) ? kFalse : kTrue;
-        rec.texcoord = texcoord_;
-        rec.normal = one_side ? normal_ : -normal_;
         rec.pos = pos_;
         rec.wo = wo;
         rec.wi = wi;
-        (*bsdf_)->Eval(rec);
+        if (bsdf_)
+        {
+            auto one_side = myvec::dot(wi, normal_) < 0; //入射光线与法线是否同侧
+            rec.inside = one_side ? inside_ : !inside_;
+            rec.normal = one_side ? normal_ : -normal_;
+            rec.texcoord = texcoord_;
+            (*bsdf_)->Eval(rec);
+        }
+        else
+        {
+            rec.pdf = 1;
+            rec.attenuation = vec3(1);
+            rec.valid = true;
+        }
         return rec;
     }
 
+    bool Inner(const vec3 &wo) const
+    {
+        if (myvec::dot(wo, normal_) > 0)
+            return inside_;
+        else
+            return !inside_;
+    }
+
 private:
-    bool valid_;          //光线与物体的相交是否发生
-    bool absorb_;         //光线与单面材质的物体交于物体背面而被吸收
-    int inside_;          //交点处法线是否朝内
-    Float distance_;      //从光线起点到该交点的距离
-    Float pdf_area_;      //面元概率
-    vec2 texcoord_;       //交点纹理坐标
-    vec3 pos_;            //交点空间坐标
-    vec3 normal_;         //交点法线
-    Bsdf **bsdf_; //交点面片对应的材质
+    bool valid_;     //光线与物体的相交是否发生
+    bool absorb_;    //光线与单面材质的物体交于物体背面而被吸收
+    bool inside_;    //交点处法线是否朝内
+    Float distance_; //从光线起点到该交点的距离
+    Float pdf_area_; //面元概率
+    vec2 texcoord_;  //交点纹理坐标
+    vec3 pos_;       //交点空间坐标
+    vec3 normal_;    //交点法线
+    Bsdf **bsdf_;    //交点面片对应的材质
 };

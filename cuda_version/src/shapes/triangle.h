@@ -93,16 +93,16 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
     if ((*bsdf_)->Transparent(texcoord, sample))
         return;
     vec3 pos = alpha * v_[0].position + beta * v_[1].position + gamma * v_[2].position;
-    int inside = -1;
+    bool inside = false;
     if (det < 0)
     {
         normal = -normal;
-        inside = -inside;
+        inside = !inside;
     }
     if (flip_normals_)
     {
         normal = -normal;
-        inside = -inside;
+        inside = !inside;
     }
     its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, pdf_area_);
 }

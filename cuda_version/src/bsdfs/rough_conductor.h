@@ -185,8 +185,8 @@ __device__ inline void InitRoughConductor(uint m_idx, BsdfInfo *bsdf_info_list, 
                              kulla_conty_lut, albedo_avg);
 
     bsdf_list[m_idx] = new RoughConductor(m_idx, bsdf_info_list[m_idx].twosided, bump_map, opacity_map,
-                                              bsdf_info_list[m_idx].mirror, bsdf_info_list[m_idx].eta,
-                                              bsdf_info_list[m_idx].k, specular_reflectance,
-                                              bsdf_info_list[m_idx].distri, alpha_u, alpha_v, kulla_conty_lut,
-                                              albedo_avg);
+                                          bsdf_info_list[m_idx].mirror, bsdf_info_list[m_idx].eta,
+                                          bsdf_info_list[m_idx].k, specular_reflectance,
+                                          bsdf_info_list[m_idx].distri, alpha_u, alpha_v, kulla_conty_lut,
+                                          albedo_avg);
 }
