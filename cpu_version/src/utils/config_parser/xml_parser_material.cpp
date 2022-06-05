@@ -324,7 +324,7 @@ Bsdf *XmlParser::ParseConductor(rapidxml::xml_node<> *node_conductor)
     auto eta = Spectrum(0);
     auto k = Spectrum(1);
     auto ext_eta = GetIor(node_conductor, "extEta", "air");
-    auto node_bsdf = GetChild(node_conductor, "bsdf");
+    auto node_bsdf = GetChild(node_conductor, "material");
     if (node_bsdf)
     {
         auto bsdf_name = GetAttri(node_bsdf, "value").value();
