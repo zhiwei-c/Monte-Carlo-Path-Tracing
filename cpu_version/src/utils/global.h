@@ -24,8 +24,9 @@ using Vector2 = glm::dvec2;
 using Mat4 = glm::dmat4;
 using Mat3 = glm::dmat3;
 
-constexpr auto kPi = glm::pi<Float>();
-constexpr auto kPiInv = static_cast<Float>(1.0 / glm::pi<Float>());
+constexpr Float kPi = glm::pi<Float>();
+constexpr Float kPiInv = 1.0 / glm::pi<Float>();
+constexpr Float kFourPiInv = 0.25 * glm::pi<Float>();
 
 constexpr Float kMaxFloat = std::numeric_limits<Float>::max();
 constexpr Float kLowestFloat = std::numeric_limits<Float>::lowest();

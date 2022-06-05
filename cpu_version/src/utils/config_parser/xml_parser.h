@@ -23,22 +23,29 @@ public:
 private:
 	std::string xml_directory_;
 	std::map<std::string, Bsdf *> id_to_bsdf_;
+	std::map<std::string, Medium *> id_to_medium_;
 	int bsdf_cnt_;
+	int media_cnt_;
 	Float gamma_;
 
 	void Reset()
 	{
 		xml_directory_ = "";
 		id_to_bsdf_.clear();
+		id_to_medium_.clear();
 		bsdf_cnt_ = 0;
+		media_cnt_ = 0;
 	}
 
 	Integrator *ParseIntegrator(rapidxml::xml_node<> *node_integrator);
 	Camera *ParseCamera(rapidxml::xml_node<> *node_sensor);
 	void ParseShape(rapidxml::xml_node<> *node_shape, Renderer *renderer);
 	void ParseBsdf(rapidxml::xml_node<> *node_bsdf, Renderer *renderer, const std::string &id_default = "");
+	void ParseMedium(rapidxml::xml_node<> *node_medium, Renderer *renderer, const std::string &id_default = "");
 	Envmap *ParseEnvmap(rapidxml::xml_node<> *node_envmap);
 	Film ParseFilm(rapidxml::xml_node<> *node_sensor);
+
+	std::unique_ptr<PhaseFunction> ParsePhaseFunction(rapidxml::xml_node<> *&node_medium);
 
 	std::unique_ptr<Texture> ParseBumpMapping(rapidxml::xml_node<> *&node_bsdf, std::string &bsdf_type);
 	std::unique_ptr<Texture> ParseOpacity(rapidxml::xml_node<> *&node_bsdf, std::string &bsdf_type);

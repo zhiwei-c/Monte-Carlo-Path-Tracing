@@ -2,13 +2,9 @@
 
 NAMESPACE_BEGIN(raytracer)
 
-Disk::Disk(Bsdf *bsdf,
-           std::unique_ptr<Mat4> to_world,
-           bool flip_normals)
-    : Shape(ShapeType::kDisk, bsdf, flip_normals),
-      to_world_(std::move(to_world)),
-      to_world_norm_(nullptr),
-      to_local_(nullptr)
+Disk::Disk(Bsdf *bsdf, Medium *medium, std::unique_ptr<Mat4> to_world, bool flip_normals)
+    : Shape(ShapeType::kDisk, bsdf, medium, flip_normals), to_world_(std::move(to_world)),
+      to_world_norm_(nullptr), to_local_(nullptr)
 {
     auto center = Vector3(0, 0, 0);
     auto p1 = Vector3(0.5, 0, 0);
@@ -119,7 +115,7 @@ void Disk::Intersect(const Ray &ray, Intersection &its) const
         inside = !inside;
     }
 
-    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, pdf_area_);
+    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, medium_, pdf_area_);
 }
 
 Intersection Disk::SampleP() const
@@ -132,7 +128,7 @@ Intersection Disk::SampleP() const
         pos = TransfromPt(*to_world_, pos);
         normal = TransfromDir(*to_world_norm_, normal);
     }
-    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, pdf_area_);
+    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, medium_, pdf_area_);
 }
 
 NAMESPACE_END(raytracer)

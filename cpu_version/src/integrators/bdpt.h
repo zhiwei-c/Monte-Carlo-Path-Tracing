@@ -27,7 +27,7 @@ public:
     ///\brief 双向路径追踪
     ///\param max_depth 递归地追踪光线最大深度
     ///\param rr_depth 最小的光线追踪深度，超过该深度后进行俄罗斯轮盘赌抽样控制光线追踪深度
-    BdptIntegrator(int max_depth, int rr_depth) : Integrator(max_depth, rr_depth) {}
+    BdptIntegrator(int max_depth, int rr_depth) : Integrator(IntegratorType::kBdpt, max_depth, rr_depth) {}
 
     ///\brief 着色
     ///\param eye_pos 观察点的位置

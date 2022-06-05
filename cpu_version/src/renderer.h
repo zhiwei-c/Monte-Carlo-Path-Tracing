@@ -2,6 +2,7 @@
 
 #include "core/emitter.h"
 #include "core/bsdf.h"
+#include "core/medium.h"
 #include "core/shape.h"
 #include "core/camera.h"
 
@@ -15,7 +16,7 @@ class Renderer
 {
 public:
 	///\brief 渲染器
-	Renderer() : camera_(nullptr), integrator_(nullptr), envmap_(nullptr) {}
+	Renderer() : camera_(nullptr), integrator_(nullptr), envmap_(nullptr), global_medium_(nullptr) {}
 
 	~Renderer()
 	{
@@ -54,6 +55,15 @@ public:
 				bsdf = nullptr;
 			}
 		}
+
+		for (auto &medium : media_)
+		{
+			if (medium)
+			{
+				delete medium;
+				medium = nullptr;
+			}
+		}
 	}
 
 	///\brief 添加物体
@@ -66,6 +76,12 @@ public:
 	void AddBsdf(Bsdf *bsdf)
 	{
 		bsdfs_.push_back(bsdf);
+	}
+
+	///\brief 添加介质
+	void AddMedium(Medium *medium)
+	{
+		media_.push_back(medium);
 	}
 
 	///\brief 设置物体和材质
@@ -83,6 +99,9 @@ public:
 	///\brief 设置全局光照模型
 	void SetIntegrator(Integrator *integrator) { integrator_ = integrator; }
 
+	///\brief 设置全局光照模型
+	void SetGlobalMedium(Medium *global_medium) { global_medium_ = global_medium; }
+
 	///\brief 生成图像
 	void Render(std::string output_filename)
 	{
@@ -91,18 +110,21 @@ public:
 			std::cout << "[warning] enmpty output file name, use default: \"result." << camera_->Format() << "\"" << std::endl;
 			output_filename = ChangeSuffix("result.png", camera_->Format());
 		}
-
-		integrator_->InitIntegrator(shapes_, envmap_);
+		if (!media_.empty() && integrator_->type() != IntegratorType::kPath)
+			std::cerr << "[warning] only support participating media for path integrator, ignore them" << std::endl;
+		integrator_->InitIntegrator(shapes_, envmap_, global_medium_);
 		auto frame = camera_->Shoot(integrator_);
 		frame->Save(output_filename);
 	}
 
 private:
-	Camera *camera_;					//照相机
-	Integrator *integrator_;			//全局光照模型
-	Envmap *envmap_;					//环境光映射
-	std::vector<Shape *> shapes_;		//场景包含的物体
-	std::vector<Bsdf *> bsdfs_; //场景包含的材质
+	Camera *camera_;		 //照相机
+	Integrator *integrator_; //全局光照模型
+	Envmap *envmap_;		 //环境光映射
+	Medium *global_medium_;
+	std::vector<Shape *> shapes_; //场景包含的物体
+	std::vector<Bsdf *> bsdfs_;	  //场景包含的材质
+	std::vector<Medium *> media_; //场景包含的介质
 };
 
 NAMESPACE_END(raytracer)

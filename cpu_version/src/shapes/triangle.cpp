@@ -2,14 +2,9 @@
 
 NAMESPACE_BEGIN(raytracer)
 
-Triangle::Triangle(const std::vector<Vector3> &vertices,
-                   const std::vector<Vector3> &normals,
-                   const std::vector<Vector2> &texcoords,
-                   Bsdf *bsdf,
-                   bool flip_normals)
-    : Shape(ShapeType::kTriangle, bsdf, flip_normals),
-      vertices_(vertices),
-      texcoords_(texcoords)
+Triangle::Triangle(const std::vector<Vector3> &vertices, const std::vector<Vector3> &normals,
+                   const std::vector<Vector2> &texcoords, Bsdf *bsdf, Medium *medium, bool flip_normals)
+    : Shape(ShapeType::kTriangle, bsdf, medium, flip_normals), vertices_(vertices), texcoords_(texcoords)
 {
     Setup(vertices, normals);
     if (bsdf->NormalPerturbing())
@@ -24,18 +19,11 @@ Triangle::Triangle(const std::vector<Vector3> &vertices,
     }
 }
 
-Triangle::Triangle(const std::vector<Vector3> &vertices,
-                   const std::vector<Vector3> &normals,
-                   const std::vector<Vector2> &texcoords,
-                   const std::vector<Vector3> &tangents,
-                   const std::vector<Vector3> &bitangents,
-                   Bsdf *bsdf,
-                   bool flip_normals)
-    : Shape(ShapeType::kTriangle, bsdf, flip_normals),
-      vertices_(vertices),
-      texcoords_(texcoords),
-      tangents_(tangents),
-      bitangents_(bitangents)
+Triangle::Triangle(const std::vector<Vector3> &vertices, const std::vector<Vector3> &normals,
+                   const std::vector<Vector2> &texcoords, const std::vector<Vector3> &tangents,
+                   const std::vector<Vector3> &bitangents, Bsdf *bsdf, Medium *medium, bool flip_normals)
+    : Shape(ShapeType::kTriangle, bsdf, medium, flip_normals), vertices_(vertices), texcoords_(texcoords),
+      tangents_(tangents), bitangents_(bitangents)
 {
     Setup(vertices, normals);
 }
@@ -118,7 +106,7 @@ void Triangle::Intersect(const Ray &ray, Intersection &its) const
         normal = -normal;
         inside = !inside;
     }
-    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, pdf_area_);
+    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, medium_, pdf_area_);
 }
 
 Intersection Triangle::SampleP() const
@@ -127,7 +115,7 @@ Intersection Triangle::SampleP() const
     Float alpha = 1.0 - u - v, beta = u, gamma = v;
     Vector3 pos = alpha * vertices_[0] + beta * vertices_[1] + gamma * vertices_[2],
             normal = alpha * normals_[0] + beta * normals_[1] + gamma * normals_[2];
-    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, pdf_area_);
+    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, medium_, pdf_area_);
 }
 
 NAMESPACE_END(raytracer)

@@ -2,17 +2,10 @@
 
 NAMESPACE_BEGIN(raytracer)
 
-Sphere::Sphere(Bsdf *bsdf,
-               const Vector3 &center,
-               Float radius,
-               std::unique_ptr<Mat4> to_world,
+Sphere::Sphere(Bsdf *bsdf, Medium *medium, const Vector3 &center, Float radius, std::unique_ptr<Mat4> to_world,
                bool flip_normals)
-    : Shape(ShapeType::kSphere, bsdf, flip_normals),
-      center_(center),
-      radius_(radius),
-      to_world_(std::move(to_world)),
-      to_world_norm_(nullptr),
-      to_local_(nullptr)
+    : Shape(ShapeType::kSphere, bsdf, medium, flip_normals), center_(center), radius_(radius), to_world_(std::move(to_world)),
+      to_world_norm_(nullptr), to_local_(nullptr)
 {
     Vector3 center_world = center_;
     auto p1 = Vector3(center.x + radius, center.y, center.z);
@@ -123,7 +116,7 @@ void Sphere::Intersect(const Ray &ray, Intersection &its) const
         inside = !inside;
     }
 
-    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, pdf_area_);
+    its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, medium_, pdf_area_);
 }
 
 Intersection Sphere::SampleP() const
@@ -135,7 +128,7 @@ Intersection Sphere::SampleP() const
         pos = TransfromPt(*to_world_, pos);
         normal = TransfromDir(*to_world_norm_, normal);
     }
-    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, pdf_area_);
+    return Intersection(pos, normal, Vector2(-1), false, INFINITY, bsdf_, medium_, pdf_area_);
 }
 
 NAMESPACE_END(raytracer)

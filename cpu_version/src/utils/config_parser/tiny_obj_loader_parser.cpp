@@ -5,7 +5,7 @@
 #include <optional>
 #include <tuple>
 
-#include "obj_loader.h"
+#include "../model_loader/obj_loader.h"
 #include "../../utils/file_path.h"
 #include "../../core/ior.h"
 
@@ -101,9 +101,9 @@ void ModelParser::Parse(const std::string &obj_path, std::vector<Shape *> &shape
                     texcoords.emplace_back(Vector2(tx, 1 - ty));
                 }
             }
-            meshes[f] = new Triangle(vertices, normals, texcoords, bsdfs_new[m_now_id], false);
+            meshes[f] = new Triangle(vertices, normals, texcoords, bsdfs_new[m_now_id], nullptr, false);
         }
-        shapes.push_back(new Meshes(meshes, bsdfs_new[m_now_id], false));
+        shapes.push_back(new Meshes(meshes, bsdfs_new[m_now_id], nullptr, false));
     }
     std::cout << "[info] load model succeed\t\t\t\r";
 }

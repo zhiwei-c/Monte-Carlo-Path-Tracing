@@ -16,13 +16,21 @@ public:
      * \param to_world 从局部坐标系到世界坐标系的变换矩阵
      * \param flip_normals 法线方向是否翻转
      */
-    Rectangle(Bsdf *bsdf,
-              std::unique_ptr<Mat4> to_world,
-              bool flip_normals);
+    Rectangle(Bsdf *bsdf, Medium *medium, std::unique_ptr<Mat4> to_world, bool flip_normals);
 
-    ~Rectangle();
-    
-    void Intersect(const Ray &ray, Intersection& its) const override
+    ~Rectangle()
+    {
+        for (auto &mesh : meshes_)
+        {
+            if (mesh)
+            {
+                delete mesh;
+                mesh = nullptr;
+            }
+        }
+    }
+
+    void Intersect(const Ray &ray, Intersection &its) const override
     {
         this->bvh_->Intersect(ray, its);
     }

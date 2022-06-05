@@ -13,9 +13,7 @@ public:
      * \param to_world 从局部坐标系到世界坐标系的变换矩阵
      * \param flip_normals 法线方向是否翻转
      */
-    Disk(Bsdf *bsdf,
-         std::unique_ptr<Mat4> to_world,
-         bool flip_normals);
+    Disk(Bsdf *bsdf, Medium *medium, std::unique_ptr<Mat4> to_world, bool flip_normals);
 
     void Intersect(const Ray &ray, Intersection &its) const override;
 
