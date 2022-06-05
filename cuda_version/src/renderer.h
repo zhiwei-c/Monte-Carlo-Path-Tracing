@@ -21,13 +21,8 @@ __global__ void RenderInit(int max_x, int max_y, int resolution, curandState *ra
     curand_init(1984 + pixel_index, 0, 0, &rand_state[pixel_index]);
 }
 
-__global__ void RenderProcess(int width,
-                              int height,
-                              int resolution,
-                              curandState *rand_state,
-                              Camera *camera,
-                              Integrator *integrator,
-                              float *frame_data)
+__global__ void RenderProcess(int width, int height, int resolution, curandState *rand_state, Camera *camera,
+                              Integrator *integrator, float *frame_data, volatile int *progress)
 {
     auto i = threadIdx.x + blockIdx.x * blockDim.x;
     auto j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -79,23 +74,20 @@ __global__ void RenderProcess(int width,
         col[i] = ApplyGamma(col[i], camera->GammaInv());
         frame_data[pixel_index * 3 + i] = col[i];
     }
+
+    atomicAdd((int *)progress, 1);
+    __threadfence_system();
 }
 
 class Renderer
 {
 public:
-    Renderer() : texture_list_(nullptr),
-                 bsdf_list_(nullptr),
-                 mesh_list_(nullptr),
-                 shapebvh_list_(nullptr),
-                 scenebvh_node_list_(nullptr),
-                 scenebvh_(nullptr),
-                 integrator_(nullptr),
-                 camera_(nullptr),
-                 emitter_idx_list_(nullptr),
-                 d_rand_state_(nullptr),
-                 env_map_info_(nullptr),
-                 env_map_(nullptr) {}
+    Renderer()
+        : texture_list_(nullptr), bsdf_list_(nullptr), mesh_list_(nullptr), shapebvh_list_(nullptr),
+          scenebvh_node_list_(nullptr), scenebvh_(nullptr), integrator_(nullptr), camera_(nullptr),
+          emitter_idx_list_(nullptr), d_rand_state_(nullptr), env_map_info_(nullptr), env_map_(nullptr)
+    {
+    }
 
     ~Renderer()
     {
@@ -180,6 +172,24 @@ public:
     void Render(const std::string &output_filename);
 
 private:
+    void InitTextureList();
+
+    void InitBsdfList();
+
+    void InitVertexIndexBuffer(Vertex *&vertex_list, uvec3 *&mesh_idx_list, uint *&mesh_bsdf_idx_list, uint &mesh_num,
+                               std::vector<uvec2> &mesh_idx_range_list);
+
+    void InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list, std::vector<AABB> &mesh_aabb_list,
+                          std::vector<Float> &mesh_area_list);
+
+    void InitShapeBvh(std::vector<BvhNodeInfo> &shape_info_list);
+
+    void InitSceneBvh(AABB &scene_aabb);
+
+    void InitEnvMap(const AABB &scene_aabb);
+
+    void initIntegratorCamera();
+
     Timer timer_;
     Texture *texture_list_;
     Bsdf **bsdf_list_;
@@ -202,22 +212,6 @@ private:
     std::vector<uint> emitter_shape_idx_list_;
     std::vector<BvhNode *> bvhnode_list_;
     std::vector<float *> texture_bitmap_data_;
-
-    void InitTextureList();
-
-    void InitBsdfList();
-
-    void InitVertexIndexBuffer(Vertex *&vertex_list, uvec3 *&mesh_idx_list, uint *&mesh_bsdf_idx_list, uint &mesh_num, std::vector<uvec2> &mesh_idx_range_list);
-
-    void InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list, std::vector<AABB> &mesh_aabb_list, std::vector<Float> &mesh_area_list);
-
-    void InitShapeBvh(std::vector<BvhNodeInfo> &shape_info_list);
-
-    void InitSceneBvh(AABB &scene_aabb);
-
-    void InitEnvMap(const AABB &scene_aabb);
-
-    void initIntegratorCamera();
 };
 
 void Renderer::InitTextureList()
@@ -240,16 +234,14 @@ void Renderer::InitTextureList()
         case kBitmap:
         {
             auto resolution = texture_info_list_[texture_idx]->colors.size();
-            float* bitmap_data = nullptr;
+            float *bitmap_data = nullptr;
             CheckCudaErrors(cudaMallocManaged(&bitmap_data, resolution * sizeof(float)));
-            cudaMemcpy(bitmap_data, texture_info_list_[texture_idx]->colors.data(), resolution * sizeof(float), cudaMemcpyHostToDevice);
+            cudaMemcpy(bitmap_data, texture_info_list_[texture_idx]->colors.data(), resolution * sizeof(float),
+                       cudaMemcpyHostToDevice);
             texture_bitmap_data_.push_back(bitmap_data);
-            InitBitmapTexture<<<1, 1>>>(texture_idx,
-                                        texture_info_list_[texture_idx]->width,
-                                        texture_info_list_[texture_idx]->height,
-                                        texture_info_list_[texture_idx]->channel,
-                                        bitmap_data,
-                                        texture_list_);
+            InitBitmapTexture<<<1, 1>>>(texture_idx, texture_info_list_[texture_idx]->width,
+                                        texture_info_list_[texture_idx]->height, texture_info_list_[texture_idx]->channel,
+                                        bitmap_data, texture_list_);
             CheckCudaErrors(cudaGetLastError());
             CheckCudaErrors(cudaDeviceSynchronize());
             break;
@@ -279,10 +271,7 @@ void Renderer::InitBsdfList()
     local_bsdf_info_list = nullptr;
 }
 
-void Renderer::InitVertexIndexBuffer(Vertex *&vertex_list,
-                                     uvec3 *&mesh_idx_list,
-                                     uint *&mesh_bsdf_idx_list,
-                                     uint &mesh_num,
+void Renderer::InitVertexIndexBuffer(Vertex *&vertex_list, uvec3 *&mesh_idx_list, uint *&mesh_bsdf_idx_list, uint &mesh_num,
                                      std::vector<uvec2> &mesh_idx_range_list)
 {
     std::cerr << "[info] load shapes ..." << std::endl;
@@ -341,9 +330,9 @@ void Renderer::InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list,
                                 std::vector<Float> &mesh_area_list)
 {
     std::cerr << "[info] create mesh ..." << std::endl;
-    Vertex* vertex_list = nullptr;
-    uvec3* mesh_idx_list = nullptr;
-    uint* mesh_bsdf_idx_list = nullptr;
+    Vertex *vertex_list = nullptr;
+    uvec3 *mesh_idx_list = nullptr;
+    uint *mesh_bsdf_idx_list = nullptr;
     uint mesh_num = 0;
     mesh_idx_range_list = std::vector<uvec2>();
     InitVertexIndexBuffer(vertex_list,
@@ -357,24 +346,16 @@ void Renderer::InitShapesMeshes(std::vector<uvec2> &mesh_idx_range_list,
     //
     mesh_list_ = nullptr;
     CheckCudaErrors(cudaMallocManaged(&mesh_list_, mesh_num * sizeof(Mesh)));
-    AABB* local_mesh_aabbs = nullptr;
+    AABB *local_mesh_aabbs = nullptr;
     CheckCudaErrors(cudaMallocManaged(&local_mesh_aabbs, mesh_num * sizeof(Mesh)));
-    Float* local_mesh_areas = nullptr;
+    Float *local_mesh_areas = nullptr;
     CheckCudaErrors(cudaMallocManaged(&local_mesh_areas, mesh_num * sizeof(Float)));
     auto nx = static_cast<uint>(sqrt(mesh_num) + 1);
     auto ny = static_cast<uint>(mesh_num / nx + 1);
     auto blocks = dim3(nx / 16 + 1, ny / 16 + 1);
     auto threads = dim3(16, 16);
-    CreateMeshes<<<blocks, threads>>>(nx,
-                                      ny,
-                                      mesh_num,
-                                      vertex_list,
-                                      mesh_idx_list,
-                                      mesh_bsdf_idx_list,
-                                      bsdf_list_,
-                                      local_mesh_aabbs,
-                                      local_mesh_areas,
-                                      mesh_list_);
+    CreateMeshes<<<blocks, threads>>>(nx, ny, mesh_num, vertex_list, mesh_idx_list, mesh_bsdf_idx_list, bsdf_list_,
+                                      local_mesh_aabbs, local_mesh_areas, mesh_list_);
     CheckCudaErrors(cudaGetLastError());
     CheckCudaErrors(cudaDeviceSynchronize());
 
@@ -404,9 +385,7 @@ void Renderer::InitShapeBvh(std::vector<BvhNodeInfo> &shape_info_list)
     auto mesh_idx_range_list = std::vector<uvec2>();
     auto scene_mesh_aabb_list = std::vector<AABB>();
     auto scene_mesh_area_list = std::vector<Float>();
-    InitShapesMeshes(mesh_idx_range_list,
-                     scene_mesh_aabb_list,
-                     scene_mesh_area_list);
+    InitShapesMeshes(mesh_idx_range_list, scene_mesh_aabb_list, scene_mesh_area_list);
 
     std::cerr << "[info] create shape bvh ..." << std::endl;
     auto meshes_num = scene_mesh_aabb_list.size();
@@ -430,29 +409,21 @@ void Renderer::InitShapeBvh(std::vector<BvhNodeInfo> &shape_info_list)
         auto mesh_num = scene_shape_mesh_idx_end - scene_shape_mesh_idx_begin;
         auto bvhnode_num = BvhNodeNum(mesh_num);
         auto bvhnode_info_list = std::vector<BvhNodeInfo>(bvhnode_num);
-        BuildShapeBvhInfo(0,
-                          scene_shape_mesh_idx_begin,
-                          scene_shape_mesh_idx_end,
-                          scene_mesh_idx_list,
-                          scene_mesh_aabb_list,
-                          scene_mesh_area_list,
-                          bvhnode_info_list);
+        BuildShapeBvhInfo(0, scene_shape_mesh_idx_begin, scene_shape_mesh_idx_end, scene_mesh_idx_list,
+                          scene_mesh_aabb_list, scene_mesh_area_list, bvhnode_info_list);
         shape_info_list[shape_idx] = bvhnode_info_list[0];
         //
-        SetMeshesOtherInfo<<<1, 1>>>(scene_shape_mesh_idx_begin,
-                                     mesh_num,
-                                     shape_idx,
-                                     shape_info_list_[shape_idx]->flip_normals,
-                                     bvhnode_info_list[0].area,
-                                     mesh_list_);
+        SetMeshesOtherInfo<<<1, 1>>>(scene_shape_mesh_idx_begin, mesh_num, shape_idx,
+                                     shape_info_list_[shape_idx]->flip_normals, bvhnode_info_list[0].area, mesh_list_);
         CheckCudaErrors(cudaGetLastError());
         CheckCudaErrors(cudaDeviceSynchronize());
         //
-        BvhNodeInfo* local_bvhnodes_info_list = nullptr;
+        BvhNodeInfo *local_bvhnodes_info_list = nullptr;
         CheckCudaErrors(cudaMallocManaged(&local_bvhnodes_info_list, bvhnode_num * sizeof(BvhNodeInfo)));
-        cudaMemcpy(local_bvhnodes_info_list, bvhnode_info_list.data(), bvhnode_num * sizeof(BvhNodeInfo), cudaMemcpyHostToDevice);
+        cudaMemcpy(local_bvhnodes_info_list, bvhnode_info_list.data(), bvhnode_num * sizeof(BvhNodeInfo),
+                   cudaMemcpyHostToDevice);
         //
-        BvhNode* bvhnode_list = nullptr;
+        BvhNode *bvhnode_list = nullptr;
         CheckCudaErrors(cudaMallocManaged(&bvhnode_list, bvhnode_num * sizeof(BvhNode)));
         auto nx = static_cast<uint>(sqrt(bvhnode_num) + 1);
         auto ny = static_cast<uint>(bvhnode_num / nx + 1);
@@ -462,11 +433,7 @@ void Renderer::InitShapeBvh(std::vector<BvhNodeInfo> &shape_info_list)
         CheckCudaErrors(cudaGetLastError());
         CheckCudaErrors(cudaDeviceSynchronize());
 
-        CreateShapeBvh<<<1, 1>>>(shape_idx,
-                                 shape_num,
-                                 bvhnode_list,
-                                 bvhnode_info_list[0].area,
-                                 shapebvh_list_);
+        CreateShapeBvh<<<1, 1>>>(shape_idx, shape_num, bvhnode_list, bvhnode_info_list[0].area, shapebvh_list_);
         CheckCudaErrors(cudaGetLastError());
         CheckCudaErrors(cudaDeviceSynchronize());
 
@@ -496,7 +463,7 @@ void Renderer::InitSceneBvh(AABB &scene_aabb)
     BuildSceneBvhInfo(0, 0, shape_num, shape_idx_list, shape_info_list, node_info_list);
     scene_aabb = node_info_list[0].aabb;
 
-    BvhNodeInfo* node_info_list_gpu = nullptr;
+    BvhNodeInfo *node_info_list_gpu = nullptr;
     CheckCudaErrors(cudaMallocManaged(&node_info_list_gpu, node_num * sizeof(BvhNodeInfo)));
     cudaMemcpy(node_info_list_gpu, node_info_list.data(), node_num * sizeof(BvhNodeInfo), cudaMemcpyHostToDevice);
 
@@ -533,7 +500,7 @@ void Renderer::InitEnvMap(const AABB &scene_aabb)
     auto radius = myvec::length(scene_aabb.max() - scene_aabb.min()) * 0.5;
     auto pdf_area = 1.0 / (4.0 * kPi * radius * radius);
 
-    gmat4* to_local = nullptr;
+    gmat4 *to_local = nullptr;
     if (env_map_info_->to_local)
     {
         CheckCudaErrors(cudaMallocManaged(&to_local, sizeof(gmat4)));
@@ -593,8 +560,17 @@ void Renderer::Render(const std::string &output_filename)
     initIntegratorCamera();
     timer_.PrintTimePassed("prepare work");
 
+    volatile int *device_progress, *host_progess;
+    cudaSetDeviceFlags(cudaDeviceMapHost);
+    CheckCudaErrors(cudaGetLastError());
+    cudaHostAlloc((void **)&host_progess, sizeof(int), cudaHostAllocMapped);
+    CheckCudaErrors(cudaGetLastError());
+    cudaHostGetDevicePointer((int **)&device_progress, (int *)host_progess, 0);
+    CheckCudaErrors(cudaGetLastError());
+    *host_progess = 0;
+
     auto resolution = camera_info_.height * camera_info_.width;
-    float* frame_data = nullptr;
+    float *frame_data = nullptr;
     CheckCudaErrors(cudaMallocManaged((void **)&frame_data, 3 * resolution * sizeof(float)));
     auto tx = camera_info_.width > 8 ? 8 : camera_info_.width;
     auto ty = camera_info_.height > 8 ? 8 : camera_info_.height;
@@ -603,8 +579,27 @@ void Renderer::Render(const std::string &output_filename)
     auto blocks = dim3(nx / tx + 1, ny / ty + 1);
     auto threads = dim3(tx, ty);
     Timer timer2;
-    RenderProcess<<<blocks, threads>>>(nx, ny, resolution, d_rand_state_, camera_, integrator_, frame_data);
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    cudaEventRecord(start);
+
+    RenderProcess<<<blocks, threads>>>(nx, ny, resolution, d_rand_state_, camera_, integrator_, frame_data, device_progress);
+    cudaEventRecord(stop);
+
+    unsigned int num_blocks = blocks.x * blocks.y;
+    float kernel_progress = 0.0f;
+    while (kernel_progress < 0.9999)
+    {
+        cudaEventQuery(stop);
+        kernel_progress = static_cast<float>(*host_progess) / resolution;
+        timer2.PrintProgress(kernel_progress);
+    }
+
+    cudaEventSynchronize(stop);
     CheckCudaErrors(cudaGetLastError());
+
     CheckCudaErrors(cudaDeviceSynchronize());
     timer_.PrintTimePassed("rendering");
     timer2.PrintTimePassed2("rendering");
