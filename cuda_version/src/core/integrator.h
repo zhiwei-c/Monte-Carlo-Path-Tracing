@@ -74,13 +74,14 @@ __device__ vec3 Integrator::Shade(const vec3 &eye_pos, const vec3 &look_dir, cur
 {
     auto L = vec3(0),          //着色结果
         attenuation = vec3(1); //光能因被物体吸收而衰减的系数
-    uint depth = 1;            //光线溯源深度
+    uint depth = 0;            //光线溯源深度
     vec3 wo = -look_dir;
     auto its = Intersection(eye_pos);
     while (depth < max_depth_ && (depth <= rr_depth_ || curand_uniform(local_rand_state) < pdf_rr_))
     {
+        bool harsh_lobe = its.HashLobe();
         //按发光物体表面积采样来自面光源的直接光照
-        if (!its.HashLobe())
+        if (!harsh_lobe)
             L += attenuation * EmitterDirectArea(its, wo, local_rand_state);
 
         SamplingRecord b_rec = its.Sample(wo, RandomVec3(local_rand_state));
@@ -109,7 +110,7 @@ __device__ vec3 Integrator::Shade(const vec3 &eye_pos, const vec3 &look_dir, cur
             }
             else if (its.HasEmission())
             { //按 BSDF 采样来自面光源的直接光照
-                if (depth == 1 || its.HashLobe())
+                if (harsh_lobe)
                     L += attenuation * its.radiance();
                 else
                 {

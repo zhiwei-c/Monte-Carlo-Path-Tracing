@@ -19,14 +19,15 @@ public:
     ///\return 观察点来源于给定观察方向的辐射亮度
     Spectrum Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const override
     {
-        auto L = Spectrum(0),                      //着色结果
-            global_attenuation = Spectrum(1);      //光能因被物体吸收而衰减的系数
-        size_t depth = 1;                          //光线溯源深度
-        Vector3 wo = -look_dir;                    //当前出射光线方向
-        auto its = Intersection(eye_pos); //当前散射点
+        auto L = Spectrum(0),                 //着色结果
+            global_attenuation = Spectrum(1); //光能因被物体吸收而衰减的系数
+        size_t depth = 0;                     //光线溯源深度
+        Vector3 wo = -look_dir;               //当前出射光线方向
+        auto its = Intersection(eye_pos);     //当前散射点
         while (depth < static_cast<size_t>(max_depth_) && (depth <= rr_depth_ || UniformFloat() < pdf_rr_))
         { //迭代地溯源光线
-            if (!its.HarshLobe())
+            bool harsh_lobe = its.HarshLobe();
+            if (!harsh_lobe)
             { //按发光物体表面积采样来自面光源的直接光照，生成 shadow rays
                 auto L_direct = Spectrum(0);
                 EmitterDirectArea(its, wo, L_direct);
@@ -85,7 +86,7 @@ public:
                 }
                 else if (its.HasEmission())
                 { //没有散射，按 BSDF 采样来自面光源的直接光照
-                    if (depth == 1 || its.HarshLobe())
+                    if (harsh_lobe)
                         L += its.radiance() * global_attenuation;
                     else
                     {
