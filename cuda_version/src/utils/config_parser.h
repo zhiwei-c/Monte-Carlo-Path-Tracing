@@ -579,7 +579,7 @@ BsdfInfo ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor)
     auto eta = vec3(0);
     auto k = vec3(1);
     auto ext_eta = GetIor(node_rough_conductor, "extEta", "air");
-    auto node_bsdf = GetChild(node_rough_conductor, "bsdf");
+    auto node_material_name = GetChild(node_rough_conductor, "material");
 
     auto specular_reflectance_idx = static_cast<uint>(-1);
     auto specular_reflectance = ParseTextureOrOther(node_rough_conductor, "specularReflectance");
@@ -590,14 +590,14 @@ BsdfInfo ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor)
     }
 
     bool mirror = false;
-    if (node_bsdf)
+    if (node_material_name)
     {
-        auto bsdf_name = GetAttri(node_bsdf, "value").value();
+        auto bsdf_name = GetAttri(node_material_name, "value").value();
         if (bsdf_name == "none")
             mirror = true;
         else if (!LookupConductorIor(bsdf_name, eta, k))
         {
-            std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
+            std::cerr << "[error] " << GetTreeName(node_material_name) << std::endl
                       << " unsupported bsdf :" << bsdf_name << ", "
                       << "use default Conductor bsdf instead." << std::endl;
             exit(1);

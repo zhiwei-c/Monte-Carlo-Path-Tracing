@@ -359,13 +359,13 @@ Bsdf *XmlParser::ParseRoughConductor(rapidxml::xml_node<> *node_rough_conductor)
     auto eta = Spectrum(0);
     auto k = Spectrum(1);
     auto ext_eta = GetIor(node_rough_conductor, "extEta", "air");
-    auto node_bsdf = GetChild(node_rough_conductor, "bsdf");
-    if (node_bsdf)
+    auto node_material_name = GetChild(node_rough_conductor, "material");
+    if (node_material_name)
     {
-        auto bsdf_name = GetAttri(node_bsdf, "value").value();
+        auto bsdf_name = GetAttri(node_material_name, "value").value();
         if (!LookupConductorIor(bsdf_name, eta, k))
         {
-            std::cerr << "[error] " << GetTreeName(node_bsdf) << std::endl
+            std::cerr << "[error] " << GetTreeName(node_material_name) << std::endl
                       << "unsupported bsdf :" << bsdf_name << ", "
                       << "use default Conductor bsdf instead." << std::endl;
             exit(1);
