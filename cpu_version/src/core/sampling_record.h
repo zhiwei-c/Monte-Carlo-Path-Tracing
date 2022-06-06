@@ -22,8 +22,8 @@ struct SamplingRecord
     Vector2 texcoord;     //表面纹理坐标
     Vector3 normal;       //表面法线方向
     Vector3 pos;          //散射位置
-    Vector3 wi;           //光线入射方向
-    Vector3 wo;           //光线出射方向
+    Vector3 wi;           //入射光线方向
+    Vector3 wo;           //出射光线方向
     Spectrum attenuation; //光能衰减系数
 
     SamplingRecord()

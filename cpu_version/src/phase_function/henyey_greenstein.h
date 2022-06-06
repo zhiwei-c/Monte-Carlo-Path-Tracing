@@ -24,12 +24,6 @@ public:
             Float sqr_term = (1.0 - g * g) / (1.0 - g + 2.0 * g * UniformFloat());
             cos_theta = (1.0 + g * g - sqr_term * sqr_term) / (2.0 * g);
         }
-        Float sin_theta = std::sqrt(std::max(kEpsilon, 1.0 - cos_theta * cos_theta));
-        Float phi = 2 * kPi * UniformFloat();
-
-        rec.wi = Vector3(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta);
-        rec.wi = -ToWorld(rec.wi, rec.wo);
-
         rec.pdf = 0;
         for (int i = 0; i < 3; i++)
         {
@@ -41,6 +35,11 @@ public:
         if (rec.pdf < kEpsilonPdf)
             return;
         rec.type = ScatteringType::kScattering;
+
+        Float sin_theta = std::sqrt(std::max(kEpsilon, 1.0 - cos_theta * cos_theta));
+        Float phi = 2 * kPi * UniformFloat();
+        rec.wi = Vector3(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta);
+        rec.wi = -ToWorld(rec.wi, rec.wo);
     }
 
     void Eval(SamplingRecord &rec) const override

@@ -68,6 +68,7 @@ public:
         if (rec.pdf < kEpsilonPdf)
             return;
         rec.type = ScatteringType::kReflect;
+        
         if (!rec.get_attenuation)
             return;
         auto albedo = Spectrum(0);

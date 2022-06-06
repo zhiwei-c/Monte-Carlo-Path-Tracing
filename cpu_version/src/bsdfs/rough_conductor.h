@@ -40,6 +40,7 @@ public:
 		auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v);				 //微表面分布
 		auto [h, D] = distrib->Sample(rec.normal, {UniformFloat(), UniformFloat()}); //微表面法线和相应的概率（相对于宏观表面法线）
 		rec.wi = -Reflect(-rec.wo, h);
+
 		//计算光线传播概率
 		Float cos_theta_i = glm::dot(-rec.wi, rec.normal); //入射光线方向和宏观表面法线方向夹角的余弦
 		if (cos_theta_i < 0)
@@ -48,6 +49,7 @@ public:
 		if (rec.pdf < kEpsilonPdf)
 			return;
 		rec.type = ScatteringType::kReflect;
+		
 		//计算光能衰减系数
 		if (!rec.get_attenuation)
 			return;
@@ -73,6 +75,7 @@ public:
 			//故只需确保光线出射方向和表面法线方向在介质同侧即可
 			return;
 		}
+
 		//计算光线传播概率
 		auto [alpha_u, alpha_v] = GetAlpha(rec.texcoord);			 //景物表面沿切线方向和副切线方向的粗糙程度
 		auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v); //微表面分布
@@ -82,6 +85,7 @@ public:
 		if (rec.pdf < kEpsilonPdf)
 			return;
 		rec.type = ScatteringType::kReflect;
+
 		//计算光能衰减系数
 		Spectrum F = FresnelConductor(rec.wi, h, eta_, k_);											  //菲涅尔项
 		Float G = distrib->SmithG1(-rec.wi, h, rec.normal) * distrib->SmithG1(rec.wo, h, rec.normal), //阴影-遮蔽项

@@ -40,10 +40,12 @@ public:
 	///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
 	void Sample(SamplingRecord &rec) const override
 	{
-		Float eta = rec.inside ? eta_inv_ : eta_,					 //相对折射率，即光线透射侧介质折射率与入射侧介质折射率之比
-			eta_inv = rec.inside ? eta_ : eta_inv_,					 //相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
-			ratio_t = rec.inside ? ratio_t_inv_ : ratio_t_,			 //补偿多次散射后出射光能中折射的比例
-			ratio_t_inv = rec.inside ? ratio_t_ : ratio_t_inv_;		 //光线逆向传播时，补偿多次散射后出射光能中折射的比例
+		Float eta = rec.inside ? eta_inv_ : eta_,				//相对折射率，即光线透射侧介质折射率与入射侧介质折射率之比
+			eta_inv = rec.inside ? eta_ : eta_inv_,				//相对折射率的倒数，即光线入射侧介质折射率与透射侧介质折射率之比
+			ratio_t = rec.inside ? ratio_t_inv_ : ratio_t_,		//补偿多次散射后出射光能中折射的比例
+			ratio_t_inv = rec.inside ? ratio_t_ : ratio_t_inv_; //光线逆向传播时，补偿多次散射后出射光能中折射的比例
+
+		//抽样微表面法线
 		auto [alpha_u, alpha_v] = GetAlpha(rec.texcoord);			 //景物表面沿切线方向和副切线方向的粗糙程度
 		auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_v); //微表面分布
 		// Walter 等人在《Microfacet Models for Refraction through Rough Surfaces》中提到的技巧，略微缩放粗糙度，以减少重要性采样权重。
@@ -51,18 +53,23 @@ public:
 		auto [h, D] = distrib->Sample(rec.normal, {UniformFloat(), UniformFloat()}); //微表面法线和相应的概率（相对于宏观表面法线）
 		if (D < kEpsilonPdf)
 			return;
+
 		Float F = Fresnel(-rec.wo, h, eta_inv), //菲涅尔项
-		cos_theta_i = 0;//入射光线方向和宏观表面法线方向夹角的余弦
+			cos_theta_i = 0;					//入射光线方向和宏观表面法线方向夹角的余弦
 		if (UniformFloat() < F)
 		{ //抽样反射光线
+			//生成光线方向
 			rec.wi = -Reflect(-rec.wo, h);
 			 cos_theta_i = glm::dot(-rec.wi, rec.normal); 
 			if (cos_theta_i < kEpsilon)
 				return;
+
+			//计算光线传播概率
 			rec.pdf = F * D * std::abs(1.0 / (4.0 * glm::dot(rec.wo, h)));
 			if (rec.pdf < kEpsilonPdf)
 				return;
 			rec.type = ScatteringType::kReflect;
+
 			//计算光能衰减系数
 			if (!rec.get_attenuation)
 				return;
@@ -79,6 +86,7 @@ public:
 		}
 		else
 		{ //抽样折射光线
+			//生成光线方向
 			rec.wi = -Refract(-rec.wo, h, eta_inv);
 			cos_theta_i = glm::dot(rec.wi, rec.normal); //入射光线方向和宏观表面法线方向夹角的余弦
 			if (cos_theta_i < kEpsilon)
@@ -90,6 +98,8 @@ public:
 				h = -h;
 				ratio_t = ratio_t_inv;
 			}
+
+			//计算光线传播概率
 			F = Fresnel(rec.wi, h, eta_inv);
 			Float cos_i_h = glm::dot(-rec.wi, h), //入射光线方向和微表面法线方向夹角的余弦
 				cos_o_h = glm::dot(rec.wo, h);	  //出射光线方向和微表面法线方向夹角的余弦
@@ -97,6 +107,7 @@ public:
 			if (rec.pdf < kEpsilonPdf)
 				return;
 			rec.type = ScatteringType::kTransimission;
+
 			//计算光能衰减系数
 			if (!rec.get_attenuation)
 				return;

@@ -28,28 +28,34 @@ public:
             kr = Fresnel(-rec.wo, rec.normal, eta_inv); //菲涅尔项
         if (UniformFloat() < kr)
         { //抽样反射光线
-            rec.wi = -Reflect(-rec.wo, rec.normal);
+            //计算光线传播概率
             rec.pdf = kr;
             if (rec.pdf < kEpsilonPdf)
                 return;
             rec.type = ScatteringType::kReflect;
+            //生成光线方向
+            rec.wi = -Reflect(-rec.wo, rec.normal);
+            //计算光能衰减系数
             rec.attenuation = Spectrum(kr) * glm::dot(-rec.wi, rec.normal);
             if (specular_reflectance_)
                 rec.attenuation *= specular_reflectance_->Color(rec.texcoord);
         }
         else
         { //抽样折射光线
+            //生成光线方向
             rec.wi = -Refract(-rec.wo, rec.normal, eta_inv);
-            { //光线折射时穿过了介质，为了使光线入射方向和表面法线方向夹角的余弦仍小于零，需做一些相应处理
+            { //光线折射时穿过了介质，为了使实际的入射光线方向和表面法线方向夹角的余弦仍小于零，需做一些相应处理
                 rec.normal = -rec.normal;
                 rec.inside = !rec.inside;
                 eta_inv = eta;
             }
             kr = Fresnel(rec.wi, rec.normal, eta_inv);
+            //计算光线传播概率
             rec.pdf = 1.0 - kr;
             if (rec.pdf < kEpsilonPdf)
                 return;
             rec.type = ScatteringType::kTransimission;
+            //计算光能衰减系数
             rec.attenuation = Spectrum(1.0 - kr) * glm::dot(-rec.wi, rec.normal);
             if (specular_transmittance_)
                 rec.attenuation *= specular_transmittance_->Color(rec.texcoord);

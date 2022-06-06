@@ -35,33 +35,41 @@ public:
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     void Sample(SamplingRecord &rec) const override
     {
-        bool sampled_specular = false;                                       //是否抽样到了镜面反射分量
-        Float kr_i = 0,                                                      //入射菲涅尔项
-            kr_o = Fresnel(-rec.wo, rec.normal, eta_inv_),                   //出射菲涅尔项
+        bool add_specular = false;                                           //生成的光线方向是否在镜面反射波瓣之中
+        Float kr_o = Fresnel(-rec.wo, rec.normal, eta_inv_),                 //出射菲涅尔项
+            kr_i = kr_o,                                                     //入射菲涅尔项
             specular_sampling_weight = SpecularSamplingWeight(rec.texcoord), //抽样镜面反射的权重
-            pdf_specular = kr_o * specular_sampling_weight,                  //抽样镜面反射分量的概率
-            pdf_diffuse = (1.0 - kr_o) * (1.0 - specular_sampling_weight);   //抽样漫反射分量的概率
+            pdf_specular = kr_i * specular_sampling_weight,                  //抽样镜面反射分量的概率
+            pdf_diffuse = (1.0 - kr_i) * (1.0 - specular_sampling_weight),   //抽样漫反射分量的概率
+            pdf_diffuse_local = 0;                                           //出射光线方向作为漫反射方向的概率
         pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
-        rec.pdf = 0;
         if (UniformFloat() < pdf_specular)
         { //从镜面反射分量抽样光线方向
+            add_specular = true;
+            //生成光线方向
             rec.wi = -Reflect(-rec.wo, rec.normal);
-            kr_i = kr_o;
-            rec.pdf += pdf_specular;
-            sampled_specular = true;
+            pdf_diffuse_local = PdfHemisCos(rec.wo, rec.normal);
         }
         else
         { //从漫反射分量抽样光线方向
-            SampleHemisCos(rec.normal, rec.wi);
+            SampleHemisCos(rec.normal, rec.wi, &pdf_diffuse_local);
+            if (SameDirection(rec.wi, -Reflect(-rec.wo, rec.normal)))
+                add_specular = true;
+
             kr_i = Fresnel(rec.wi, rec.normal, eta_inv_);
             pdf_specular = kr_i * specular_sampling_weight;
             pdf_diffuse = (1.0 - kr_i) * (1.0 - specular_sampling_weight);
             pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
         }
-        rec.pdf += (1.0 - pdf_specular) * PdfHemisCos(rec.wo, rec.normal);
+        
+        //计算光线传播概率
+        rec.pdf = (1.0 - pdf_specular) * pdf_diffuse_local;
+        if (add_specular)
+            rec.pdf += pdf_specular;
         if (rec.pdf < kEpsilonPdf)
             return;
         rec.type = ScatteringType::kReflect;
+        
         //计算光能衰减系数
         if (!rec.get_attenuation)
             return;
@@ -71,8 +79,13 @@ public:
         else
             rec.attenuation = diffuse_reflectance / (1.0 - fdr_);
         rec.attenuation *= Sqr(eta_inv_) * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
-        if (sampled_specular)
-            rec.attenuation += kr_i * (specular_reflectance_ ? specular_reflectance_->Color(rec.texcoord) : Spectrum(1));
+        if (add_specular)
+        {
+            auto specular_attenuation = Spectrum(kr_i);
+            if (specular_reflectance_)
+                specular_attenuation *= specular_reflectance_->Color(rec.texcoord);
+            rec.attenuation += specular_attenuation;
+        }
         //因为 BSDF 是入射辐射照度和出射辐射亮度之间的关系，所以需要乘以入射方向和表面方向夹角的余弦，将入射辐射亮度转换为入射辐射照度.
         rec.attenuation *= glm::dot(-rec.wi, rec.normal);
     }

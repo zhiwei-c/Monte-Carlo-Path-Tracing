@@ -29,22 +29,28 @@ public:
             kr *= 2.0 / (1.0 + kr);
         if (UniformFloat() < kr)
         { //抽样反射光线
+            //计算光线传播概率
             rec.pdf = kr;
             if (rec.pdf < kEpsilonPdf)
                 return;
+            //生成光线方向
             rec.wi = -Reflect(-rec.wo, rec.normal);
             rec.type = ScatteringType::kReflect;
+            //计算光能衰减系数
             rec.attenuation = Spectrum(kr) * glm::dot(-rec.wi, rec.normal);
             if (specular_reflectance_)
                 rec.attenuation *= specular_reflectance_->Color(rec.texcoord);
         }
         else
         { //抽样折射光线
+            //计算光线传播概率
             rec.pdf = 1.0 - kr;
             if (rec.pdf < kEpsilonPdf)
                 return;
+            //生成光线方向
             rec.wi = rec.wo;
             rec.type = ScatteringType::kTransimission;
+            //计算光能衰减系数
             rec.attenuation = Vector3(1.0 - kr) * glm::dot(-rec.wi, rec.normal);
             if (specular_transmittance_)
                 rec.attenuation *= specular_transmittance_->Color(rec.texcoord);

@@ -22,9 +22,11 @@ public:
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     void Sample(SamplingRecord &rec) const override
     {
+        //生成光线方向，计算光线传播概率
         rec.wi = -Reflect(-rec.wo, rec.normal);
         rec.pdf = 1;
         rec.type = ScatteringType::kReflect;
+        //计算光能衰减系数
         if (!rec.get_attenuation)
             return;
         rec.attenuation = FresnelConductor(rec.wi, rec.normal, eta_, k_) * glm::dot(-rec.wi, rec.normal);

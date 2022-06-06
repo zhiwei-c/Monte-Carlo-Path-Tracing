@@ -48,38 +48,50 @@ public:
     void Sample(SamplingRecord &rec) const override
     {
         Float kr_o = Fresnel(-rec.wo, rec.normal, eta_inv_),                 //出射菲涅尔项
+            kr_i = kr_o,                                                     //入射菲涅尔项
             specular_sampling_weight = SpecularSamplingWeight(rec.texcoord), //抽样镜面反射的权重
-            pdf_specular = kr_o * specular_sampling_weight,                  //抽样镜面反射分量的概率
-            pdf_diffuse = (1.0 - kr_o) * (1.0 - specular_sampling_weight);   //抽样漫反射分量的概率
+            pdf_specular = kr_i * specular_sampling_weight,                  //抽样镜面反射分量的概率
+            pdf_diffuse = (1.0 - kr_i) * (1.0 - specular_sampling_weight);   //抽样漫反射分量的概率
         pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
+
         auto [alpha_u, alpha_v] = GetAlpha(rec.texcoord);            //景物表面沿切线方向和副切线方向的粗糙程度
         auto distrib = InitDistrib(distrib_type_, alpha_u, alpha_u); //微表面分布
-        Float D = 0;                                                 //微表面法线分布概率（相对于宏观表面法线）
         auto h = Vector3(0);                                         //微表面法线
+        Float D = 0,                                                 //微表面法线分布概率（相对于宏观表面法线）
+            pdf_diffuse_local = 0;                                   //出射光线方向作为漫反射方向的概率
+        bool add_specular = false;                                   //生成的光线方向是否在镜面反射波瓣之中
         if (UniformFloat() < pdf_specular)
         { //从镜面反射分量抽样光线方向
+            add_specular = true;
             std::tie(h, D) = distrib->Sample(rec.normal, {UniformFloat(), UniformFloat()});
             rec.wi = -Reflect(-rec.wo, h);
+            pdf_diffuse_local = PdfHemisCos(rec.wo, rec.normal);
         }
         else
         { //从漫反射分量抽样光线方向
-            SampleHemisCos(rec.normal, rec.wi);
+            SampleHemisCos(rec.normal, rec.wi, &pdf_diffuse_local);
             h = glm::normalize(-rec.wi + rec.wo);
             D = distrib->Pdf(h, rec.normal);
+            if (D > kEpsilonPdf)
+                add_specular = true;
         }
         Float cos_theta_i = glm::dot(-rec.wi, rec.normal); //入射光线方向和宏观表面法线方向夹角的余弦
         if (cos_theta_i < kEpsilon)
             return;
-        Float kr_i = Fresnel(rec.wi, rec.normal, eta_inv_); //入射菲涅尔项
-        pdf_specular = kr_i * specular_sampling_weight,
+
+        kr_i = Fresnel(rec.wi, rec.normal, eta_inv_);
+        pdf_specular = kr_i * specular_sampling_weight;
         pdf_diffuse = (1.0 - kr_i) * (1.0 - specular_sampling_weight);
         pdf_specular = pdf_specular / (pdf_specular + pdf_diffuse);
-        rec.pdf = (1.0 - pdf_specular) * PdfHemisCos(rec.wo, rec.normal);
-        if (D > kEpsilonPdf)
+
+        //计算光线传播概率
+        rec.pdf = (1.0 - pdf_specular) * pdf_diffuse_local;
+        if (add_specular)
             rec.pdf += pdf_specular * D * std::abs(1.0 / (4.0 * glm::dot(rec.wo, h)));
         if (rec.pdf < kEpsilonPdf)
             return;
         rec.type = ScatteringType::kReflect;
+
         //计算光能衰减系数
         if (!rec.get_attenuation)
             return;
@@ -89,7 +101,7 @@ public:
         else
             rec.attenuation = diffuse_reflectance / (1.0 - fdr_);
         rec.attenuation *= Sqr(eta_inv_) * (1.0 - kr_i) * (1.0 - kr_o) * kPiInv;
-        if (D > kEpsilonPdf)
+        if (add_specular)
         {
             Float F = Fresnel(rec.wi, h, eta_inv_),                                                     //菲涅尔项
                 G = distrib->SmithG1(-rec.wi, h, rec.normal) * distrib->SmithG1(rec.wo, h, rec.normal), //阴影-遮蔽项
