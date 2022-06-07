@@ -44,7 +44,7 @@ public:
             if (envmap_)
                 return envmap_->radiance(look_dir);
             else
-                Spectrum(0);
+                return Spectrum(0);
         }
         else
         {
@@ -63,35 +63,35 @@ public:
                 for (int c_idx = camera_path.size() - 1; c_idx >= 0; --c_idx)
                 {
                     const PathVertex &c = camera_path[c_idx];
+
                     //直接光照
                     Spectrum L_direct = EmitterEnv2OneV(c, !emitter_path.empty() ? &emitter_path[0].its : nullptr);
-                    //来自前一个照相机路径的间接光照
-                    auto L_indirect_pre = Spectrum(0);
-                    Float pdf_pre = 0;
+
+                    auto L_indirects = std::vector<Spectrum>();
+                    auto pdfs_indirects = std::vector<Float>();
+
+                    auto L_indirect_bsdf = Spectrum(0);
+                    //来自前一个照相机路径的间接光照，是根据 BSDF 抽样产生的间接光照
                     if (c_idx < camera_path.size() - 1)
                     {
-                        L_indirect_pre = camera_path[c_idx + 1].L * c.attenuation / c.pdf;
-                        pdf_pre = c.pdf;
+                        L_indirect_bsdf = camera_path[c_idx + 1].L * c.attenuation / c.pdf;
+                        Float pdf_indirect = c.pdf;
                         if (c_idx > rr_depth_)
                         {
-                            L_indirect_pre /= pdf_rr_;
-                            pdf_pre *= pdf_rr_;
+                            L_indirect_bsdf /= pdf_rr_;
+                            pdf_indirect *= pdf_rr_;
                         }
+                        L_indirects.push_back(L_indirect_bsdf);
+                        pdfs_indirects.push_back(pdf_indirect);
                     }
+
                     if (c.its.HarshLobe())
                     { //当前照相机路径点总光照
-                        camera_path[c_idx].L = L_direct + L_indirect_pre;
+                        camera_path[c_idx].L = L_direct + L_indirect_bsdf;
                     }
                     else
                     {
-                        auto L_indirects = std::vector<Spectrum>();
-                        auto pdfs = std::vector<Float>();
-                        if (L_indirect_pre.r + L_indirect_pre.g + L_indirect_pre.b > kEpsilon)
-                        {
-                            L_indirects.push_back(L_indirect_pre);
-                            pdfs.push_back(pdf_pre);
-                        }
-                        //来自光源路径的间接光照
+                        //来自光源路径的间接光照，是主动地抽样其它景物表面产生的间接光照
                         for (int e_idx = 1; e_idx < emitter_path.size(); e_idx++)
                         {
                             if (max_depth_ > 0 && c_idx + e_idx + 2 > max_depth_)
@@ -99,23 +99,27 @@ public:
                             if (emitter_path[e_idx].its.HarshLobe())
                                 continue;
 
-                            auto [L_temp, pdf_temp] = PrepareOtherEmitter2OneC(emitter_path, e_idx, c);
-                            if (pdf_temp > 0)
+                            auto [L_indirect, pdf_indirect] = PrepareOtherEmitter2OneC(emitter_path, e_idx, c);
+                            if (pdf_indirect > 0)
                             {
-                                L_indirects.push_back(L_temp);
-                                pdfs.push_back(pdf_temp);
+                                if (c_idx > rr_depth_)
+                                {
+                                    L_indirect /= pdf_rr_;
+                                    pdf_indirect *= pdf_rr_;
+                                }
+                                L_indirects.push_back(L_indirect);
+                                pdfs_indirects.push_back(pdf_indirect);
                             }
                         }
                         //多重重要抽样
-                        Spectrum L_indirect = WeightPowerHeuristic(L_indirects, pdfs);
+                        Spectrum L_indirect = WeightPowerHeuristic(L_indirects, pdfs_indirects);
                         //当前照相机路径点总光照
-                        camera_path[c_idx].L = L_indirect + L_direct;
+                        camera_path[c_idx].L = L_direct + L_indirect;
                     }
                 }
                 return camera_path[0].L;
             }
         }
-        return Spectrum(0);
     }
 
 private:
@@ -271,9 +275,10 @@ private:
             return {Spectrum(0), 0};
         }
 
+        //计算从当前光源路径点向相机路径点传播光线的方向
         e.wo = glm::normalize(c.its.pos() - e.its.pos());
-        //计算当前相机路径点的间接光照入射光线方向
         c.wi = e.wo;
+
         SamplingRecord rec_now = c.its.Eval(c.wi, c.wo);
         if (rec_now.type == ScatteringType::kNone)
             return {Spectrum(0), 0};
@@ -299,14 +304,14 @@ private:
             return {Spectrum(0), 0};
         }
 
-        //当前点接收间接光照的数学期望
-        auto L_indirect = L_pre * rec_now.attenuation / rec_now.pdf;
+        auto L_indirect = L_pre * rec_now.attenuation / rec_now.pdf; //当前点接收间接光照的数学期望
+        Float pdf_indirect = rec_now.pdf;
         if (e_index > rr_depth_)
         {
             L_indirect /= pdf_rr_;
-            rec_now.pdf *= pdf_rr_;
+            pdf_indirect *= pdf_rr_;
         }
-        return {L_indirect, rec_now.pdf};
+        return {L_indirect, pdf_indirect};
     }
 };
 
