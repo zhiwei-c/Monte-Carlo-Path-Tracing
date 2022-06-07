@@ -26,7 +26,8 @@ using Mat3 = glm::dmat3;
 
 constexpr Float kPi = glm::pi<Float>();
 constexpr Float kPiInv = 1.0 / glm::pi<Float>();
-constexpr Float kFourPiInv = 0.25 * glm::pi<Float>();
+constexpr Float kTwoPiInv = 0.5 * kPiInv;
+constexpr Float kFourPiInv = 0.25 * kPiInv;
 
 constexpr Float kMaxFloat = std::numeric_limits<Float>::max();
 constexpr Float kLowestFloat = std::numeric_limits<Float>::lowest();
@@ -37,7 +38,7 @@ constexpr auto kMinVector3 = Vector3(kLowestFloat);
 constexpr Float kEpsilon = 1e-10;
 constexpr Float kEpsilonDistance = 1e-6;
 constexpr Float kEpsilonPdf = 1e-3;
-constexpr Float kEpsilonPdf2 = 0.025 * glm::pi<Float>();
+constexpr Float kEpsilonPdf2 = 6e-2;
 constexpr Float kEpsilonMachine = std::numeric_limits<Float>::epsilon() * 0.5;
 
 inline Float GammaError(int n)
