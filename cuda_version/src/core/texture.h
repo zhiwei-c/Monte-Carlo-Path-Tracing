@@ -1,79 +1,83 @@
 #pragma once
 
-#include "../textures/constant_texture.h"
-#include "../textures/bitmap.h"
+#include <vector>
+#include <string>
+#include <set>
 
-__device__ vec3 Texture::Color(const vec2 &texcoord) const
-{
-    switch (type_)
-    {
-    case kConstant:
-        return color_;
-        break;
-    case kBitmap:
-        return ColorBitmap(texcoord);
-        break;
-    default:
-        break;
-    }
-    return vec3(0);
-}
+#include "../utils/global.h"
+#include "../utils/file_path.h"
+#include "../utils/image_writer.h"
 
-__device__ vec2 Texture::Gradient(const vec2 &texcoord) const
+enum TextureType
 {
-    switch (type_)
-    {
-    case kBitmap:
-        return GradientBitmap(texcoord);
-        break;
-    default:
-        break;
-    }
-    return vec2(0);
-}
-
-__device__ bool Texture::Transparent(const vec2 &texcoord, Float sample) const
-{
-    switch (type_)
-    {
-    case kConstant:
-    {
-        return sample > color_.x;
-        break;
-    }
-    case kBitmap:
-    {
-        if (channel_ != 4)
-            return false;
-        auto x = static_cast<int>(texcoord.x * width_),
-             y = static_cast<int>(texcoord.y * height_);
-        x = Modulo(x, width_);
-        y = Modulo(y, height_);
-        auto offset = (x + width_ * y) * channel_;
-        auto alpha = colors_[offset + 3];
-        if (alpha == 1)
-            return false;
-        else if (alpha == 0)
-            return true;
-        else
-            return sample > alpha;
-        break;
-    }
-    default:
-        break;
-    }
-    return false;
-}
-
-__device__ Float Texture::GetNorm(const vec2 &coord, int offset_x, int offset_y) const
-{
-    auto x = static_cast<int>(coord.x * width_) + offset_x,
-         y = static_cast<int>(coord.y * height_) + offset_y;
-    x = Modulo(x, width_);
-    y = Modulo(y, height_);
-    auto offset = (x + width_ * y) * channel_;
-    auto r = 255 * colors_[offset];
-    auto g = 255 * colors_[offset + 1];
-    auto b = 255 * colors_[offset + 2];
-    return myvec::length(vec3(r, g, b));
+    kNoneTexture, //空纹理
+    kConstant,    //恒定颜色
+    kBitmap,      //位图
 };
+
+struct TextureInfo
+{
+    TextureType type;
+    int width;
+    int height;
+    int channel;
+    Float line_width;
+    std::vector<float> colors;
+    vec3 color;
+    std::string filename;
+
+    TextureInfo(Float color) : type(kConstant), width(1), height(1), channel(3), color(vec3(color)) {}
+
+    TextureInfo(const vec3 &color) : type(kConstant), width(1), height(1), channel(3), color(color) {}
+
+    TextureInfo(const std::string &filename, Float gamma) : type(kBitmap), filename(filename)
+    {
+        ImageReader(filename, gamma, width, height, channel, colors);
+    }
+};
+
+class Texture
+{
+public:
+    __device__ Texture() : type_(kNoneTexture), width_(0), height_(0), channel_(0), color_(vec3(0)), colors_(nullptr) {}
+
+    __device__ vec3 Color(const vec2 &texcoord) const;
+
+    __device__ vec2 Gradient(const vec2 &texcoord) const;
+
+    __device__ bool Transparent(const vec2 &texcoord, Float sample) const;
+
+    __device__ bool IsBitmap() const { return type_ == kBitmap; }
+
+    __device__ bool Varying() const { return type_ != kConstant; }
+
+    __device__ void InitConstant(const vec3 &color);
+
+    __device__ void InitBitmap(int width, int height, int channel, float *colors);
+
+private:
+    __device__ Float GetNorm(const vec2 &coord, int offset_x, int offset_y) const;
+
+    TextureType type_;
+    int width_;
+    int height_;
+    int channel_;
+    vec3 color_;
+    float *colors_;
+};
+
+__global__ inline void InitBitmapTexture(uint idx, int width, int height, int channel, float *colors, Texture *texture_list)
+{
+    if (threadIdx.x == 0 && blockIdx.x == 0)
+    {
+        texture_list[idx].InitBitmap(width, height, channel, colors);
+    }
+}
+
+__global__ inline void InitConstantTexture(uint idx, vec3 color, Texture *texture_list)
+{
+    if (threadIdx.x == 0 && blockIdx.x == 0)
+    {
+        texture_list[idx].InitConstant(color);
+    }
+}

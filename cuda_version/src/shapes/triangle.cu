@@ -1,14 +1,16 @@
 #pragma once
 
-#include "../core/shape_base.h"
+#include "../core/shape.h"
 
-__device__ void Mesh::InitTriangle(Vertex *v, Bsdf **bsdf, Float area, Mesh *pre, Mesh *next)
+__device__ void Shape::InitTriangle(Vertex *v, Bsdf **bsdf, Float area)
 {
+    bsdf_ = bsdf;
+    area_ = area;
+
     for (int k = 0; k < 3; k++)
     {
         v_[k] = v[k];
     }
-    bsdf_ = bsdf;
 
     if (v[0].normal.length() < kEpsilon)
     {
@@ -18,12 +20,10 @@ __device__ void Mesh::InitTriangle(Vertex *v, Bsdf **bsdf, Float area, Mesh *pre
             v_[k].normal = fn;
         }
     }
-    area_ = area;
-    pre_ = pre;
-    next_ = next;
+    
 }
 
-__device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection &its) const
+__device__ void Shape::Intersect(const Ray &ray, const vec2 &sample, Intersection &its) const
 {
     vec3 v0v2 = v_[2].position - v_[0].position,
          v0v1 = v_[1].position - v_[0].position,
@@ -77,12 +77,8 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
         texcoord = alpha * v_[0].texcoord + beta * v_[1].texcoord + gamma * v_[2].texcoord;
         if ((*bsdf_)->BumpMapping())
         {
-            vec3 tangent = myvec::normalize(alpha * v_[0].tangent +
-                                            beta * v_[1].tangent +
-                                            gamma * v_[2].tangent);
-            vec3 bitangent = myvec::normalize(alpha * v_[0].bitangent +
-                                              beta * v_[1].bitangent +
-                                              gamma * v_[2].bitangent);
+            vec3 tangent = myvec::normalize(alpha * v_[0].tangent + beta * v_[1].tangent + gamma * v_[2].tangent);
+            vec3 bitangent = myvec::normalize(alpha * v_[0].bitangent + beta * v_[1].bitangent + gamma * v_[2].bitangent);
             normal = (*bsdf_)->PerturbNormal(normal, tangent, bitangent, texcoord);
         }
     }
@@ -103,7 +99,7 @@ __device__ void Mesh::Intersect(const Ray &ray, const vec2 &sample, Intersection
     its = Intersection(pos, normal, texcoord, inside, distance, bsdf_, pdf_area_);
 }
 
-__device__ void Mesh::SampleP(Intersection &its, const vec3 &sample) const
+__device__ void Shape::SampleP(Intersection &its, const vec3 &sample) const
 {
 
     auto alpha = static_cast<Float>(1 - sample.y - sample.z),

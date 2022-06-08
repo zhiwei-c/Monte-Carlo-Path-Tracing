@@ -44,7 +44,7 @@ private:
     ShapeBvh *bvh_root_;
 };
 
-__global__ void CreateSceneBvh(ShapeBvh *bvh_root, SceneBvh *scene_bvh)
+__global__ inline void CreateSceneBvh(ShapeBvh *bvh_root, SceneBvh *scene_bvh)
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {
@@ -52,8 +52,8 @@ __global__ void CreateSceneBvh(ShapeBvh *bvh_root, SceneBvh *scene_bvh)
     }
 }
 
-__global__ void CreateSceneBvhNodes(uint max_x, uint max_y, uint scenebvh_node_num, ShapeBvh *shapebvh_list,
-                                    BvhNodeInfo *scenebvh_info_list, ShapeBvh *scenebvh_node_list)
+__global__ inline void CreateSceneBvhNodes(uint max_x, uint max_y, uint scenebvh_node_num, ShapeBvh *shapebvh_list,
+                                           BvhNodeInfo *scenebvh_info_list, ShapeBvh *scenebvh_node_list)
 {
     auto i = threadIdx.x + blockIdx.x * blockDim.x;
     auto j = threadIdx.y + blockIdx.y * blockDim.y;

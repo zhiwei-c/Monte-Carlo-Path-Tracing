@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/bsdf_base.h"
+#include "../core/bsdf.h"
 
 class AreaLight : public Bsdf
 {

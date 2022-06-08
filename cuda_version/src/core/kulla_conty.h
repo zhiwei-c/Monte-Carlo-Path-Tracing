@@ -1,5 +1,6 @@
 #pragma once
 
+#include "texture.h"
 #include "../utils/math/sample.h"
 #include "../utils/math/microfacet_distribution.h"
 

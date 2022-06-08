@@ -98,7 +98,7 @@ private:
     ShapeBvh *next_;
 };
 
-__global__ void CreateShapeBvh(uint shapebvh_idx, uint shapebvh_num, BvhNode *bvh_root, Float area, ShapeBvh *shapebvh_list)
+__global__ inline void CreateShapeBvh(uint shapebvh_idx, uint shapebvh_num, BvhNode *bvh_root, Float area, ShapeBvh *shapebvh_list)
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {
@@ -114,8 +114,8 @@ __global__ void CreateShapeBvh(uint shapebvh_idx, uint shapebvh_num, BvhNode *bv
     }
 }
 
-__global__ void CreateShapeBvhNodes(uint max_x, uint max_y, uint bvhnode_num, Mesh *mesh_list, BvhNodeInfo *bvhnode_info_list,
-                                    BvhNode *bvhnode_list)
+__global__ inline void CreateShapeBvhNodes(uint max_x, uint max_y, uint bvhnode_num, Shape *shape_list,
+                                           BvhNodeInfo *bvhnode_info_list, BvhNode *bvhnode_list)
 {
     auto i = threadIdx.x + blockIdx.x * blockDim.x;
     auto j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -132,7 +132,7 @@ __global__ void CreateShapeBvhNodes(uint max_x, uint max_y, uint bvhnode_num, Me
     auto node_idx = bvhnode_info_list[idx].idx;
 
     if (bvhnode_info_list[idx].leaf)
-        bvhnode_list[node_idx].InitBvhNode(bvhnode_info_list[idx].aabb, mesh_list + bvhnode_info_list[idx].obj_idx,
+        bvhnode_list[node_idx].InitBvhNode(bvhnode_info_list[idx].aabb, shape_list + bvhnode_info_list[idx].obj_idx,
                                            bvhnode_info_list[idx].area);
     else
         bvhnode_list[node_idx].InitBvhNode(bvhnode_info_list[idx].aabb, bvhnode_info_list[idx].area,

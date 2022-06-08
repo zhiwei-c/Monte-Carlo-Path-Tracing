@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/bsdf_base.h"
+#include "../core/bsdf.h"
 
 ///\brief 平滑的理想漫反射材质派生类
 class Diffuse : public Bsdf

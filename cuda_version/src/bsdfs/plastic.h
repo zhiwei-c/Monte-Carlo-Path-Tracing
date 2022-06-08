@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/bsdf_base.h"
+#include "../core/bsdf.h"
 
 ///\brief 平滑的塑料材质派生类
 class Plastic : public Bsdf

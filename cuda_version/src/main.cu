@@ -2,7 +2,7 @@
 #include <string>
 #include <filesystem>
 
-#include "utils/config_parser.h"
+#include "utils/config_parser/config_parser.h"
 
 int main(int argc, char *argv[])
 {

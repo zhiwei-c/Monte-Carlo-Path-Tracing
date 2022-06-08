@@ -1,31 +1,8 @@
-#pragma once
+#include "bvh_node.h"
 
 #include <algorithm>
 
-#include "../core/shape.h"
-
-struct BvhNodeInfo
-{
-    bool valid;
-    bool leaf;
-    uint idx;
-    uint left_idx;
-    uint right_idx;
-    AABB aabb;
-    uint obj_idx;
-    Float area;
-
-    __host__ __device__ BvhNodeInfo()
-        : valid(false), leaf(true), idx(kUintMax), left_idx(kUintMax), right_idx(kUintMax),
-          aabb(AABB()), obj_idx(kUintMax), area(0) {}
-
-    BvhNodeInfo(bool leaf, uint idx, uint left_idx, uint right_idx,
-                const AABB &aabb, uint obj_idx, Float area)
-        : valid(true), leaf(leaf), idx(idx), left_idx(left_idx), right_idx(right_idx),
-          aabb(aabb), obj_idx(obj_idx), area(area) {}
-};
-
-inline uint BvhNodeNum(uint num)
+uint BvhNodeNum(uint num)
 {
     auto height = static_cast<uint>(log2(num)) + 1;
     auto last_layer_node_num = static_cast<uint>(pow(2, height - 1));
@@ -34,8 +11,8 @@ inline uint BvhNodeNum(uint num)
     return static_cast<uint>(pow(2, height)) - 1;
 }
 
-inline void MergeShapesInfo(uint begin, uint end, const std::vector<uint> &shape_idx_list,
-                            const std::vector<BvhNodeInfo> &shape_info_list, AABB &aabb, Float &area)
+void MergeShapesInfo(uint begin, uint end, const std::vector<uint> &shape_idx_list,
+                     const std::vector<BvhNodeInfo> &shape_info_list, AABB &aabb, Float &area)
 {
     if (begin + 1 == end)
     {
@@ -53,8 +30,8 @@ inline void MergeShapesInfo(uint begin, uint end, const std::vector<uint> &shape
     }
 }
 
-inline void BuildSceneBvhInfo(uint bvhnode_idx, uint begin, uint end, std::vector<uint> &shape_idx_list,
-                              const std::vector<BvhNodeInfo> &shape_info_list, std::vector<BvhNodeInfo> &bvhnode_info_list)
+void BuildSceneBvhInfo(uint bvhnode_idx, uint begin, uint end, std::vector<uint> &shape_idx_list,
+                       const std::vector<BvhNodeInfo> &shape_info_list, std::vector<BvhNodeInfo> &bvhnode_info_list)
 {
     if (begin + 1 > end)
         return;
@@ -100,9 +77,9 @@ inline void BuildSceneBvhInfo(uint bvhnode_idx, uint begin, uint end, std::vecto
                                                  aabb_now, kUintMax, area_now);
 }
 
-inline void MergeMeshesInfo(uint begin, uint end, const std::vector<uint> &scene_mesh_idx_list,
-                            const std::vector<AABB> &scene_mesh_aabb_list, const std::vector<Float> &scene_mesh_area_list,
-                            AABB &aabb, Float &area)
+void MergeMeshesInfo(uint begin, uint end, const std::vector<uint> &scene_mesh_idx_list,
+                     const std::vector<AABB> &scene_mesh_aabb_list, const std::vector<Float> &scene_mesh_area_list,
+                     AABB &aabb, Float &area)
 {
     if (begin + 1 == end)
     {
@@ -120,9 +97,9 @@ inline void MergeMeshesInfo(uint begin, uint end, const std::vector<uint> &scene
     }
 }
 
-inline void BuildShapeBvhInfo(uint bvhnode_idx, uint begin, uint end, std::vector<uint> &scene_mesh_idx_list,
-                              const std::vector<AABB> &scene_mesh_aabb_list, const std::vector<Float> &scene_mesh_area_list,
-                              std::vector<BvhNodeInfo> &bvhnode_info_list)
+void BuildShapeBvhInfo(uint bvhnode_idx, uint begin, uint end, std::vector<uint> &scene_mesh_idx_list,
+                       const std::vector<AABB> &scene_mesh_aabb_list, const std::vector<Float> &scene_mesh_area_list,
+                       std::vector<BvhNodeInfo> &bvhnode_info_list)
 {
     if (begin + 1 > end)
         return;

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/bsdf_base.h"
+#include "../core/bsdf.h"
 
 ///\brief 薄的电介质材质派生类
 class ThinDielectric : public Bsdf

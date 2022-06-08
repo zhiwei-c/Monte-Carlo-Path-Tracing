@@ -7,7 +7,7 @@ static constexpr uint phi_steps = theta_steps * 2;
 static constexpr Float d_theta = kPi / (theta_steps - 1);
 static constexpr Float d_phi = (2 * kPi) / (phi_steps - 1);
 
-std::vector<Float> PrecomputeCosine()
+inline std::vector<Float> PrecomputeCosine()
 {
     auto result = std::vector<Float>(phi_steps);
     for (uint32_t i = 0; i < phi_steps; ++i)
@@ -15,7 +15,7 @@ std::vector<Float> PrecomputeCosine()
     return result;
 }
 
-std::vector<Float> PrecomputeSine()
+inline std::vector<Float> PrecomputeSine()
 {
     auto result = std::vector<Float>(phi_steps);
     for (uint32_t i = 0; i < phi_steps; ++i)
@@ -27,9 +27,9 @@ inline void LoadSphere(ShapeInfo *shape_info, bool bump_mapping, std::vector<Ver
 {
     const std::vector<Float> &cos_phi = PrecomputeCosine();
     const std::vector<Float> &sin_phi = PrecomputeSine();
-    
-    gmat4* to_world_pos = nullptr,
-        * to_world_norm = nullptr;
+
+    gmat4 *to_world_pos = nullptr,
+          *to_world_norm = nullptr;
     auto to_world = shape_info->to_world;
     if (to_world != nullptr)
     {

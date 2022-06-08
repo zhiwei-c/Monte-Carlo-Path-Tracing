@@ -1,6 +1,7 @@
 #pragma once
 
-#include "../core/bsdf_base.h"
+#include "../core/bsdf.h"
+#include"../core/kulla_conty.h"
 
 ///\brief 粗糙的电介质派生类
 class RoughDielectric : public Bsdf

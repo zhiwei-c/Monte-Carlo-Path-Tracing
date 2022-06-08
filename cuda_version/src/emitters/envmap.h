@@ -73,7 +73,7 @@ private:
     Texture *radiance_;
 };
 
-__global__ void CreateEnvMap(Float pdf_area, gmat4 *to_local, uint radiance_idx, Texture *texture_list, EnvMap *envmap)
+__global__ inline void CreateEnvMap(Float pdf_area, gmat4 *to_local, uint radiance_idx, Texture *texture_list, EnvMap *envmap)
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {

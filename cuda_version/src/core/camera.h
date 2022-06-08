@@ -51,7 +51,7 @@ private:
     vec3 view_dy_; //当光线于视锥体底的投影点在相机坐标系向x方向移动单位长度时，在世界坐标系下移动的长度
 };
 
-__global__ void InitCamera(CameraInfo info, Camera *camera)
+__global__ inline void InitCamera(CameraInfo info, Camera *camera)
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {
