@@ -7,10 +7,7 @@ class SceneBvh
 public:
     __device__ SceneBvh() : bvh_root_(nullptr) {}
 
-    __device__ void InitSceneBvh(ShapeBvh *bvh_root)
-    {
-        bvh_root_ = bvh_root;
-    }
+    __device__ void InitSceneBvh(ShapeBvh *bvh_root) { bvh_root_ = bvh_root; }
 
     __device__ bool Intersect(const Ray &ray, const vec2 &sample, Intersection &its) const
     {

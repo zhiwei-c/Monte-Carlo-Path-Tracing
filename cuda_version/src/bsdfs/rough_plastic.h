@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../core/bsdf.h"
-#include"../core/kulla_conty.h"
+#include "../core/kulla_conty.h"
 
 ///\brief 粗糙的塑料材质派生类
 class RoughPlastic : public Bsdf
@@ -23,15 +23,13 @@ public:
      * @param kulla_conty_lut Kulla-Conty 补偿散射能量查找表
      * @param albedo_avg 平均反照率
      */
-    __device__ RoughPlastic(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
-                            vec3 eta, Texture *diffuse_reflectance, Texture *specular_reflectance,
-                            MicrofacetDistribType distri, Texture *alpha, bool nonlinear,
-                            float *kulla_conty_lut, float albedo_avg)
-        : Bsdf(idx, kRoughPlastic, twosided, bump_map, opacity_map),
-          eta_inv_d_(1.0 / eta.x), diffuse_reflectance_(diffuse_reflectance),
-          specular_reflectance_(specular_reflectance), distri_(distri), alpha_(alpha),
-          nonlinear_(nonlinear), fdr_int_(AverageFresnel(eta.x)), albedo_avg_(-1),
-          kulla_conty_lut_(nullptr), f_add_(vec3(0))
+    __device__ RoughPlastic(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map, vec3 eta,
+                            Texture *diffuse_reflectance, Texture *specular_reflectance, MicrofacetDistribType distri,
+                            Texture *alpha, bool nonlinear, float *kulla_conty_lut, float albedo_avg)
+        : Bsdf(idx, kRoughPlastic, twosided, bump_map, opacity_map), eta_inv_d_(1.0 / eta.x),
+          diffuse_reflectance_(diffuse_reflectance), specular_reflectance_(specular_reflectance), distri_(distri),
+          alpha_(alpha), nonlinear_(nonlinear), fdr_int_(AverageFresnel(eta.x)), albedo_avg_(-1), kulla_conty_lut_(nullptr),
+          f_add_(vec3(0))
     {
         if (albedo_avg < 0)
             return;
@@ -268,7 +266,7 @@ __device__ inline void InitRoughPlastic(uint m_idx, BsdfInfo *bsdf_info_list, Te
                              kulla_conty_lut, albedo_avg);
 
     bsdf_list[m_idx] = new RoughPlastic(m_idx, bsdf_info_list[m_idx].twosided, bump_map, opacity_map,
-                                            bsdf_info_list[m_idx].eta, diffuse_reflectance, specular_reflectance,
-                                            bsdf_info_list[m_idx].distri, alpha, bsdf_info_list[m_idx].nonlinear,
-                                            kulla_conty_lut, albedo_avg);
+                                        bsdf_info_list[m_idx].eta, diffuse_reflectance, specular_reflectance,
+                                        bsdf_info_list[m_idx].distri, alpha, bsdf_info_list[m_idx].nonlinear,
+                                        kulla_conty_lut, albedo_avg);
 }

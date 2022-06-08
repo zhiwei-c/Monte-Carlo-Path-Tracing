@@ -18,11 +18,10 @@ public:
      * @param specular_reflectance 镜面反射系数 （注意：对于物理真实感绘制，默认为 1，表示为空指针，不应更改此参数）
      * @param nonlinear 是否考虑因内部散射而引起的非线性色移
      */
-    __device__ Plastic(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
-                       vec3 eta, Texture *diffuse_reflectance, Texture *specular_reflectance, bool nonlinear)
-        : Bsdf(idx, kPlastic, twosided, bump_map, opacity_map),
-          eta_inv_d_(1.0 / eta.x), diffuse_reflectance_(diffuse_reflectance), specular_reflectance_(specular_reflectance),
-          nonlinear_(nonlinear), fdr_int_(AverageFresnel(eta.x))
+    __device__ Plastic(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map, vec3 eta, Texture *diffuse_reflectance,
+                       Texture *specular_reflectance, bool nonlinear)
+        : Bsdf(idx, kPlastic, twosided, bump_map, opacity_map), eta_inv_d_(1.0 / eta.x), diffuse_reflectance_(diffuse_reflectance),
+          specular_reflectance_(specular_reflectance), nonlinear_(nonlinear), fdr_int_(AverageFresnel(eta.x))
     {
     }
 
@@ -183,6 +182,6 @@ __device__ inline void InitPlastic(uint m_idx, BsdfInfo *bsdf_info_list, Texture
         specular_reflectance = texture_list + bsdf_info_list[m_idx].specular_reflectance_idx;
 
     bsdf_list[m_idx] = new Plastic(m_idx, bsdf_info_list[m_idx].twosided, bump_map, opacity_map,
-                                       bsdf_info_list[m_idx].eta, diffuse_reflectance, specular_reflectance,
-                                       bsdf_info_list[m_idx].nonlinear);
+                                   bsdf_info_list[m_idx].eta, diffuse_reflectance, specular_reflectance,
+                                   bsdf_info_list[m_idx].nonlinear);
 }

@@ -17,11 +17,10 @@ public:
      * @param specular_reflectance 镜面反射系数 （注意：对于物理真实感绘制，默认为 1，表示为空指针，不应更改此参数）
      * @param specular_transmittance 镜面透射系数 （注意：对于物理真实感绘制，默认为 1，表示为空指针，不应更改此参数）
      */
-    __device__ ThinDielectric(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
-                              vec3 eta, Texture *specular_reflectance, Texture *specular_transmittance)
-        : Bsdf(idx, kThinDielectric, twosided, bump_map, opacity_map),
-          eta_inv_d_(1.0 / eta.x), specular_reflectance_(specular_reflectance),
-          specular_transmittance_(specular_transmittance)
+    __device__ ThinDielectric(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map, vec3 eta,
+                              Texture *specular_reflectance, Texture *specular_transmittance)
+        : Bsdf(idx, kThinDielectric, twosided, bump_map, opacity_map), eta_inv_d_(1.0 / eta.x),
+          specular_reflectance_(specular_reflectance), specular_transmittance_(specular_transmittance)
     {
     }
 
@@ -115,5 +114,5 @@ __device__ inline void InitThinDielectric(uint m_idx, BsdfInfo *bsdf_info_list, 
         specular_transmittance = texture_list + bsdf_info_list[m_idx].specular_transmittance_idx;
 
     bsdf_list[m_idx] = new ThinDielectric(m_idx, bsdf_info_list[m_idx].twosided, bump_map, opacity_map,
-                                              bsdf_info_list[m_idx].eta, specular_reflectance, specular_transmittance);
+                                          bsdf_info_list[m_idx].eta, specular_reflectance, specular_transmittance);
 }

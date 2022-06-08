@@ -15,10 +15,10 @@ public:
      * @param opacity_map 凹凸映射
      * @param diffuse_reflectance 漫反射系数
      */
-    __device__ Diffuse(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
-                       Texture *diffuse_reflectance)
-        : Bsdf(idx, kDiffuse, twosided, bump_map, opacity_map),
-          diffuse_reflectance_(diffuse_reflectance) {}
+    __device__ Diffuse(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map, Texture *diffuse_reflectance)
+        : Bsdf(idx, kDiffuse, twosided, bump_map, opacity_map), diffuse_reflectance_(diffuse_reflectance)
+    {
+    }
 
     ///\brief 根据光线出射方向和表面法线方向，抽样光线入射方向
     __device__ void Sample(SamplingRecord &rec, const vec3 &sample) const override

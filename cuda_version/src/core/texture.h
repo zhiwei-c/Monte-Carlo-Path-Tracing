@@ -6,7 +6,7 @@
 
 #include "../utils/global.h"
 #include "../utils/file_path.h"
-#include "../utils/image_writer.h"
+#include "../utils/image_io.h"
 
 enum TextureType
 {

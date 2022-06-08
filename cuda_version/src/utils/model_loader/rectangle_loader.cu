@@ -1,19 +1,17 @@
-#pragma once
+#include "../model_loader.h"
 
-#include "../../core/shape.h"
+constexpr float RectanglePositions[][3] = {{-1, -1, 0}, {1, -1, 0}, {1, 1, 0}, {-1, 1, 0}};
 
-static constexpr float RectanglePositions[][3] = {{-1, -1, 0}, {1, -1, 0}, {1, 1, 0}, {-1, 1, 0}};
+constexpr float RectangleNormals[][3] = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
 
-static constexpr float RectangleNormals[][3] = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
+constexpr float RectangleTexcoords[][2] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
 
-static constexpr float RectangleTexcoords[][2] = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+constexpr uint32_t RectangleTriangles[][3] = {{0, 1, 2}, {2, 3, 0}};
 
-static constexpr uint32_t RectangleTriangles[][3] = {{0, 1, 2}, {2, 3, 0}};
-
-inline void LoadRectangle(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
+void LoadRectangle(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
 {
-    gmat4* to_world_pos = nullptr,
-        * to_world_norm = nullptr;
+    gmat4 *to_world_pos = nullptr,
+          *to_world_norm = nullptr;
     auto to_world = shape_info->to_world;
     if (to_world != nullptr)
     {

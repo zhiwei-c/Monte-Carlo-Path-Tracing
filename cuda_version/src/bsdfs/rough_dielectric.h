@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../core/bsdf.h"
-#include"../core/kulla_conty.h"
+#include "../core/kulla_conty.h"
 
 ///\brief 粗糙的电介质派生类
 class RoughDielectric : public Bsdf
@@ -23,15 +23,13 @@ public:
      * @param kulla_conty_lut Kulla-Conty 补偿散射能量查找表
      * @param albedo_avg 平均反照率
      */
-    __device__ RoughDielectric(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
-                               vec3 eta, Texture *specular_reflectance, Texture *specular_transmittance,
-                               MicrofacetDistribType distri, Texture *alpha_u, Texture *alpha_v,
-                               float *kulla_conty_lut, float albedo_avg)
-        : Bsdf(idx, kRoughDielectric, twosided, bump_map, opacity_map),
-          eta_d_(eta.x), eta_inv_d_(1.0 / eta.x), specular_reflectance_(specular_reflectance),
-          specular_transmittance_(specular_transmittance), distri_(distri), alpha_u_(alpha_u),
-          alpha_v_(alpha_v), albedo_avg_(-1), kulla_conty_lut_(nullptr), f_add_(vec3(0)),
-          f_add_inv_(vec3(0)), ratio_t_(0), ratio_t_inv_(0)
+    __device__ RoughDielectric(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map, vec3 eta,
+                               Texture *specular_reflectance, Texture *specular_transmittance, MicrofacetDistribType distri,
+                               Texture *alpha_u, Texture *alpha_v, float *kulla_conty_lut, float albedo_avg)
+        : Bsdf(idx, kRoughDielectric, twosided, bump_map, opacity_map), eta_d_(eta.x), eta_inv_d_(1.0 / eta.x),
+          specular_reflectance_(specular_reflectance), specular_transmittance_(specular_transmittance), distri_(distri),
+          alpha_u_(alpha_u), alpha_v_(alpha_v), albedo_avg_(-1), kulla_conty_lut_(nullptr), f_add_(vec3(0)), f_add_inv_(vec3(0)),
+          ratio_t_(0), ratio_t_inv_(0)
     {
         if (albedo_avg < 0)
             return;
@@ -276,7 +274,7 @@ __device__ inline void InitRoughDielectric(uint m_idx, BsdfInfo *bsdf_info_list,
                              kulla_conty_lut, albedo_avg);
 
     bsdf_list[m_idx] = new RoughDielectric(m_idx, bsdf_info_list[m_idx].twosided, bump_map, opacity_map,
-                                               bsdf_info_list[m_idx].eta, specular_reflectance, specular_transmittance,
-                                               bsdf_info_list[m_idx].distri, alpha_u, alpha_v, kulla_conty_lut,
-                                               albedo_avg);
+                                           bsdf_info_list[m_idx].eta, specular_reflectance, specular_transmittance,
+                                           bsdf_info_list[m_idx].distri, alpha_u, alpha_v, kulla_conty_lut,
+                                           albedo_avg);
 }

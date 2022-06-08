@@ -1,13 +1,11 @@
-#pragma once
+#include "../model_loader.h"
 
-#include "../../core/shape.h"
+constexpr uint theta_steps = 20;
+constexpr uint phi_steps = theta_steps * 2;
+constexpr Float d_theta = kPi / (theta_steps - 1);
+constexpr Float d_phi = (2 * kPi) / (phi_steps - 1);
 
-static constexpr uint theta_steps = 20;
-static constexpr uint phi_steps = theta_steps * 2;
-static constexpr Float d_theta = kPi / (theta_steps - 1);
-static constexpr Float d_phi = (2 * kPi) / (phi_steps - 1);
-
-inline std::vector<Float> PrecomputeCosine()
+std::vector<Float> PrecomputeCosine()
 {
     auto result = std::vector<Float>(phi_steps);
     for (uint32_t i = 0; i < phi_steps; ++i)
@@ -15,7 +13,7 @@ inline std::vector<Float> PrecomputeCosine()
     return result;
 }
 
-inline std::vector<Float> PrecomputeSine()
+std::vector<Float> PrecomputeSine()
 {
     auto result = std::vector<Float>(phi_steps);
     for (uint32_t i = 0; i < phi_steps; ++i)
@@ -23,7 +21,7 @@ inline std::vector<Float> PrecomputeSine()
     return result;
 }
 
-inline void LoadSphere(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
+void LoadSphere(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
 {
     const std::vector<Float> &cos_phi = PrecomputeCosine();
     const std::vector<Float> &sin_phi = PrecomputeSine();

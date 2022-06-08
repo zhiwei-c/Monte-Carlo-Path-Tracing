@@ -13,20 +13,15 @@ enum MicrofacetDistribType
     kGgx
 };
 
-__device__ inline void SampleNormDistrib(MicrofacetDistribType type,
-                                         Float alpha_u,
-                                         Float alpha_v,
-                                         const vec3 &macro_normal,
-                                         const vec3 &sample,
-                                         vec3 &facet_normal,
-                                         Float &pdf)
+__device__ inline void SampleNormDistrib(MicrofacetDistribType type, Float alpha_u, Float alpha_v, const vec3 &macro_normal,
+                                         const vec3 &sample, vec3 &facet_normal, Float &pdf)
 {
-    auto isotropic = (alpha_u == alpha_v);
-    auto sin_phi = static_cast<Float>(0),
-         cos_phi = static_cast<Float>(0),
-         sin_theta = static_cast<Float>(0),
-         cos_theta = static_cast<Float>(0),
-         alpha_2 = static_cast<Float>(0);
+    bool isotropic = (alpha_u == alpha_v);
+    Float sin_phi = 0,
+         cos_phi = 0,
+         sin_theta = 0,
+         cos_theta = 0,
+         alpha_2 = 0;
     switch (type)
     {
     case kGgx:
@@ -40,20 +35,16 @@ __device__ inline void SampleNormDistrib(MicrofacetDistribType type,
         }
         else
         {
-            auto phi = atan(alpha_v / alpha_u * tan(kPi + 2.0 * kPi * sample.y)) +
-                       kPi * static_cast<int>(2.0 * sample.y + 0.5);
+            auto phi = atan(alpha_v / alpha_u * tan(kPi + 2.0 * kPi * sample.y)) + kPi * static_cast<int>(2.0 * sample.y + 0.5);
             cos_phi = cos(phi);
             sin_phi = sin(phi);
-            alpha_2 = 1.0 / (pow(cos_phi / alpha_u, 2) +
-                             pow(sin_phi / alpha_v, 2));
+            alpha_2 = 1.0 / (pow(cos_phi / alpha_u, 2) + pow(sin_phi / alpha_v, 2));
         }
         auto tan_theta_2 = alpha_2 * sample.x / (1.0 - sample.x);
         cos_theta = 1.0 / sqrt(1.0 + tan_theta_2);
         sin_theta = sqrt(1.0 - cos_theta * cos_theta);
 
-        pdf = 1.0 / (kPi * alpha_u * alpha_v *
-                     pow(cos_theta, 3) *
-                     pow(1.0 + tan_theta_2 / alpha_2, 2));
+        pdf = 1.0 / (kPi * alpha_u * alpha_v * pow(cos_theta, 3) * pow(1.0 + tan_theta_2 / alpha_2, 2));
         break;
     }
     default:
@@ -67,8 +58,7 @@ __device__ inline void SampleNormDistrib(MicrofacetDistribType type,
         }
         else
         {
-            auto phi = atan(alpha_v / alpha_u * tan(kPi + 2.0 * kPi * sample.y)) +
-                       kPi * static_cast<int>(2 * sample.y + 0.5);
+            auto phi = atan(alpha_v / alpha_u * tan(kPi + 2.0 * kPi * sample.y)) + kPi * static_cast<int>(2 * sample.y + 0.5);
             cos_phi = cos(phi);
             sin_phi = sin(phi);
             alpha_2 = 1.0 / (pow(cos_phi / alpha_u, 2) +
@@ -85,10 +75,7 @@ __device__ inline void SampleNormDistrib(MicrofacetDistribType type,
     facet_normal = ToWorld(facet_normal, macro_normal);
 }
 
-__device__ inline Float PdfNormDistrib(MicrofacetDistribType type,
-                                       Float alpha_u,
-                                       Float alpha_v,
-                                       const vec3 &macro_normal,
+__device__ inline Float PdfNormDistrib(MicrofacetDistribType type, Float alpha_u, Float alpha_v, const vec3 &macro_normal,
                                        const vec3 &facet_normal)
 {
     auto cos_theta = myvec::dot(macro_normal, facet_normal);
@@ -110,11 +97,7 @@ __device__ inline Float PdfNormDistrib(MicrofacetDistribType type,
         else
         {
             auto dir = ToLocal(facet_normal, macro_normal);
-            return cos_theta / (kPi * alpha_2 *
-                                pow(pow(dir.x / alpha_u, 2) +
-                                        pow(dir.y / alpha_v, 2) +
-                                        pow(dir.z, 2),
-                                    2));
+            return cos_theta / (kPi * alpha_2 * pow(pow(dir.x / alpha_u, 2) + pow(dir.y / alpha_v, 2) + pow(dir.z, 2), 2));
         }
         break;
     }
@@ -125,8 +108,7 @@ __device__ inline Float PdfNormDistrib(MicrofacetDistribType type,
         else
         {
             auto dir = ToLocal(facet_normal, macro_normal);
-            return exp(-(pow(dir.x / alpha_u, 2) + pow(dir.y / alpha_v, 2)) / cos_theta_2) /
-                   (kPi * alpha_2 * cos_theta_3);
+            return exp(-(pow(dir.x / alpha_u, 2) + pow(dir.y / alpha_v, 2)) / cos_theta_2) / (kPi * alpha_2 * cos_theta_3);
         }
         break;
     }
@@ -134,11 +116,7 @@ __device__ inline Float PdfNormDistrib(MicrofacetDistribType type,
     return 0;
 }
 
-__device__ inline Float SmithG1(MicrofacetDistribType type,
-                                Float alpha_u,
-                                Float alpha_v,
-                                const vec3 &v,
-                                const vec3 &macro_normal,
+__device__ inline Float SmithG1(MicrofacetDistribType type, Float alpha_u, Float alpha_v, const vec3 &v, const vec3 &macro_normal,
                                 const vec3 &facet_normal)
 {
     auto cos_v_n = myvec::dot(v, macro_normal);

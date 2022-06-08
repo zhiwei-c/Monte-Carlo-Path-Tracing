@@ -6,14 +6,14 @@ class ShapeBvh
 {
 public:
     __device__ ShapeBvh()
-        : leaf_(true), aabb_(AABB()), shape_idx_(kUintMax), bvh_root_(nullptr), area_(0),
-          left_(nullptr), right_(nullptr), pre_(nullptr), next_(nullptr)
+        : leaf_(true), aabb_(AABB()), shape_idx_(kUintMax), bvh_root_(nullptr), area_(0), left_(nullptr), right_(nullptr),
+          pre_(nullptr), next_(nullptr)
     {
     }
 
     __device__ ShapeBvh(const AABB &aabb, Float area, ShapeBvh *left, ShapeBvh *right)
-        : leaf_(false), aabb_(aabb), shape_idx_(kUintMax), bvh_root_(nullptr), area_(area),
-          left_(left), right_(right), pre_(nullptr), next_(nullptr)
+        : leaf_(false), aabb_(aabb), shape_idx_(kUintMax), bvh_root_(nullptr), area_(area), left_(left), right_(right),
+          pre_(nullptr), next_(nullptr)
     {
     }
 
@@ -28,16 +28,6 @@ public:
         right_ = nullptr;
         pre_ = pre;
         next_ = next;
-    }
-
-    __device__ bool Leaf()
-    {
-        return leaf_;
-    }
-
-    __device__ bool IntersectAabb(const Ray &ray)
-    {
-        return aabb_.Intersect(ray);
     }
 
     __device__ void Intersect(const Ray &ray, const vec2 &sample, Intersection &its) const
@@ -79,6 +69,10 @@ public:
         }
         now->SampleP(its, sample);
     }
+
+    __device__ bool IntersectAabb(const Ray &ray) { return aabb_.Intersect(ray); }
+
+    __device__ bool Leaf() { return leaf_; }
 
     __device__ const AABB &aabb() const { return aabb_; }
 

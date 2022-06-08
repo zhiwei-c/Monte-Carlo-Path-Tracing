@@ -1,4 +1,4 @@
-#include "image_writer.h"
+#include "image_io.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>

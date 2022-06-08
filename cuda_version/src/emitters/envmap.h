@@ -77,8 +77,6 @@ __global__ inline void CreateEnvMap(Float pdf_area, gmat4 *to_local, uint radian
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {
-        envmap->InitEnvMap(pdf_area,
-                           to_local,
-                           texture_list + radiance_idx);
+        envmap->InitEnvMap(pdf_area, to_local, texture_list + radiance_idx);
     }
 }

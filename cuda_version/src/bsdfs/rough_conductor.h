@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../core/bsdf.h"
-#include"../core/kulla_conty.h"
+#include "../core/kulla_conty.h"
 
 ///\brief 粗糙的导体材质派生类
 class RoughConductor : public Bsdf
@@ -24,13 +24,11 @@ public:
      * @param kulla_conty_lut Kulla-Conty 补偿散射能量查找表
      * @param albedo_avg 平均反照率
      */
-    __device__ RoughConductor(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
-                              bool mirror, vec3 eta, vec3 k, Texture *specular_reflectance,
-                              MicrofacetDistribType distri, Texture *alpha_u, Texture *alpha_v,
+    __device__ RoughConductor(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map, bool mirror, vec3 eta, vec3 k,
+                              Texture *specular_reflectance, MicrofacetDistribType distri, Texture *alpha_u, Texture *alpha_v,
                               float *kulla_conty_lut, float albedo_avg)
-        : Bsdf(idx, kRoughConductor, twosided, bump_map, opacity_map),
-          mirror_(mirror), eta_(eta), k_(k), specular_reflectance_(specular_reflectance),
-          distri_(distri), alpha_u_(alpha_u), alpha_v_(alpha_v), albedo_avg_(-1),
+        : Bsdf(idx, kRoughConductor, twosided, bump_map, opacity_map), mirror_(mirror), eta_(eta), k_(k),
+          specular_reflectance_(specular_reflectance), distri_(distri), alpha_u_(alpha_u), alpha_v_(alpha_v), albedo_avg_(-1),
           kulla_conty_lut_(nullptr), f_add_(vec3(0))
     {
         if (albedo_avg < 0)

@@ -18,10 +18,10 @@ public:
      * @param k 复数折射率的虚部（消光系数）
      * @param specular_reflectance 镜面反射系数 （注意：对于物理真实感绘制，默认为 1，表示为空指针，不应更改此参数）
      */
-    __device__ Conductor(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map,
-                         bool mirror, vec3 eta, vec3 k, Texture *specular_reflectance)
-        : Bsdf(idx, kConductor, twosided, bump_map, opacity_map),
-          mirror_(mirror), eta_(eta), k_(k), specular_reflectance_(specular_reflectance)
+    __device__ Conductor(uint idx, bool twosided, Texture *bump_map, Texture *opacity_map, bool mirror, vec3 eta, vec3 k,
+                         Texture *specular_reflectance)
+        : Bsdf(idx, kConductor, twosided, bump_map, opacity_map), mirror_(mirror), eta_(eta), k_(k),
+          specular_reflectance_(specular_reflectance)
     {
     }
 
@@ -46,7 +46,7 @@ public:
             return;
         rec.pdf = 1;
         rec.valid = true;
-        
+
         rec.attenuation = vec3(1);
         if (specular_reflectance_)
             rec.attenuation = specular_reflectance_->Color(rec.texcoord);
@@ -83,6 +83,6 @@ __device__ inline void InitConductor(size_t m_idx, BsdfInfo *bsdf_info_list, Tex
         specular_reflectance = texture_list + bsdf_info_list[m_idx].specular_reflectance_idx;
 
     bsdf_list[m_idx] = new Conductor(m_idx, bsdf_info_list[m_idx].twosided, bump_map, opacity_map,
-                                         bsdf_info_list[m_idx].mirror, bsdf_info_list[m_idx].eta,
-                                         bsdf_info_list[m_idx].k, specular_reflectance);
+                                     bsdf_info_list[m_idx].mirror, bsdf_info_list[m_idx].eta,
+                                     bsdf_info_list[m_idx].k, specular_reflectance);
 }

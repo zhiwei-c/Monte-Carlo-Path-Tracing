@@ -1,11 +1,11 @@
-#pragma once
+#include "../model_loader.h"
 
-#include "../../core/shape.h"
+constexpr uint phi_steps = 40;
 
-inline void LoadDisk(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
+void LoadDisk(ShapeInfo *shape_info, bool bump_mapping, std::vector<Vertex> &vertex_list, std::vector<uvec3> &idx_list)
 {
-    gmat4* to_world_pos = nullptr,
-        * to_world_norm = nullptr;
+    gmat4 *to_world_pos = nullptr,
+          *to_world_norm = nullptr;
     auto to_world = shape_info->to_world;
     if (to_world != nullptr)
     {
@@ -19,7 +19,6 @@ inline void LoadDisk(ShapeInfo *shape_info, bool bump_mapping, std::vector<Verte
         normal = TransfromDir(*to_world_norm, normal);
     normal = normal;
 
-    const uint phi_steps = 40;
     const Float d_phi = (2.0 * kPi) / (phi_steps - 1);
 
     auto vector = gvec3(0);
