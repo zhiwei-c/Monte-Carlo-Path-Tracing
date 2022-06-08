@@ -1,4 +1,4 @@
-This is the Mitsuba version of 'Veach, Ajar' by Benedikt Bitterli, downloaded from https://benedikt-bitterli.me/resources/
+This is edited from the Mitsuba version of 'Veach, Ajar' by Benedikt Bitterli, downloaded from https://benedikt-bitterli.me/resources/
 
 The original file may be obtained here: https://benedikt-bitterli.me/resources
 

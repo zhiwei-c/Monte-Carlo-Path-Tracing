@@ -14,8 +14,8 @@
 			<integer name="sampleCount" value="4" />
 		</sampler>
 		<film type="ldrfilm" >
-			<integer name="width" value="3840" />
-			<integer name="height" value="2160" />
+			<integer name="width" value="5120" />
+			<integer name="height" value="2880" />
 			<string name="fileFormat" value="png" />
 			<string name="pixelFormat" value="rgb" />
 			<float name="gamma" value="2.2" />
@@ -114,10 +114,10 @@
 			<rgb name="k" value="9.22387, 6.26952, 4.837"/>
 		</bsdf>
 	</bsdf>
-	<bsdf type="roughdielectric" id="Material" >
+	<bsdf type="roughdielectric" id="Pot1" >
 		<float name="intIOR" value="1.5" />
 		<float name="extIOR" value="1" />
-		<float name="alpha" value="0.001" />
+		<float name="alpha" value="0.01" />
 		<string name="distribution" value="ggx" />
 	</bsdf>
 	<bsdf type="twosided" id="Pot3" >
@@ -286,13 +286,13 @@
 		<transform name="toWorld" >
 			<matrix value="-0.0837611 0 0.0303939 -1.95645 0 0.0891049 0 0.651268 -0.0303939 0 -0.0837611 -3.57687 0 0 0 1"/>
 		</transform>
-		<ref id="Material" />
+		<ref id="Pot1" />
 	</shape>
 	<shape type="obj" >
 		<string name="filename" value="models/Mesh000.obj" />
 		<transform name="toWorld" >
 			<matrix value="-0.083761 0 0.0303938 -1.95645 0 0.0891049 0 0.651268 -0.0303938 0 -0.083761 -3.57687 0 0 0 1"/>
 		</transform>
-		<ref id="Material" />
+		<ref id="Pot1" />
 	</shape>
 </scene>
