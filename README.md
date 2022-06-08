@@ -45,7 +45,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 | 3840*2160 分辨率，<br />4 spp  | ![ajar, path tracing, 4 spp](resources/rendering_results/ajar-path-4_spp.png)   | ![ajar, Bidirectional Path Tracing, 4 spp](resources/rendering_results/ajar-bdpt-4_spp.png)   |
 | 960*960 分辨率，<br />64 spp | ![bidir, path tracing, 64 spp](resources/rendering_results/bidir-path-64_spp.png) | ![bidir, Bidirectional Path Tracing, 64 spp](resources/rendering_results/bidir-bdpt-64_spp.png) |
 
-### 1.3 表面散射模型（Surface Scattering Models）和参与介质（Multiple Importance Sampling）
+### 1.3 表面散射模型（Surface Scattering Models）和参与介质（Participating Media）
 
 左图场景中不存在参与介质，而右图场景中部分区域弥漫着各向同性相函数描述的参与介质。左图绘制参数 [1024*1024 分辨率，64 spp](resources/rendering_resources/veach-caustic/scene_without_participating_media.xml)，右图绘制参数 [1024*1024 分辨率，1024 spp](resources/rendering_resources/veach-caustic/scene.xml)。
 
