@@ -45,8 +45,13 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 | 3840*2160 分辨率，<br />4 spp  | ![ajar, path tracing, 4 spp](resources/rendering_results/ajar-path-4_spp.png)   | ![ajar, Bidirectional Path Tracing, 4 spp](resources/rendering_results/ajar-bdpt-4_spp.png)   |
 | 960*960 分辨率，<br />64 spp | ![bidir, path tracing, 64 spp](resources/rendering_results/bidir-path-64_spp.png) | ![bidir, Bidirectional Path Tracing, 64 spp](resources/rendering_results/bidir-bdpt-64_spp.png) |
 
-### 1.3 多重重要性抽样（Multiple Importance Sampling）
+### 1.3 表面散射模型（Surface Scattering Models）和参与介质（Multiple Importance Sampling）
 
+左图场景中不存在参与介质，而右图场景中部分区域弥漫着各向同性相函数描述的参与介质。左图绘制参数 [1024*1024 分辨率，64 spp](resources/rendering_resources/veach-caustic/scene_without_participating_media.xml)，右图绘制参数 [1024*1024 分辨率，1024 spp](resources/rendering_resources/veach-caustic/scene.xml)。
+
+![volumetric-caustic, path tracing](resources/rendering_results/volumetric-caustic.png)
+
+### 1.4 多重重要性抽样（Multiple Importance Sampling）
 
 - [1280*720 分辨率，64 spp](resources/rendering_resources/veach-mis/scene.xml)
 
@@ -105,7 +110,19 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
   [左图配置](resources/rendering_resources/mercury/scene_smooth.xml)，[右图配置](resources/rendering_resources/mercury/scene_rough.xml)。
 
-### 2.3 其它
+### 2.3 参与介质（Participating Media）
+
+- [各向同性相函数（Isotropic Phase Function）](cpu_version/src/phase_function/isotropic.h)描述的参与介质，模仿 [mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#isotropic-phase-function-isotropic)；
+
+  ![volumetric-caustic, path tracing](resources/rendering_results/volumetric-caustic.png)
+
+  左图场景中不存在参与介质，而右图场景中部分区域弥漫着各向同性相函数描述的参与介质。
+
+  [左图配置](resources/rendering_resources/veach-caustic/scene_without_participating_media.xml)， [右图配置](resources/rendering_resources/veach-caustic/scene.xml)。
+
+- [亨尼-格林斯坦相函数（Henyey-Greenstein Phase Function）](cpu_version/src/phase_function/henyey_greenstein.h)描述的参与介质，模仿 [mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#henyey-greenstein-phase-function-hg)；
+
+### 2.4 其它
 
 - [使用Kulla和Conty提出的方法](https://fpsunflower.github.io/ckulla/data/s2017_pbs_imageworks_slides_v2.pdf)，尝试补上[微表面模型](https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf)没有建模的，微表面之间的多重散射；
 
