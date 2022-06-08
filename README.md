@@ -47,7 +47,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 ### 1.3 表面散射模型（Surface Scattering Models）和参与介质（Participating Media）
 
-左图场景中不存在参与介质，而右图场景中部分区域弥漫着各向同性相函数描述的参与介质。左图绘制参数 [1024*1024 分辨率，64 spp](resources/rendering_resources/veach-caustic/scene_without_participating_media.xml)，右图绘制参数 [1024*1024 分辨率，1024 spp](resources/rendering_resources/veach-caustic/scene.xml)。
+左图场景中不存在参与介质，而右图场景中部分区域弥漫着各向同性相函数描述的参与介质。左图绘制参数 [1024*1024 分辨率，64 spp](resources/rendering_resources/volumetric-caustic/scene_without_participating_media.xml)，右图绘制参数 [1024*1024 分辨率，1024 spp](resources/rendering_resources/volumetric-caustic/scene.xml)。
 
 ![volumetric-caustic, path tracing](resources/rendering_results/volumetric-caustic.png)
 
@@ -118,7 +118,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
   左图场景中不存在参与介质，而右图场景中部分区域弥漫着各向同性相函数描述的参与介质。
 
-  [左图配置](resources/rendering_resources/veach-caustic/scene_without_participating_media.xml)， [右图配置](resources/rendering_resources/veach-caustic/scene.xml)。
+  [左图配置](resources/rendering_resources/volumetric-caustic/scene_without_participating_media.xml)， [右图配置](resources/rendering_resources/volumetric-caustic/scene.xml)。
 
 - [亨尼-格林斯坦相函数（Henyey-Greenstein Phase Function）](cpu_version/src/phase_function/henyey_greenstein.h)描述的参与介质，模仿 [mitsuba 相应的材质](https://mitsuba2.readthedocs.io/en/latest/generated/plugins.html#henyey-greenstein-phase-function-hg)；
 
