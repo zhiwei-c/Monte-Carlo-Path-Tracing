@@ -158,7 +158,8 @@ __device__ inline Float AverageFresnel(Float eta)
              inv_eta_3 = inv_eta_2 * inv_eta,
              inv_eta_4 = inv_eta_3 * inv_eta,
              inv_eta_5 = inv_eta_4 * inv_eta;
-        return 0.919317 - 3.4793 * inv_eta + 6.75335 * inv_eta_2 - 7.80989 * inv_eta_3 + 4.98554 * inv_eta_4 - 1.36881 * inv_eta_5;
+        return 0.919317 - 3.4793 * inv_eta + 6.75335 * inv_eta_2 - 7.80989 * inv_eta_3 +
+               4.98554 * inv_eta_4 - 1.36881 * inv_eta_5;
     }
 }
 /**
@@ -189,6 +190,6 @@ __device__ inline void IorToReflectivityEdgetint(const vec3 &eta,
 ///\brief 导体材质的平均菲涅尔系数，https://blog.selfshadow.com/publications/s2017-shading-course/imageworks/s2017_pbs_imageworks_slides_v2.pdf
 __device__ inline vec3 AverageFresnelConductor(const vec3 &r, const vec3 &g)
 {
-    return vec3(0.087237) + 0.0230685 * g - 0.0864902 * g * g + 0.0774594 * g * g * g + 0.782654 * r - 0.136432 * r * r + 0.278708 * r * r * r + 0.19744 * g * r + 0.0360605 * g * g * r - 0.2586 * g * r * r;
+    return vec3(0.087237) + 0.0230685 * g - 0.0864902 * g * g + 0.0774594 * g * g * g + 0.782654 * r - 0.136432 * r * r +
+           0.278708 * r * r * r + 0.19744 * g * r + 0.0360605 * g * g * r - 0.2586 * g * r * r;
 }
-

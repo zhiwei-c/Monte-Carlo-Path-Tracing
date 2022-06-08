@@ -23,36 +23,35 @@ class Texture
 {
 public:
     __device__ Texture()
-        : type_(kNoneTexture),
-          width_(0),
-          height_(0),
-          channel_(0),
-          color_(vec3(0)),
-          colors_(nullptr) {}
+        : type_(kNoneTexture), width_(0), height_(0), channel_(0), color_(vec3(0)), colors_(nullptr)
+    {
+    }
 
     __device__ vec3 Color(const vec2 &texcoord) const;
 
     __device__ vec2 Gradient(const vec2 &texcoord) const;
 
     __device__ bool Transparent(const vec2 &texcoord, Float sample) const;
-    
+
     __device__ bool IsBitmap() const { return type_ == kBitmap; }
 
     __device__ bool Varying() const { return type_ != kConstant; }
 
     __device__ void InitConstant(const vec3 &color);
+
     __device__ void InitBitmap(int width, int height, int channel, float *colors);
 
 private:
+    __device__ Float GetNorm(const vec2 &coord, int offset_x, int offset_y) const;
+
+    __device__ vec3 ColorBitmap(const vec2 &texcoord) const;
+
+    __device__ vec2 GradientBitmap(const vec2 &texcoord) const;
+
     TextureType type_;
     int width_;
     int height_;
     int channel_;
     vec3 color_;
     float *colors_;
-
-    __device__ Float GetNorm(const vec2 &coord, int offset_x, int offset_y) const;
-
-    __device__ vec3 ColorBitmap(const vec2 &texcoord) const;
-    __device__ vec2 GradientBitmap(const vec2 &texcoord) const;
 };

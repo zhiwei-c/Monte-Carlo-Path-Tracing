@@ -18,13 +18,11 @@ public:
 class Mesh
 {
 public:
-    __device__ Mesh() : mesh_idx_in_shape_(kUintMax),
-                        shape_idx_(kUintMax),
-                        flip_normals_(false),
-                        bsdf_(nullptr),
-                        pdf_area_(0),
-                        pre_(nullptr),
-                        next_(nullptr) {}
+    __device__ Mesh()
+        : mesh_idx_in_shape_(kUintMax), shape_idx_(kUintMax), flip_normals_(false), bsdf_(nullptr),
+          pdf_area_(0), pre_(nullptr), next_(nullptr)
+    {
+    }
 
     __device__ void InitTriangle(Vertex *v, Bsdf **bsdf, Float area, Mesh *pre, Mesh *next);
 

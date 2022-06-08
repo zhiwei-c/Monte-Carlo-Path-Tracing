@@ -11,10 +11,7 @@
 #include "../bsdfs/plastic.h"
 #include "../bsdfs/rough_plastic.h"
 
-__global__ void CreateBsdfs(uint bsdf_num,
-                                BsdfInfo *bsdf_info_list,
-                                Texture *texture_list,
-                                Bsdf **bsdf_list)
+__global__ void CreateBsdfs(uint bsdf_num, BsdfInfo *bsdf_info_list, Texture *texture_list, Bsdf **bsdf_list)
 {
     if (threadIdx.x != 0 && blockIdx.x != 0)
         return;
@@ -54,14 +51,13 @@ __global__ void CreateBsdfs(uint bsdf_num,
     }
 }
 
-
 __global__ void FreeBsdfs(uint bsdf_num,
-                                Bsdf **bsdf_list)
+                          Bsdf **bsdf_list)
 {
     if (threadIdx.x != 0 && blockIdx.x != 0)
         return;
-        
-    for(uint i = 0; i < bsdf_num; i++)
+
+    for (uint i = 0; i < bsdf_num; i++)
     {
         delete bsdf_list[i];
         bsdf_list[i] = nullptr;

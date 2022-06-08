@@ -26,40 +26,22 @@ struct ShapeInfo
     std::string filename;
     gmat4 *to_world;
 
-    ShapeInfo(const std::string &filename,
-              bool face_normals,
-              bool flip_normals,
-              bool flip_tex_coords,
-              gmat4 *to_world,
-              uint bsdf_idx)
-        : type(kMeshes),
-          filename(filename),
-          face_normals(face_normals),
-          flip_normals(flip_normals),
-          flip_tex_coords(flip_tex_coords),
-          to_world(to_world),
-          bsdf_idx(bsdf_idx) {}
+    ShapeInfo(const std::string &filename, bool face_normals, bool flip_normals, bool flip_tex_coords,
+              gmat4 *to_world, uint bsdf_idx)
+        : type(kMeshes), filename(filename), face_normals(face_normals), flip_normals(flip_normals),
+          flip_tex_coords(flip_tex_coords), to_world(to_world), bsdf_idx(bsdf_idx)
+    {
+    }
 
-    ShapeInfo(vec3 center,
-              Float radius,
-              bool flip_normals,
-              gmat4 *to_world,
-              uint bsdf_idx)
-        : type(kSphere),
-          center(center),
-          radius(radius),
-          flip_normals(flip_normals),
-          to_world(to_world),
-          bsdf_idx(bsdf_idx) {}
+    ShapeInfo(vec3 center, Float radius, bool flip_normals, gmat4 *to_world, uint bsdf_idx)
+        : type(kSphere), center(center), radius(radius), flip_normals(flip_normals), to_world(to_world), bsdf_idx(bsdf_idx)
+    {
+    }
 
-    ShapeInfo(ShapeType type,
-              bool flip_normals,
-              gmat4 *to_world,
-              uint bsdf_idx)
-        : type(type),
-          flip_normals(flip_normals),
-          to_world(to_world),
-          bsdf_idx(bsdf_idx) {}
+    ShapeInfo(ShapeType type, bool flip_normals, gmat4 *to_world, uint bsdf_idx)
+        : type(type), flip_normals(flip_normals), to_world(to_world), bsdf_idx(bsdf_idx)
+    {
+    }
 
     ~ShapeInfo()
     {

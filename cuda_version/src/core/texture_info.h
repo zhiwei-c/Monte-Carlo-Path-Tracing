@@ -49,33 +49,22 @@ struct TextureInfo
     std::string filename;
 
     TextureInfo(Float color)
-        : type(kConstant),
-          width(1),
-          height(1),
-          channel(3),
-          color(vec3(color)) {}
+        : type(kConstant), width(1), height(1), channel(3), color(vec3(color))
+    {
+    }
 
     TextureInfo(const vec3 &color)
-        : type(kConstant),
-          width(1),
-          height(1),
-          channel(3),
-          color(color) {}
+        : type(kConstant), width(1), height(1), channel(3), color(color)
+    {
+    }
 
     TextureInfo(const std::string &filename, Float gamma)
         : type(kBitmap), filename(filename)
     {
         auto suffix = GetSuffix(filename);
-        auto stb_input_format = std::set<std::string>{"jpg", "jpeg", "JPG", "JPEG",
-                                                    "png", "PNG",
-                                                    "tga", "TGA",
-                                                    "bmp", "BMP",
-                                                    "psd", "PSD",
-                                                    "gif", "GIF",
-                                                    "hdr", "HDR",
-                                                    "pic", "PIC",
-                                                    "pgm", "PGM",
-                                                    "ppm", "PPM"};
+        auto stb_input_format = std::set<std::string>{"jpg", "jpeg", "JPG", "JPEG", "png", "PNG", "tga", "TGA",
+                                                      "bmp", "BMP", "psd", "PSD", "gif", "GIF", "hdr", "HDR",
+                                                      "pic", "PIC", "pgm", "PGM", "ppm", "PPM"};
         if (stb_input_format.find(suffix) != stb_input_format.end())
         {
             if (auto data = stbi_load(filename.c_str(), &width, &height, &channel, 0);
@@ -98,8 +87,8 @@ struct TextureInfo
         }
         else if (suffix == "exr")
         {
-            float* data = nullptr;
-            const char* err = nullptr;
+            float *data = nullptr;
+            const char *err = nullptr;
             int ret = LoadEXR(&data, &width, &height, filename.c_str(), &err);
             channel = 4;
             if (ret != TINYEXR_SUCCESS)

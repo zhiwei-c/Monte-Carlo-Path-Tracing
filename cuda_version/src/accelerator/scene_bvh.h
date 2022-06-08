@@ -17,7 +17,7 @@ public:
         ShapeBvh *node_stack[64] = {nullptr};
         node_stack[0] = bvh_root_;
         int ptr = 0;
-        ShapeBvh* now = nullptr;
+        ShapeBvh *now = nullptr;
         while (ptr >= 0)
         {
             now = node_stack[ptr];
@@ -52,12 +52,8 @@ __global__ void CreateSceneBvh(ShapeBvh *bvh_root, SceneBvh *scene_bvh)
     }
 }
 
-__global__ void CreateSceneBvhNodes(uint max_x,
-                                    uint max_y,
-                                    uint scenebvh_node_num,
-                                    ShapeBvh *shapebvh_list,
-                                    BvhNodeInfo *scenebvh_info_list,
-                                    ShapeBvh *scenebvh_node_list)
+__global__ void CreateSceneBvhNodes(uint max_x, uint max_y, uint scenebvh_node_num, ShapeBvh *shapebvh_list,
+                                    BvhNodeInfo *scenebvh_info_list, ShapeBvh *scenebvh_node_list)
 {
     auto i = threadIdx.x + blockIdx.x * blockDim.x;
     auto j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -76,8 +72,7 @@ __global__ void CreateSceneBvhNodes(uint max_x,
     if (scenebvh_info_list[idx].leaf)
         scenebvh_node_list[node_idx] = shapebvh_list[scenebvh_info_list[idx].obj_idx];
     else
-        scenebvh_node_list[node_idx] = ShapeBvh(scenebvh_info_list[idx].aabb,
-                                                scenebvh_info_list[idx].area,
+        scenebvh_node_list[node_idx] = ShapeBvh(scenebvh_info_list[idx].aabb, scenebvh_info_list[idx].area,
                                                 scenebvh_node_list + scenebvh_info_list[idx].left_idx,
                                                 scenebvh_node_list + scenebvh_info_list[idx].right_idx);
 }

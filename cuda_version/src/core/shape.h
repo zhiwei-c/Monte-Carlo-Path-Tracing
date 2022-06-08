@@ -2,16 +2,8 @@
 
 #include "../shapes/triangle.h"
 
-__global__ void CreateMeshes(uint max_x,
-                             uint max_y,
-                             uint mesh_num,
-                             Vertex *v_buffer,
-                             uvec3 *i_buffer,
-                             uint *m_idx,
-                             Bsdf **bsdfs,
-                             AABB *mesh_aabbs,
-                             Float *mesh_areas,
-                             Mesh *mesh_list)
+__global__ void CreateMeshes(uint max_x, uint max_y, uint mesh_num, Vertex *v_buffer, uvec3 *i_buffer, uint *m_idx,
+                             Bsdf **bsdfs, AABB *mesh_aabbs, Float *mesh_areas, Mesh *mesh_list)
 {
     auto i = threadIdx.x + blockIdx.x * blockDim.x;
     auto j = threadIdx.y + blockIdx.y * blockDim.y;
@@ -30,28 +22,21 @@ __global__ void CreateMeshes(uint max_x,
         mesh_aabbs[idx] += v[k].position;
     }
 
-    Mesh* pre = nullptr;
+    Mesh *pre = nullptr;
     if (idx > 0)
         pre = mesh_list + idx - 1;
 
-    Mesh* next = nullptr;
+    Mesh *next = nullptr;
     if (idx + 1 < mesh_num)
         next = mesh_list + idx + 1;
 
-    mesh_areas[idx] = myvec::length(myvec::cross(v[1].position - v[0].position, v[2].position - v[0].position)) * static_cast<Float>(0.5);
-    mesh_list[idx].InitTriangle(v,
-                                bsdfs + m_idx[idx],
-                                mesh_areas[idx],
-                                pre,
-                                next);
+    mesh_areas[idx] = myvec::length(myvec::cross(v[1].position - v[0].position, v[2].position - v[0].position)) *
+                      static_cast<Float>(0.5);
+    mesh_list[idx].InitTriangle(v, bsdfs + m_idx[idx], mesh_areas[idx], pre, next);
 }
 
-__global__ void SetMeshesOtherInfo(uint mesh_idx_begin,
-                                   uint mesh_num,
-                                   uint shape_idx,
-                                   bool flip_normals,
-                                   Float shape_area,
-                                   Mesh *mesh_list_)
+__global__ void SetMeshesOtherInfo(uint mesh_idx_begin, uint mesh_num, uint shape_idx, bool flip_normals,
+                                   Float shape_area, Mesh *mesh_list_)
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {

@@ -35,12 +35,7 @@ __device__ vec2 Texture::GradientBitmap(const vec2 &texcoord) const
     return vec2(du, dv);
 }
 
-__global__ void InitBitmapTexture(uint idx,
-                                  int width,
-                                  int height,
-                                  int channel,
-                                  float *colors,
-                                  Texture *texture_list)
+__global__ void InitBitmapTexture(uint idx, int width, int height, int channel, float *colors, Texture *texture_list)
 {
     if (threadIdx.x == 0 && blockIdx.x == 0)
     {

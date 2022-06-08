@@ -34,10 +34,8 @@ inline uint BvhNodeNum(uint num)
     return static_cast<uint>(pow(2, height)) - 1;
 }
 
-inline void MergeShapesInfo(uint begin, uint end,
-                            const std::vector<uint> &shape_idx_list,
-                            const std::vector<BvhNodeInfo> &shape_info_list,
-                            AABB &aabb, Float &area)
+inline void MergeShapesInfo(uint begin, uint end, const std::vector<uint> &shape_idx_list,
+                            const std::vector<BvhNodeInfo> &shape_info_list, AABB &aabb, Float &area)
 {
     if (begin + 1 == end)
     {
@@ -56,8 +54,7 @@ inline void MergeShapesInfo(uint begin, uint end,
 }
 
 inline void BuildSceneBvhInfo(uint bvhnode_idx, uint begin, uint end, std::vector<uint> &shape_idx_list,
-                              const std::vector<BvhNodeInfo> &shape_info_list,
-                              std::vector<BvhNodeInfo> &bvhnode_info_list)
+                              const std::vector<BvhNodeInfo> &shape_info_list, std::vector<BvhNodeInfo> &bvhnode_info_list)
 {
     if (begin + 1 > end)
         return;
@@ -103,10 +100,8 @@ inline void BuildSceneBvhInfo(uint bvhnode_idx, uint begin, uint end, std::vecto
                                                  aabb_now, kUintMax, area_now);
 }
 
-inline void MergeMeshesInfo(uint begin, uint end,
-                            const std::vector<uint> &scene_mesh_idx_list,
-                            const std::vector<AABB> &scene_mesh_aabb_list,
-                            const std::vector<Float> &scene_mesh_area_list,
+inline void MergeMeshesInfo(uint begin, uint end, const std::vector<uint> &scene_mesh_idx_list,
+                            const std::vector<AABB> &scene_mesh_aabb_list, const std::vector<Float> &scene_mesh_area_list,
                             AABB &aabb, Float &area)
 {
     if (begin + 1 == end)
@@ -120,29 +115,13 @@ inline void MergeMeshesInfo(uint begin, uint end,
     else
     {
         auto mid = (begin + end) / 2;
-        MergeMeshesInfo(begin,
-                        mid,
-                        scene_mesh_idx_list,
-                        scene_mesh_aabb_list,
-                        scene_mesh_area_list,
-                        aabb,
-                        area);
-        MergeMeshesInfo(mid,
-                        end,
-                        scene_mesh_idx_list,
-                        scene_mesh_aabb_list,
-                        scene_mesh_area_list,
-                        aabb,
-                        area);
+        MergeMeshesInfo(begin, mid, scene_mesh_idx_list, scene_mesh_aabb_list, scene_mesh_area_list, aabb, area);
+        MergeMeshesInfo(mid, end, scene_mesh_idx_list, scene_mesh_aabb_list, scene_mesh_area_list, aabb, area);
     }
 }
 
-inline void BuildShapeBvhInfo(uint bvhnode_idx,
-                              uint begin,
-                              uint end,
-                              std::vector<uint> &scene_mesh_idx_list,
-                              const std::vector<AABB> &scene_mesh_aabb_list,
-                              const std::vector<Float> &scene_mesh_area_list,
+inline void BuildShapeBvhInfo(uint bvhnode_idx, uint begin, uint end, std::vector<uint> &scene_mesh_idx_list,
+                              const std::vector<AABB> &scene_mesh_aabb_list, const std::vector<Float> &scene_mesh_area_list,
                               std::vector<BvhNodeInfo> &bvhnode_info_list)
 {
     if (begin + 1 > end)
@@ -159,31 +138,24 @@ inline void BuildShapeBvhInfo(uint bvhnode_idx,
 
     auto aabb_now = AABB();
     auto area_now = static_cast<Float>(0);
-    MergeMeshesInfo(begin, end, scene_mesh_idx_list, scene_mesh_aabb_list, scene_mesh_area_list,
-                    aabb_now, area_now);
+    MergeMeshesInfo(begin, end, scene_mesh_idx_list, scene_mesh_aabb_list, scene_mesh_area_list, aabb_now, area_now);
 
     auto length_x = aabb_now.max().x - aabb_now.min().x;
     auto length_y = aabb_now.max().y - aabb_now.min().y;
     auto length_z = aabb_now.max().z - aabb_now.min().z;
     if (length_x > length_y && length_x > length_z)
     {
-        std::sort(scene_mesh_idx_list.begin() + begin,
-                  scene_mesh_idx_list.begin() + end,
-                  [&](auto idx1, auto idx2)
+        std::sort(scene_mesh_idx_list.begin() + begin, scene_mesh_idx_list.begin() + end, [&](auto idx1, auto idx2)
                   { return scene_mesh_aabb_list[idx1].center().x < scene_mesh_aabb_list[idx2].center().x; });
     }
     else if (length_y > length_z)
     {
-        std::sort(scene_mesh_idx_list.begin() + begin,
-                  scene_mesh_idx_list.begin() + end,
-                  [&](auto idx1, auto idx2)
+        std::sort(scene_mesh_idx_list.begin() + begin, scene_mesh_idx_list.begin() + end, [&](auto idx1, auto idx2)
                   { return scene_mesh_aabb_list[idx1].center().y < scene_mesh_aabb_list[idx2].center().y; });
     }
     else
     {
-        std::sort(scene_mesh_idx_list.begin() + begin,
-                  scene_mesh_idx_list.begin() + end,
-                  [&](auto idx1, auto idx2)
+        std::sort(scene_mesh_idx_list.begin() + begin, scene_mesh_idx_list.begin() + end, [&](auto idx1, auto idx2)
                   { return scene_mesh_aabb_list[idx1].center().z < scene_mesh_aabb_list[idx2].center().z; });
     }
 

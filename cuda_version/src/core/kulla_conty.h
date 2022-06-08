@@ -16,11 +16,8 @@ __device__ inline vec3 HammersleyVec2(uint32_t i, uint32_t N)
     return vec3(Float(i) / Float(N), rdi, 0);
 }
 
-__device__ inline void CreateCosinAlbedoTexture(MicrofacetDistribType type,
-                                                Texture *alpha_u_texture,
-                                                Texture *alpha_v_texture,
-                                                float *&albedo,
-                                                float &albedo_avg)
+__device__ inline void CreateCosinAlbedoTexture(MicrofacetDistribType type, Texture *alpha_u_texture,
+                                                Texture *alpha_v_texture, float *&albedo, float &albedo_avg)
 {
     Float alpha_u = 0.1;
     if (alpha_u_texture)
@@ -55,19 +52,14 @@ __device__ inline void CreateCosinAlbedoTexture(MicrofacetDistribType type,
         {
             auto facet_normal = vec3(0);
             auto pdf = static_cast<Float>(0);
-            SampleNormDistrib(type, alpha_u, alpha_v,
-                              macro_normal, HammersleyVec2(i + 1, sample_count + 1),
+            SampleNormDistrib(type, alpha_u, alpha_v, macro_normal, HammersleyVec2(i + 1, sample_count + 1),
                               facet_normal, pdf);
             auto cos_m_o = glm::max(myvec::dot(wo, facet_normal), static_cast<Float>(0));
             auto cos_m_n = glm::max(myvec::dot(macro_normal, facet_normal), static_cast<Float>(0));
             auto wi = -Reflect(-wo, macro_normal);
 
-            auto G = SmithG1(type, alpha_u, alpha_v,
-                             -wi, vec3(0, 0, 1),
-                             facet_normal) *
-                     SmithG1(type, alpha_u, alpha_v,
-                             wo, vec3(0, 0, 1),
-                             facet_normal);
+            auto G = SmithG1(type, alpha_u, alpha_v, -wi, vec3(0, 0, 1), facet_normal) *
+                     SmithG1(type, alpha_u, alpha_v, wo, vec3(0, 0, 1), facet_normal);
             //重要性采样的微表面模型BSDF，并且菲涅尔项置为1（或0）
             albedo[j] += (cos_m_o * G / (cos_n_o * cos_m_n));
         }
@@ -85,8 +77,7 @@ __device__ inline void CreateCosinAlbedoTexture(MicrofacetDistribType type,
         {
             auto facet_normal = vec3(0);
             auto pdf = static_cast<Float>(0);
-            SampleNormDistrib(type, alpha_u, alpha_v,
-                              macro_normal, HammersleyVec2(i + 1, sample_count + 1),
+            SampleNormDistrib(type, alpha_u, alpha_v, macro_normal, HammersleyVec2(i + 1, sample_count + 1),
                               facet_normal, pdf);
             auto wi = -Reflect(-wo, facet_normal);
             auto cos_n_i = glm::max(myvec::dot(-wi, macro_normal), static_cast<Float>(0));

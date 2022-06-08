@@ -2,11 +2,7 @@
 
 #include "../core/shape_base.h"
 
-__device__ void Mesh::InitTriangle(Vertex *v,
-                                   Bsdf **bsdf,
-                                   Float area,
-                                   Mesh *pre,
-                                   Mesh *next)
+__device__ void Mesh::InitTriangle(Vertex *v, Bsdf **bsdf, Float area, Mesh *pre, Mesh *next)
 {
     for (int k = 0; k < 3; k++)
     {

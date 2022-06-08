@@ -30,8 +30,10 @@ struct SamplingRecord
   vec3 attenuation; // BSDF 光能衰减系数
 
   __device__ SamplingRecord()
-      : valid(false), inside(false), pdf(0), texcoord(vec2(0)), wi(vec3(0)), wo(vec3(0)),
-        pos(vec3(0)), normal(vec3(0)), attenuation(vec3(0)) {}
+      : valid(false), inside(false), pdf(0), texcoord(vec2(0)), wi(vec3(0)), wo(vec3(0)), pos(vec3(0)), normal(vec3(0)),
+        attenuation(vec3(0))
+  {
+  }
 };
 
 struct BsdfInfo
@@ -53,19 +55,10 @@ struct BsdfInfo
   bool nonlinear;
 
   __host__ __device__ BsdfInfo()
-      : type(kNoneBsdf),
-        twosided(false),
-        bump_map_idx(kUintMax),
-        opacity_idx(kUintMax),
-        mirror(true),
-        eta(vec3(1)),
-        k(vec3(0)),
-        radiance_idx(kUintMax),
-        diffuse_reflectance_idx(kUintMax),
-        specular_reflectance_idx(kUintMax),
-        specular_transmittance_idx(kUintMax),
-        distri(kNoneDistrib),
-        alpha_u_idx(kUintMax),
-        alpha_v_idx(kUintMax),
-        nonlinear(false) {}
+      : type(kNoneBsdf), twosided(false), bump_map_idx(kUintMax), opacity_idx(kUintMax), mirror(true), eta(vec3(1)),
+        k(vec3(0)), radiance_idx(kUintMax), diffuse_reflectance_idx(kUintMax), specular_reflectance_idx(kUintMax),
+        specular_transmittance_idx(kUintMax), distri(kNoneDistrib), alpha_u_idx(kUintMax), alpha_v_idx(kUintMax),
+        nonlinear(false)
+  {
+  }
 };
