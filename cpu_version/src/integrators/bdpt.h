@@ -15,7 +15,7 @@ struct PathVertex
     Spectrum L;           //在路径中的当前点，光线沿出射方向传递能量的数学期望
 
     PathVertex(Intersection its, Vector3 wi, Vector3 wo)
-        : its(its), wi(wi), wo(wo), pdf(-1), attenuation(Spectrum(0)), L(Spectrum(0))
+        : its(its), wi(wi), wo(wo), pdf(-1), attenuation(Spectrum(1)), L(Spectrum(0))
     {
     }
 };
@@ -35,11 +35,9 @@ public:
     ///\return 观察点来源于给定观察方向的辐射亮度
     Spectrum Shade(const Vector3 &eye_pos, const Vector3 &look_dir) const override
     {
-
+        const Vector3 &wo = -look_dir;
         auto its = Intersection();
-        bool hit_surface = this->bvh_ && this->bvh_->Intersect(Ray(eye_pos, look_dir), its);
-
-        if (!hit_surface)
+        if (!this->bvh_ || !this->bvh_->Intersect(Ray(eye_pos, look_dir), its))
         { //原初光线源于环境
             if (envmap_)
                 return envmap_->radiance(look_dir);
@@ -59,7 +57,7 @@ public:
             else //处理双向路径追踪算法
             {
                 std::vector<PathVertex> emitter_path = CreateEmitterPath();
-                std::vector<PathVertex> camera_path = CreateCameraPath(its, -look_dir);
+                std::vector<PathVertex> camera_path = CreateCameraPath(its, wo);
                 for (int c_idx = camera_path.size() - 1; c_idx >= 0; --c_idx)
                 {
                     const PathVertex &c = camera_path[c_idx];
@@ -74,7 +72,7 @@ public:
                     //来自前一个照相机路径的间接光照，是根据 BSDF 抽样产生的间接光照
                     if (c_idx < camera_path.size() - 1)
                     {
-                        L_indirect_bsdf = camera_path[c_idx + 1].L * c.attenuation / c.pdf;
+                        L_indirect_bsdf = camera_path[c_idx + 1].L * (c.attenuation / c.pdf);
                         Float pdf_indirect = c.pdf;
                         if (c_idx > rr_depth_)
                         {
@@ -94,8 +92,6 @@ public:
                         //来自光源路径的间接光照，是主动地抽样其它景物表面产生的间接光照
                         for (int e_idx = 1; e_idx < emitter_path.size(); e_idx++)
                         {
-                            if (max_depth_ > 0 && c_idx + e_idx + 2 > max_depth_)
-                                break;
                             if (emitter_path[e_idx].its.HarshLobe())
                                 continue;
 
@@ -143,10 +139,7 @@ private:
         {
             const PathVertex &e = emitter_path.back();
             its = Intersection();
-            bool hit_surface = this->bvh_ && this->bvh_->Intersect(Ray(e.its.pos(), e.wo), its);
-            if (!hit_surface)
-                break;
-            else if (its.absorb() || its.HasEmission())
+            if (!this->bvh_->Intersect(Ray(e.its.pos(), e.wo), its) || its.absorb() || its.HasEmission())
                 break;
             emitter_path.push_back({its, e.wo, Vector3(0)});
             depth += 1;
@@ -163,23 +156,30 @@ private:
             e_next.attenuation = bs_next.attenuation;
         }
 
+        //计算第1个光源路径点向第2个光源路径点传递的辐射亮度的数学期望
         PathVertex &e_first = emitter_path[0];
         e_first.L = e_first.its.radiance();
-        //第一个光源路径点 -> 第二个光源路径点 -> 第三个光源路径点，预计算第二个光源路径点传递的辐射亮度（光亮度）期望
+
+        //计算第2个光源路径点向第3个光源路径点传递的辐射亮度的数学期望
         if (emitter_path.size() > 2)
         {
             PathVertex &e_second = emitter_path[1];
             e_second.L = EmitterEnv2OneV(e_second);
         }
-        //第二个及之后的光源路径点 -> 下一个光源路径点 -> 下一个光源路径点，预计算传递的辐射亮度（光亮度）期望
+
+        //计算第3个及之后的光源路径点向下一个光源路径点传递辐射亮度的数学期望
         for (int i = 2; i < emitter_path.size() - 1; i++)
         {
+            //计算来自第前一个光源路径点的间接光照
             PathVertex &e_pre = emitter_path[i - 1];
             PathVertex &e = emitter_path[i];
-            Spectrum L_indirect = e_pre.L * e.attenuation / e.pdf;
+            Spectrum L_indirect = e_pre.L * (e.attenuation / e.pdf);
             if (i > rr_depth_)
                 L_indirect /= pdf_rr_;
+
+            //计算直接光照
             Spectrum L_direct_env = EmitterEnv2OneV(e, &e_first.its);
+
             e.L = L_indirect + L_direct_env;
         }
         return emitter_path;
@@ -200,10 +200,7 @@ private:
                 break;
 
             its_pre = Intersection();
-            bool hit_surface = this->bvh_ && this->bvh_->Intersect(Ray(b_rec.pos, -b_rec.wi), its_pre);
-            if (!hit_surface)
-                break;
-            else if (its_pre.absorb() || its_pre.HasEmission())
+            if (!this->bvh_->Intersect(Ray(b_rec.pos, -b_rec.wi), its_pre) || its_pre.absorb() || its_pre.HasEmission())
                 break;
 
             c.wi = b_rec.wi;
@@ -225,7 +222,7 @@ private:
         auto L_emitter = Spectrum(0),
              L_env = Spectrum(0);
 
-        //直接采样光源，并按多重重要性采样合并
+        //按面积直接采样光源，并按多重重要性采样合并
         if (!v.its.HarshLobe())
         {
             if (its_emitter_ptr)
@@ -240,26 +237,29 @@ private:
         SamplingRecord b_rec = v.its.Sample(wo);
         if (b_rec.type == ScatteringType::kNone)
             return L_emitter;
+        Spectrum local_attenuation = b_rec.attenuation / b_rec.pdf;
 
         auto its_pre = Intersection();
         if (!this->bvh_->Intersect(Ray(b_rec.pos, -b_rec.wi), its_pre))
-        {
-            if (envmap_ != nullptr) //按 BSDF 采样环境光
-                L_env = envmap_->radiance(-b_rec.wi) * b_rec.attenuation / b_rec.pdf;
+        { //按 BSDF 采样环境光
+            if (envmap_ != nullptr)
+            {
+                L_env = envmap_->radiance(-b_rec.wi) * local_attenuation;
+            }
         }
-        else if (!its_pre.absorb() && its_pre.HasEmission()) //按 BSDF 采样来自面光源的直接光照
-        {
+        else if (!its_pre.absorb() && its_pre.HasEmission())
+        { //按 BSDF 采样来自面光源的直接光照
             if (v.its.HarshLobe())
-                L_emitter += its_pre.radiance() * b_rec.attenuation / b_rec.pdf;
+                L_emitter += its_pre.radiance() * local_attenuation;
             else
             {
                 Float pdf_direct = PdfEmitterDirect(its_pre, b_rec.wi),
                       weight_bsdf = MisWeight(b_rec.pdf, pdf_direct);
-                L_emitter += weight_bsdf * its_pre.radiance() * b_rec.attenuation / b_rec.pdf;
+                L_emitter += weight_bsdf * its_pre.radiance() * local_attenuation;
             }
         }
-        auto res = L_emitter + L_env;
-        return res;
+        auto L_direct = L_emitter + L_env;
+        return L_direct;
     }
 
     ///\brief 第二个或之后的某个光源路径点 -> 某个相机路径点 -> 下一个相机路径点，计算辐射亮度（光亮度）的数学期望及概率
@@ -276,12 +276,14 @@ private:
         }
 
         //计算从当前光源路径点向相机路径点传播光线的方向
-        e.wo = glm::normalize(c.its.pos() - e.its.pos());
+        Vector3 ray_dir_vec = c.its.pos() - e.its.pos();
+        e.wo = glm::normalize(ray_dir_vec);
         c.wi = e.wo;
 
         SamplingRecord rec_now = c.its.Eval(c.wi, c.wo);
         if (rec_now.type == ScatteringType::kNone)
             return {Spectrum(0), 0};
+        Spectrum local_attenutation = rec_now.attenuation / rec_now.pdf;
 
         auto L_pre = Spectrum(0); //光源路径点向相机路径点传递辐射亮度的数学期望
 
@@ -293,7 +295,7 @@ private:
             SamplingRecord rec_pre = e.its.Eval(e.wi, e.wo);
             if (rec_pre.pdf > kEpsilonPdf2)
             {
-                Vector3 L_pre_indirect = e_pre.L * rec_pre.attenuation / rec_pre.pdf;
+                Vector3 L_pre_indirect = e_pre.L * (rec_pre.attenuation / rec_pre.pdf);
                 if (e_index - 1 > rr_depth_)
                     L_pre_indirect /= pdf_rr_;
                 L_pre += L_pre_indirect;
@@ -304,7 +306,7 @@ private:
             return {Spectrum(0), 0};
         }
 
-        auto L_indirect = L_pre * rec_now.attenuation / rec_now.pdf; //当前点接收间接光照的数学期望
+        auto L_indirect = L_pre * local_attenutation; //当前点接收间接光照的数学期望
         Float pdf_indirect = rec_now.pdf;
         if (e_index > rr_depth_)
         {

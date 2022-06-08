@@ -42,7 +42,7 @@ public:
             else
                 global_attenuation *= b_rec.attenuation / b_rec.pdf;
 
-            Medium *medium_now = its.medium(-b_rec.wi); //当前散射点是否在某个物体内部
+            Medium *medium_now = its.medium(-b_rec.wi);
             its = Intersection();
             bool hit_surface = this->bvh_ && this->bvh_->Intersect(Ray(b_rec.pos, -b_rec.wi), its); //光线是否可能源于景物表面
             auto max_distance = std::numeric_limits<Float>::infinity();                             //当前散射点距离可能的景物表面光线源头的距离

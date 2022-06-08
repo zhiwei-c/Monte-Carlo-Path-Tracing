@@ -101,7 +101,7 @@ protected:
         }
 
         SamplingRecord rec = its.Eval(wi, wo);
-        if (rec.pdf < kEpsilonPdf)
+        if (rec.type == ScatteringType::kNone)
             return false;
 
         Float pdf_area = its_pre.pdf_area() / this->emitters_.size(),
