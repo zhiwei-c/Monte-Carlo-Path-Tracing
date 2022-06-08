@@ -19,7 +19,9 @@ if(NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
     set(CMAKE_CUDA_ARCHITECTURES 75)
 endif()
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler \"/wd 4819\"")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler \"/wd 4819\"")
+endif()
 
 project(${PROJECT_NAME} LANGUAGES CUDA CXX)
 
@@ -32,25 +34,6 @@ file(GLOB CONFIG_PARSER_FILE "${PROJECT_SOURCE_DIR}/src/utils/config_parser/*.*"
 file(GLOB MATH_FILE "${PROJECT_SOURCE_DIR}/src/utils/math/*.*")
 file(GLOB MODEL_LOADER_FILE "${PROJECT_SOURCE_DIR}/src/utils/model_loader/*.*")
 file(GLOB UTILS_FILE "${PROJECT_SOURCE_DIR}/src/utils/*.*")
-
-# add_library(cuda_files STATIC "${PROJECT_SOURCE_DIR}/src/renderer.h"
-#                                 "${PROJECT_SOURCE_DIR}/src/renderer.cu"  
-#                                 ${ACCELERATOR_FILE}
-#                                 ${BSDFS_FILE}
-#                                 ${EMITTERS_FILE}
-#                                 ${SHAPES_FILE}
-#                                 ${CORE_FILE}
-#                                 ${CONFIG_PARSER_FILE}
-#                                 ${MATH_FILE}
-#                                 ${MODEL_LOADER_FILE}
-#                                 ${UTILS_FILE})
-
-# target_compile_features(cuda_files PUBLIC cxx_std_17)
-# set_target_properties(cuda_files PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-
-# add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/main.cu")
-# set_target_properties(${PROJECT_NAME} PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
-# target_link_libraries(${PROJECT_NAME} PRIVATE cuda_files)
 
 add_executable(${PROJECT_NAME} "${PROJECT_SOURCE_DIR}/src/main.cu"
                                 "${PROJECT_SOURCE_DIR}/src/renderer.h"

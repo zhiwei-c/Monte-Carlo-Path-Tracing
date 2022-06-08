@@ -1,5 +1,7 @@
 #include "xml_parser.h"
 
+#include <cstring>
+
 #include "../../core/ior.h"
 
 NAMESPACE_BEGIN(raytracer)

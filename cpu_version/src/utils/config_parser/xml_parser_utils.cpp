@@ -1,5 +1,7 @@
 #include "xml_parser.h"
 
+#include <cstring>
+
 NAMESPACE_BEGIN(raytracer)
 
 std::unique_ptr<Mat4> XmlParser::GetToWorld(rapidxml::xml_node<> *node_parent)
