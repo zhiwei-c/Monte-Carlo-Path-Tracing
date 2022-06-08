@@ -56,7 +56,7 @@ public:
     ///\return 交点处的物体表面的辐射亮度
     __device__ vec3 radiance() const { return (*bsdf_)->radiance(); }
 
-    __device__ bool HashLobe() const { return bsdf_ && (*bsdf_)->HarshLobe(); }
+    __device__ bool HashLobe() const { return !bsdf_ || bsdf_ && (*bsdf_)->HarshLobe(); }
 
     ///\brief 面元概率
     __device__ Float pdf_area() const { return pdf_area_; }

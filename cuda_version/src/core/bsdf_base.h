@@ -28,7 +28,7 @@ public:
 
     __device__ bool twosided() const { return twosided_; }
 
-    __device__ bool HarshLobe() const { return type_ == kConductor; }
+    __device__ bool HarshLobe() const { return type_ == kConductor || type_ == kAreaLight || type_ == kNoneBsdf; }
 
     __device__ bool BumpMapping() const { return bump_map_ != nullptr; }
 
