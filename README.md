@@ -10,13 +10,7 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 
 ## 1 Features
 
-### 1.1 表面散射模型（Surface Scattering Models）和参与介质（Participating Media）
-
-左图场景中不存在参与介质，而右图场景中部分区域弥漫着各向同性相函数描述的参与介质。左图绘制参数 [1024*1024 分辨率，64 spp](resources/rendering_resources/volumetric-caustic/scene_without_participating_media.xml)，右图绘制参数 [1024*1024 分辨率，1024 spp](resources/rendering_resources/volumetric-caustic/scene.xml)。
-
-![volumetric-caustic, path tracing](resources/rendering_results/volumetric-caustic.png)
-
-### 1.2 CUDA 加速计算
+### 1.1 CUDA 加速计算
 
 测试设备信息：
 
@@ -44,11 +38,17 @@ A simple Monte Carlo path tracer based on assignment 7 of [GAMES101]((https://si
 | 耗时  | 47 min 10s   | 33 min 42 s   |
 | 相对速度 | 1   | 1.4   |
 
+### 1.2 表面散射模型（Surface Scattering Models）和参与介质（Participating Media）
+
+左图场景中不存在参与介质，而右图场景中部分区域弥漫着各向同性相函数描述的参与介质。左图绘制参数 [1024*1024 分辨率，64 spp](resources/rendering_resources/volumetric-caustic/scene_without_participating_media.xml)，右图绘制参数 [1024*1024 分辨率，1024 spp](resources/rendering_resources/volumetric-caustic/scene.xml)。
+
+![volumetric-caustic, path tracing](resources/rendering_results/volumetric-caustic.png)
+
 ### 1.3 路径跟踪（Path Tracing）和双向路径跟踪（Bidirectional Path Tracing）
 
 | 绘制参数                       | 路径追踪（Path Tracing）                           | 双向路径追踪（Bidirectional Path Tracing）         |
 | ------------------------------ | ------------------------------------------------------ | ------------------------------------------------------ |
-| 3840*2160 分辨率，<br />4 spp  | ![ajar, path tracing, 4 spp](resources/rendering_results/veach-ajar-path.png)   | ![ajar, Bidirectional Path Tracing, 4 spp](resources/rendering_results/veach-ajar-bdpt.png)   |
+| 5120*2880 分辨率，<br />4 spp  | ![ajar, path tracing, 4 spp](resources/rendering_results/veach-ajar-path.png)   | ![ajar, Bidirectional Path Tracing, 4 spp](resources/rendering_results/veach-ajar-bdpt.png)   |
 | 1024*1024 分辨率，<br />64 spp | ![bidir, path tracing, 64 spp](resources/rendering_results/veach-bidir-path.png) | ![bidir, Bidirectional Path Tracing, 64 spp](resources/rendering_results/veach-bidir-bdpt.png) |
 
 
