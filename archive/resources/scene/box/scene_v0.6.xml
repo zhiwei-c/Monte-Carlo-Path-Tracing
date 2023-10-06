@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<scene version="0.5.0" >
+	<integrator type="path" >
+		<integer name="maxDepth" value="65" />
+		<boolean name="strictNormals" value="true" />
+	</integrator>
+	<sensor type="perspective" >
+		<float name="fov" value="19.5" />
+		<transform name="toWorld" >
+			<matrix value="-1 0 0 0 0 1 0 1 0 0 -1 6.8 0 0 0 1"/>
+		</transform>
+		<sampler type="sobol" >
+			<integer name="sampleCount" value="81" />
+		</sampler>
+		<film type="ldrfilm" >
+			<integer name="width" value="1024" />
+			<integer name="height" value="1024" />
+			<string name="fileFormat" value="png" />
+			<string name="pixelFormat" value="rgb" />
+			<float name="gamma" value="2.2" />
+			<boolean name="banner" value="false" />
+			<rfilter type="tent" />
+		</film>
+	</sensor>
+	<bsdf type="twosided" id="LeftWall" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0.63, 0.065, 0.05"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="RightWall" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0.14, 0.45, 0.091"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Floor" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0.725, 0.71, 0.68"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Ceiling" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0.725, 0.71, 0.68"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="BackWall" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0.725, 0.71, 0.68"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Sphere" >
+		<bsdf type="roughdielectric" >
+			<string name="distribution" value="ggx"/>
+    		<float name="alpha" value="0.05"/>
+    		<string name="int_ior" value="bk7"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="TallBox" >
+		<bsdf type="roughconductor" >
+			<string name="material" value="Al"/>
+    		<string name="distribution" value="ggx"/>
+    		<float name="alpha_u" value="0.03"/>
+    		<float name="alpha_v" value="0.03"/>
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Light" >
+		<bsdf type="diffuse" >
+			<rgb name="reflectance" value="0, 0, 0"/>
+		</bsdf>
+	</bsdf>
+	<shape type="rectangle" >
+		<transform name="toWorld" >
+			<matrix value="0 1 0 0 0 0 2 0 1 0 0 0 0 0 0 1"/>
+		</transform>
+		<ref id="Floor" />
+	</shape>
+	<shape type="rectangle" >
+		<transform name="toWorld" >
+			<matrix value="-1 0 0 0 0 0 -2 2 0 -1 0 0 0 0 0 1"/>
+		</transform>
+		<ref id="Ceiling" />
+	</shape>
+	<shape type="rectangle" >
+		<transform name="toWorld" >
+			<matrix value="0 1 0 0 1 0 0 1 0 0 -2 -1 0 0 0 1"/>
+		</transform>
+		<ref id="BackWall" />
+	</shape>
+	<shape type="rectangle" >
+		<transform name="toWorld" >
+			<matrix value="0 0 2 1 1 0 0 1 0 1 0 0 0 0 0 1"/>
+		</transform>
+		<ref id="RightWall" />
+	</shape>
+	<shape type="rectangle" >
+		<transform name="toWorld" >
+			<matrix value="0 0 -2 -1 1 0 0 1 0 -1 0 0 0 0 0 1"/>
+		</transform>
+		<ref id="LeftWall" />
+	</shape>
+	<shape type="sphere" >
+		<float name="radius" value="0.3" />
+		<point name="center" x="0.3" y="0.3" z="0.3" />
+		<ref id="Sphere" />
+	</shape>
+	<shape type="cube" >
+		<transform name="center" >
+			<matrix value="0.286776 0.098229 0 -0.335439 0 0 -0.6 0.6 -0.0997984 0.282266 0 -0.291415 0 0 0 1"/>
+		</transform>
+		<ref id="TallBox" />
+	</shape>
+	<shape type="rectangle" >
+		<transform name="toWorld" >
+			<matrix value="0.235 0 0 -0.005 0 0 -0.0893 1.98 0 0.19 0 -0.03 0 0 0 1"/>
+		</transform>
+		<ref id="Light" />
+		<emitter type="area" >
+			<rgb name="radiance" value="17, 12, 4"/>
+		</emitter>
+	</shape>
+</scene>

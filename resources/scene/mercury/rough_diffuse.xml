@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<scene version="0.5.0" >
+	<integrator type="path" >
+		<integer name="maxDepth" value="3" />
+		<boolean name="strictNormals" value="true" />
+	</integrator>
+	<sensor type="perspective" >
+		<float name="fov" value="120" />
+		<transform name="toWorld" >
+			<lookat origin="0, 0, 0.01" target="0, 0, 1" up="0, 1, 0"/>
+		</transform>
+		<sampler type="sobol" >
+			<integer name="sampleCount" value="256" />
+		</sampler>
+		<film type="ldrfilm" >
+			<integer name="width" value="500" />
+			<integer name="height" value="500" />
+			<string name="fileFormat" value="png" />
+			<string name="pixelFormat" value="rgb" />
+			<float name="gamma" value="2.2" />
+			<boolean name="banner" value="false" />
+			<rfilter type="tent" />
+		</film>
+	</sensor>
+	<bsdf type="twosided" id="mercury" >
+		<bsdf type="roughdiffuse" >
+			<float name="alpha" value="0.7" />
+			<texture name="reflectance" type="bitmap" >
+				<string name="filename" value="textures/8k_mercury.jpg" />
+			</texture>
+		</bsdf>
+	</bsdf>
+	<shape type="disk" >
+		<ref id="Null" />
+		<emitter type="area" >
+			<rgb name="radiance" value="1200, 1200, 1200"/>
+		</emitter>
+	</shape>
+	<shape type="sphere" >
+		<float name="radius" value="51" />
+		<point name="center" x="0" y="0" z="60" />
+		<ref id="mercury" />
+	</shape>
+</scene>
