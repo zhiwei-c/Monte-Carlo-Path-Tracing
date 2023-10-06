@@ -4,7 +4,7 @@
 
 一个路径追踪小程序，利用了 CPU 多线程或 CUDA 加速计算。项目最初参考了《[GAMES101: 现代计算机图形学入门](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》的作业7，有大幅度的调整。学习笔记保存于[知乎专栏](https://zhuanlan.zhihu.com/p/459580639)。
 
-A RayTracer, accelerated by C++ multithreading and CUDA.
+A RayTracer, accelerated by C++ multithreading or CUDA.
 
 ## 1 CPU vs. CUDA
 
