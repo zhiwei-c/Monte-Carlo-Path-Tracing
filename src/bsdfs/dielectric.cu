@@ -88,15 +88,26 @@ QUALIFIER_DEVICE void Dielectric::Sample(const float *pixel_buffer,
     if (H_dot_O < kEpsilon)
         return;
 
+    float eta_inv = eta_inv_,
+            eta = eta_; // 相对折射率，即透射侧介质与入射侧介质的绝对折射率之比
+    if (!rec->inside)
+    { // 如果发生折射，那么光线源于物体内部
+        // 需要颠倒相对折射率，使宏观法线和微平面法线与入射光线同侧
+        float temp = eta_inv;
+        eta_inv = eta;
+        eta = temp;
+    }
+
+    bool full_reflect = !Refract(-rec->wo, h, eta, &rec->wi);
     float F = FresnelSchlick(H_dot_O, reflectivity_);
-    if (RandomFloat(seed) < F)
+    if (full_reflect || RandomFloat(seed) < F)
     { // 抽样反射光线
         rec->wi = -Reflect(-rec->wo, h);
         const float N_dot_I = Dot(-rec->wi, rec->normal);
         if (N_dot_I < kEpsilon)
             return;
 
-        rec->pdf = D / (4.0f * H_dot_O);
+        rec->pdf = F * D / (4.0f * H_dot_O);
         if (rec->pdf < kEpsilon)
             return;
 
@@ -113,18 +124,6 @@ QUALIFIER_DEVICE void Dielectric::Sample(const float *pixel_buffer,
     }
     else
     { // 抽样折射光线
-        float eta_inv = eta_inv_,
-              eta = eta_; // 相对折射率，即透射侧介质与入射侧介质的绝对折射率之比
-        if (!rec->inside)
-        { // 如果发生折射，那么光线源于物体内部
-          // 需要颠倒相对折射率，使宏观法线和微平面法线与入射光线同侧
-            float temp = eta_inv;
-            eta_inv = eta;
-            eta = temp;
-        }
-
-        if (!Refract(-rec->wo, h, eta, &rec->wi))
-            return;
         rec->wi = -rec->wi;
 
         const float N_dot_I = Dot(-rec->wi, -rec->normal);

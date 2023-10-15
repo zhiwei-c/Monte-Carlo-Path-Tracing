@@ -13,6 +13,7 @@
 #include "../renderer/camera.cuh"
 #include "../emitters/emitters.cuh"
 
+
 struct SceneInfo
 {
     Camera camera;
@@ -29,12 +30,12 @@ struct SceneInfo
 class ConfigParser
 {
 public:
-    SceneInfo LoadConfig(const std::string &filename);
+    SceneInfo LoadConfig(bool is_realtime, const std::string &filename);
 
 private:
     SceneInfo LoadDefault();
 
-    void ReadCamera(pugi::xml_node sensor_node);
+    void ReadCamera(bool is_realtime, pugi::xml_node sensor_node);
     uint64_t ReadTexture(const pugi::xml_node &texture_node, const float scale,
                          const float defalut_value);
     uint64_t ReadBsdf(pugi::xml_node bsdf_node, std::string id, uint64_t id_opacity,

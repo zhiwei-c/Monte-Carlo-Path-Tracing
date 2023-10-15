@@ -71,28 +71,38 @@ Following features are available only in [archived project](archive/).
 
 项目使用 [vcpkg](https://github.com/microsoft/vcpkg) 进行 C++ 库管理。
 
+necessary :
+
 - [assimp](https://github.com/assimp/assimp)
 - [pugixml](https://pugixml.org/)
 - [stb](https://github.com/nothings/stb)
 - [tinyexr](https://github.com/syoyo/tinyexr)
 - [zlib](https://zlib.net/)
 
+if enable real-time viewer:
+
+- [freeglut](https://freeglut.sourceforge.net/)
+
 ### 4.2 CMake Option
 
 - `ENABLE_CUDA` : Specifies whether or not enable GPU-accelerated computing. 
     - compile as C++ project and donnot need CUDA SDK if disable.
+- `ENABLE_VIEWER` : Specifies whether or not enable real-time viewer. 
+    - no effect if disable GPU-accelerated computing.
 
 ### 4.3 Usage
 
-Command Format: `[--cpu/--cuda] [--bvh 'bvh type'] [--input 'config path'] [--output 'file path]`
+Command Format: `[--cpu/--gpu/--preview] [--bvh 'bvh type'] [--input 'config path'] [--output 'file path]`
 
 Program Option:
 
-- `-cpu`: use CPU for rendering. if not specify CPU or CUDA, use CPU.
-- `-cuda`: use CUDA for rendering, no effect if disbale CUDA when compiling. if not specify CPU or CUDA, use CPU.
-- `-bvh`: bvh type for ray tracing, available: [linear, normal], default: 'linear'.
-- `-input`: read config from mitsuba format xml file, load default config if empty, default: empty.
-- `-output`: output path for rendering result, only PNG format, default: 'result.png'.
+- `--cpu`: use CPU for offline rendering. if not specify specify CPU/CUDA/preview, use CPU.
+- `--gpu`: use CUDA for offline rendering, no effect if disbale CUDA when compiling. if not specify specify CPU/CUDA/preview, use CPU.
+- `--preview`: use CUDA for real-time rendering, no effect if disbale CUDA when compiling. if not specify specify CPU/CUDA/preview, use CPU.
+- `--bvh`: bvh type for ray tracing, available: [linear, normal], default: 'linear'.
+- `--input`: read config from mitsuba format xml file, load default config if empty, default: empty.
+- `--output`: output path for rendering result, only PNG format, default: 'result.png'.
+    - press 's' key to save when real-time previewing.
 
 ## 5 References
 

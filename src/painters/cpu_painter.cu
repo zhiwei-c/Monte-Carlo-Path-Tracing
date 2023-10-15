@@ -336,8 +336,8 @@ void CpuPainter::Draw(const std::string &filename)
     {
         std::vector<Vec3> colors_tmp, ret;
         {
-            int i = camera_->width() / 2,
-                j = camera_->height() / 2;
+            int i = 368,
+                j = 69;
             const uint64_t pixel_index = (j * camera_->width() + i) * 3;
             uint64_t seed = Tea(pixel_index, 0, 4);
             Vec3 color, color_tmp;
@@ -349,7 +349,8 @@ void CpuPainter::Draw(const std::string &filename)
                             y = 1.0f - 2.0f * (j + v) / camera_->height();
                 const Vec3 look_dir = Normalize(camera_->front() + x * camera_->view_dx() +
                                                 y * camera_->view_dy());
-                color_tmp = integrator_->TraceRay(camera_->eye(), look_dir, &seed);
+                const Vec3 eye = camera_->eye();
+                color_tmp = integrator_->TraceRay(eye, look_dir, &seed);
                 colors_tmp.push_back(color_tmp);
                 color += color_tmp;
             }

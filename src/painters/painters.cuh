@@ -30,7 +30,7 @@ protected:
     Instance *instance_buffer_;
     uint64_t *area_light_id_buffer_;
     EnvMap *env_map_;
-    Sun* sun_;
+    Sun *sun_;
     BvhNode *bvh_node_buffer_;
     Accel *accel_;
     Integrator *integrator_;
@@ -51,13 +51,24 @@ class CudaPainter : public Painter
 {
 public:
     CudaPainter(BvhBuilder::Type bvh_type, const SceneInfo &info);
-    ~CudaPainter() override;
+    virtual ~CudaPainter() override;
 
-    void Draw(const std::string &filename) override;
+    virtual void Draw(const std::string &filename) override;
 
-private:
+protected:
     dim3 num_blocks_;
     dim3 threads_per_block_;
 };
+
+#ifdef ENABLE_VIEWER
+class CudaViewer : public CudaPainter
+{
+public:
+    CudaViewer(int argc, char **argv, BvhBuilder::Type bvh_type, const SceneInfo &info);
+    ~CudaViewer() override;
+
+    void Draw(const std::string &filename) override;
+};
+#endif
 
 #endif

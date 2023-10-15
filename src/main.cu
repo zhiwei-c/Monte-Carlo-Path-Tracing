@@ -5,14 +5,22 @@
 #include "painters/painters.cuh"
 #include "utils/misc.cuh"
 
+enum class UsageType
+{
+    kCpuOffline,
+    kCudaOffline,
+    kCudaRealtime,
+};
+
 struct Param
 {
-    bool is_cpu;
+    UsageType type;
     std::string input;
     std::string output;
     BvhBuilder::Type bvh_type;
 
-    Param() : is_cpu(true), input(""), output("result.png"), bvh_type(BvhBuilder::Type::kLinear) {}
+    Param() : type(UsageType::kCpuOffline), input(""), output("result.png"),
+              bvh_type(BvhBuilder::Type::kLinear) {}
 };
 
 Param ParseParam(int argc, char **argv);
@@ -23,21 +31,31 @@ int main(int argc, char **argv)
     Param param = ParseParam(argc, argv);
 
     ConfigParser config_parser;
-    SceneInfo scene_info = config_parser.LoadConfig(param.input);
+    SceneInfo scene_info = config_parser.LoadConfig(param.type == UsageType::kCudaRealtime, param.input);
 
-#ifdef ENABLE_CUDA
     Painter *painter = nullptr;
-    if (param.is_cpu)
-        painter = new CpuPainter(param.bvh_type, scene_info);
-    else
+    switch (param.type)
+    {
+#ifdef ENABLE_CUDA
+    case UsageType::kCudaOffline:
         painter = new CudaPainter(param.bvh_type, scene_info);
-#else
-    Painter *painter = new CpuPainter(param.bvh_type, scene_info);
+        break;
+#ifdef ENABLE_VIEWER
+    case UsageType::kCudaRealtime:
+        painter = new CudaViewer(argc, argv, param.bvh_type, scene_info);
+        break;
 #endif
+#endif
+    default:
+        painter = new CpuPainter(param.bvh_type, scene_info);
+        break;
+    }
 
     painter->Draw(param.output);
+
     SAFE_DELETE_ELEMENT(painter);
     SAFE_DELETE_ELEMENT(scene_info.env_map);
+    SAFE_DELETE_ELEMENT(scene_info.sun);
 
     return 0;
 }
@@ -51,11 +69,15 @@ Param ParseParam(int argc, char **argv)
     {
         if (argv[i] == std::string("--cpu"))
         {
-            param.is_cpu = true;
+            param.type = UsageType::kCpuOffline;
         }
-        else if (argv[i] == std::string("--cuda"))
+        else if (argv[i] == std::string("--gpu"))
         {
-            param.is_cpu = false;
+            param.type = UsageType::kCudaOffline;
+        }
+        else if (argv[i] == std::string("--preview"))
+        {
+            param.type = UsageType::kCudaRealtime;
         }
         else if (argv[i] == std::string("--bvh") && i + 1 < argc)
         {
@@ -76,7 +98,7 @@ Param ParseParam(int argc, char **argv)
         {
             param.output = argv[i + 1];
         }
-        else if(argv[i] == std::string("-h"  )||argv[i] == std::string("--help"))
+        else if (argv[i] == std::string("-h") || argv[i] == std::string("--help"))
         {
             exit(0);
         }
@@ -94,11 +116,12 @@ Param ParseParam(int argc, char **argv)
 void PrintHelp()
 {
     fprintf(stderr, "\nSimple Ray Tracer.\n");
-    fprintf(stderr, "Command Format: [--cpu/--cuda] [--bvh 'bvh type'] [--input 'config path'] [--output 'file path]\n");
-    fprintf(stderr, "--cpu: use CPU for rendering. if not specify CPU or CUDA, use CPU.\n");
-    fprintf(stderr, "--cuda: use CUDA for rendering, no effect if disbale CUDA when compiling. if not specify CPU or CUDA, use CPU.\n");
+    fprintf(stderr, "Command Format: [--cpu/--gpu/--preview] [--bvh 'bvh type'] [--input 'config path'] [--output 'file path]\n");
+    fprintf(stderr, "--cpu: use CPU for offline rendering. if not specify CPU/CUDA/preview, use CPU.\n");
+    fprintf(stderr, "--gpu: use CUDA for offline rendering, no effect if disbale CUDA when compiling. if not specify CPU/CUDA/preview, use CPU.\n");
+    fprintf(stderr, "--preview: use CUDA for real-time rendering, no effect if disbale CUDA when compiling. if not specify CPU/CUDA/preview, use CPU.\n");
     fprintf(stderr, "--bvh: bvh type for ray tracing, available: [linear, normal], default: linear\n");
     fprintf(stderr, "--input: read config from mitsuba format xml file, load default config if empty, default: empty\n");
-    fprintf(stderr, "--output: output path for rendering result, only PNG format, default: 'result.png'\n");
+    fprintf(stderr, "--output: output path for rendering result, only PNG format, press 's' key to save when real-time previewing, default: 'result.png'\n");
     fprintf(stderr, "\n");
 }

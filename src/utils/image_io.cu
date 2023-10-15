@@ -45,7 +45,7 @@ void image_io::Write(int width, int height, float *frame_buffer, const std::stri
     }
     else
     {
-        fprintf(stderr, "[info] save result as image \"%s\".", filename.c_str());
+        fprintf(stderr, "[info] save result as image \"%s\".\n", filename.c_str());
     }
 }
 
@@ -87,6 +87,12 @@ void image_io::Read(const std::string &filename, float gamma, int *width, int *h
             }
             exit(1);
         }
+        if (gamma != 0.0f)
+        {
+            int num_component = *width * *height * *channel;
+            for (int i = 0; i < num_component; ++i)
+                raw_data[i] = std::pow(raw_data[i], gamma);
+        }
         *channel = 4;
         break;
     }
@@ -100,20 +106,16 @@ void image_io::Read(const std::string &filename, float gamma, int *width, int *h
         }
         int num_component = *width * *height * *channel;
         raw_data = new float[num_component];
-        for (int i = 0; i < num_component; ++i)
-            raw_data[i] = static_cast<int>(raw_data_uc[i]) / 255.0f;
-
-        if (suffix != "HDR" && suffix != "hdr" && suffix != "EXR" && suffix != "exr")
+        if (suffix != "HDR" && suffix != "hdr")
         {
-            if (gamma == -1.0f)
+            for (int i = 0; i < num_component; ++i)
+                raw_data[i] = static_cast<int>(raw_data_uc[i]) / 255.0f;
+            if (gamma == 0.0f || gamma == -1.0f)
             {
                 for (int i = 0; i < num_component; ++i)
-                {
-                    if (raw_data[i] <= 0.04045f)
-                        raw_data[i] = raw_data[i] / 12.92f;
-                    else
-                        raw_data[i] = std::pow((raw_data[i] + 0.055f) / 1.055f, 2.4f);
-                }
+                    raw_data[i] = raw_data[i] <= 0.04045f
+                                      ? raw_data[i] / 12.92f
+                                      : std::pow((raw_data[i] + 0.055f) / 1.055f, 2.4f);
             }
             else
             {
@@ -121,11 +123,25 @@ void image_io::Read(const std::string &filename, float gamma, int *width, int *h
                     raw_data[i] = std::pow(raw_data[i], gamma);
             }
         }
-        else if (gamma != -1.0f)
+        else
         {
             for (int i = 0; i < num_component; ++i)
-                raw_data[i] = std::pow(raw_data[i], gamma);
+                raw_data[i] = static_cast<int>(raw_data_uc[i]);
+
+            if (gamma == -1.0f)
+            {
+                for (int i = 0; i < num_component; ++i)
+                    raw_data[i] = raw_data[i] <= 0.04045f
+                                      ? raw_data[i] / 12.92f
+                                      : std::pow((raw_data[i] + 0.055f) / 1.055f, 2.4f);
+            }
+            else if (gamma != 0.0f)
+            {
+                for (int i = 0; i < num_component; ++i)
+                    raw_data[i] = std::pow(raw_data[i], gamma);
+            }
         }
+
         stbi_image_free(raw_data_uc);
         break;
     }
@@ -144,4 +160,12 @@ void image_io::Read(const std::string &filename, float gamma, int *width, int *h
 
     *data = std::vector<float>(raw_data, raw_data + *width * *height * *channel);
     SAFE_DELETE_ARRAY(raw_data);
+}
+
+void image_io::Resize(const float *input_pixels, int input_w, int input_h, int input_stride_in_bytes,
+                      float *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
+                      int num_channels)
+{
+    stbir_resize_float(input_pixels, input_w, input_h, input_stride_in_bytes, output_pixels,
+                       output_w, output_h, output_stride_in_bytes, num_channels);
 }

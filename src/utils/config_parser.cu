@@ -35,7 +35,7 @@ namespace mitsuba_parser
                         const std::vector<std::string> &valid_names, pugi::xml_node *child_node);
 } // namespace mitsuba_parser
 
-SceneInfo ConfigParser::LoadConfig(const std::string &filename)
+SceneInfo ConfigParser::LoadConfig(bool is_realtime, const std::string &filename)
 {
     info_ = {};
 
@@ -81,7 +81,7 @@ SceneInfo ConfigParser::LoadConfig(const std::string &filename)
         std::string value = node.attribute("value").value();
         default_mp_["$" + name] = value;
     }
-    ReadCamera(scene_node.child("sensor"));
+    ReadCamera(is_realtime, scene_node.child("sensor"));
 
     //
     // 解析除面光源外的其它光源
@@ -213,7 +213,7 @@ SceneInfo ConfigParser::LoadDefault()
     return info_;
 }
 
-void ConfigParser::ReadCamera(pugi::xml_node sensor_node)
+void ConfigParser::ReadCamera(bool is_realtime, pugi::xml_node sensor_node)
 {
     std::string type = sensor_node.attribute("type").as_string();
     if (type != "perspective")
@@ -242,7 +242,7 @@ void ConfigParser::ReadCamera(pugi::xml_node sensor_node)
         }
     }
 
-    uint64_t width = 768, height = 576;
+    int width = 768, height = 576;
     for (pugi::xml_node node : sensor_node.child("film").children("integer"))
     {
         switch (Hash(node.attribute("name").value()))
@@ -322,34 +322,41 @@ void ConfigParser::ReadCamera(pugi::xml_node sensor_node)
         exit(1);
     }
     }
-
-    uint32_t spp = 4;
-    for (pugi::xml_node node : sensor_node.child("sampler").children("integer"))
+    uint32_t spp = 1;
+    if (is_realtime)
     {
-        switch (Hash(node.attribute("name").value()))
+        fprintf(stderr, "[info] spp is forced to be set to 1 when real-time previewing.\n",
+                fov_axis.c_str());
+    }
+    else
+    {
+        for (pugi::xml_node node : sensor_node.child("sampler").children("integer"))
         {
-        case "sampleCount"_hash:
-        case "sample_count"_hash:
-        {
-            std::string value_str = node.attribute("value").value();
-            if (!value_str.empty())
+            switch (Hash(node.attribute("name").value()))
             {
-                if (value_str[0] == '$')
+            case "sampleCount"_hash:
+            case "sample_count"_hash:
+            {
+                std::string value_str = node.attribute("value").value();
+                if (!value_str.empty())
                 {
-                    if (!default_mp_.count(value_str))
+                    if (value_str[0] == '$')
                     {
-                        fprintf(stderr, "[error] cannot find '%s' from config file.\n",
-                                value_str.c_str());
-                        exit(1);
+                        if (!default_mp_.count(value_str))
+                        {
+                            fprintf(stderr, "[error] cannot find '%s' from config file.\n",
+                                    value_str.c_str());
+                            exit(1);
+                        }
+                        value_str = default_mp_.at(value_str);
                     }
-                    value_str = default_mp_.at(value_str);
+                    spp = std::stoi(value_str);
                 }
-                spp = std::stoi(value_str);
+                break;
             }
-            break;
-        }
-        default:
-            break;
+            default:
+                break;
+            }
         }
     }
 
@@ -659,7 +666,7 @@ uint64_t ConfigParser::ReadTexture(const pugi::xml_node &texture_node, const flo
                 fprintf(stderr, "[error] cannot find filename for bitmap texture.\n");
                 exit(1);
             }
-            const float gamma = mitsuba_parser::ReadFloat(texture_node, {"gamma"}, -1.0f);
+            const float gamma = mitsuba_parser::ReadFloat(texture_node, {"gamma"}, 0.0f);
             const uint64_t index = info_.texture_info_buffer.size();
             if (id.empty())
                 id = "texture_" + std::to_string(index);
@@ -969,7 +976,7 @@ void ConfigParser::ReadEmitter(pugi::xml_node emitter_node)
     case "envmap"_hash:
     {
         const std::string filename = emitter_node.child("string").attribute("value").as_string();
-        const float gamma = mitsuba_parser::ReadFloat(emitter_node, {"gamma"}, -1.0f);
+        const float gamma = mitsuba_parser::ReadFloat(emitter_node, {"gamma"}, 0.0f);
         int width_target = static_cast<int>(info_.camera.width() * 360 / info_.camera.fov_x());
         const uint64_t id_radiance = ReadBitmap(config_file_directory_ + filename,
                                                 filename, gamma, 1.0f, &width_target);

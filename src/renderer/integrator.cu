@@ -47,7 +47,7 @@ QUALIFIER_DEVICE Vec3 Integrator::TraceRay(const Vec3 &eye, const Vec3 &look_dir
     }
 
     // 光线追踪主循环，根据俄罗斯轮盘算法判断是否继续溯源光线
-    constexpr float pdf_rr = 0.8f; // 俄罗斯轮盘（russian roulette）算法的概率
+    constexpr float pdf_rr = 0.95f; // 俄罗斯轮盘（russian roulette）算法的概率
     for (uint64_t depth = 0; RandomFloat(seed) < pdf_rr; ++depth)
     {
         // 按表面积进行抽样得到阴影光线，根据多重重要抽样（MIS，multiple importance sampling）合并

@@ -18,7 +18,7 @@ QUALIFIER_DEVICE Camera::Camera()
     spp_inv_ = 1.0f / spp_;
 }
 
-QUALIFIER_DEVICE Camera::Camera(const uint32_t spp, const uint64_t width, const uint64_t height,
+QUALIFIER_DEVICE Camera::Camera(const uint32_t spp, const int width, const int height,
                                 const float fov_x, const Vec3 eye, const Vec3 look_at, const Vec3 up)
     : spp_(spp), width_(width), height_(height), fov_x_(fov_x), eye_(eye), up_(up)
 {

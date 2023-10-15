@@ -2,6 +2,7 @@
 cmake_minimum_required(VERSION 3.18)
 
 option(ENABLE_CUDA "Specifies whether or not enable GPU-accelerated computing." ON)
+option(ENABLE_VIEWER "Specifies whether or not enable real-time viewer, no effect if disable GPU-accelerated computing." ON)
 
 set(PROJECT_NAME "RayTracer")
 project(${PROJECT_NAME} LANGUAGES CXX C)
@@ -13,6 +14,10 @@ if(ENABLE_CUDA)
     message(STATUS "Enable GPU-accelerated computing")
     enable_language(CUDA)
     add_definitions(-DENABLE_CUDA)
+    if(ENABLE_VIEWER)
+        message(STATUS "Enable real-time viewer")
+        add_definitions(-DENABLE_VIEWER)
+    endif()
     set(CMAKE_CUDA_STANDARD 17)
     set(CMAKE_CUDA_STANDARD_REQUIRED ON)
     set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
@@ -52,6 +57,11 @@ target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/extern
 # assimp
 find_package(assimp CONFIG REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE assimp::assimp)
+
+if(ENABLE_CUDA AND ENABLE_VIEWER)
+    find_package(FreeGLUT CONFIG REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PRIVATE $<IF:$<TARGET_EXISTS:FreeGLUT::freeglut>,FreeGLUT::freeglut,FreeGLUT::freeglut_static>)
+endif()
 
 # pugixml
 find_package(pugixml CONFIG REQUIRED)
