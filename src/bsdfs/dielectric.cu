@@ -2,9 +2,8 @@
 
 #include "../utils/math.cuh"
 
-QUALIFIER_DEVICE void Dielectric::Evaluate(const float *pixel_buffer,
-                                                Texture **texture_buffer,
-                                                uint64_t *seed, SamplingRecord *rec) const
+QUALIFIER_DEVICE void Dielectric::Evaluate(Texture **texture_buffer, const float *pixel_buffer,
+                                           uint32_t *seed, SamplingRecord *rec) const
 {
     float eta = eta_,
           eta_inv = eta_inv_; // 相对折射率的倒数，即入射侧介质和透射侧介质的绝对折射率之比
@@ -70,9 +69,8 @@ QUALIFIER_DEVICE void Dielectric::Evaluate(const float *pixel_buffer,
     }
 }
 
-QUALIFIER_DEVICE void Dielectric::Sample(const float *pixel_buffer,
-                                              Texture **texture_buffer,
-                                              uint64_t *seed, SamplingRecord *rec) const
+QUALIFIER_DEVICE void Dielectric::Sample(Texture **texture_buffer, const float *pixel_buffer,
+                                         uint32_t *seed, SamplingRecord *rec) const
 {
     const float scale = 1.2f - 0.2f * sqrt(abs(Dot(-rec->wo, rec->normal)));
     const float roughness = texture_buffer[id_roughness_]->GetColor(rec->texcoord, pixel_buffer).x;
@@ -89,7 +87,7 @@ QUALIFIER_DEVICE void Dielectric::Sample(const float *pixel_buffer,
         return;
 
     float eta_inv = eta_inv_,
-            eta = eta_; // 相对折射率，即透射侧介质与入射侧介质的绝对折射率之比
+          eta = eta_; // 相对折射率，即透射侧介质与入射侧介质的绝对折射率之比
     if (!rec->inside)
     { // 如果发生折射，那么光线源于物体内部
         // 需要颠倒相对折射率，使宏观法线和微平面法线与入射光线同侧
@@ -146,7 +144,8 @@ QUALIFIER_DEVICE void Dielectric::Sample(const float *pixel_buffer,
         rec->attenuation = (abs(H_dot_I * H_dot_O) * ((1.0f - F) * G * D)) /
                            abs(N_dot_O * pow(eta_inv * H_dot_I + H_dot_O, 2));
 
-        rec->attenuation += EvaluateMultipleScatter(N_dot_I, N_dot_O, roughness, !rec->inside, false);
+        rec->attenuation += EvaluateMultipleScatter(N_dot_I, N_dot_O, roughness, !rec->inside,
+                                                    false);
 
         // 光线折射后，光路可能覆盖的立体角范围发生了改变，
         //     对辐射亮度进行积分需要进行相应的处理
@@ -160,10 +159,10 @@ QUALIFIER_DEVICE void Dielectric::Sample(const float *pixel_buffer,
 }
 
 QUALIFIER_DEVICE float Dielectric::EvaluateMultipleScatter(const float N_dot_I,
-                                                                const float N_dot_O,
-                                                                const float roughness,
-                                                                const bool inside,
-                                                                const bool reflect) const
+                                                           const float N_dot_O,
+                                                           const float roughness,
+                                                           const bool inside,
+                                                           const bool reflect) const
 {
     const float brdf_i = GetBrdfAvg(N_dot_I, roughness),
                 brdf_o = GetBrdfAvg(N_dot_O, roughness),

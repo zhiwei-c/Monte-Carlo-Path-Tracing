@@ -2,9 +2,8 @@
 
 #include "../utils/math.cuh"
 
-QUALIFIER_DEVICE void Conductor::Evaluate(const float *pixel_buffer,
-                                          Texture **texture_buffer,
-                                          uint64_t *seed, SamplingRecord *rec) const
+QUALIFIER_DEVICE void Conductor::Evaluate(Texture **texture_buffer, const float *pixel_buffer,
+                                          uint32_t *seed, SamplingRecord *rec) const
 {
     // 反射光线与法线方向应该位于同侧
     const float N_dot_O = Dot(rec->wo, rec->normal);
@@ -29,13 +28,13 @@ QUALIFIER_DEVICE void Conductor::Evaluate(const float *pixel_buffer,
     const Vec3 F = FresnelSchlick(H_dot_I, reflectivity_);
     rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
     rec->attenuation += EvaluateMultipleScatter(N_dot_I, N_dot_O, roughness);
-    const Vec3 spec = texture_buffer[id_specular_reflectance_]->GetColor(rec->texcoord, pixel_buffer);
+    const Vec3 spec = texture_buffer[id_specular_reflectance_]->GetColor(rec->texcoord,
+                                                                         pixel_buffer);
     rec->attenuation *= spec;
 }
 
-QUALIFIER_DEVICE void Conductor::Sample(const float *pixel_buffer,
-                                        Texture **texture_buffer,
-                                        uint64_t *seed, SamplingRecord *rec) const
+QUALIFIER_DEVICE void Conductor::Sample(Texture **texture_buffer, const float *pixel_buffer,
+                                        uint32_t *seed, SamplingRecord *rec) const
 {
     // 根据GGX法线分布函数重要抽样微平面法线，生成入射光线方向
     Vec3 h(0);
@@ -63,12 +62,12 @@ QUALIFIER_DEVICE void Conductor::Sample(const float *pixel_buffer,
     const Vec3 F = FresnelSchlick(H_dot_I, reflectivity_);
     rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
     rec->attenuation += EvaluateMultipleScatter(N_dot_I, N_dot_O, roughness);
-    const Vec3 spec = texture_buffer[id_specular_reflectance_]->GetColor(rec->texcoord, pixel_buffer);
+    const Vec3 spec = texture_buffer[id_specular_reflectance_]->GetColor(rec->texcoord,
+                                                                         pixel_buffer);
     rec->attenuation *= spec;
 }
 
-QUALIFIER_DEVICE Vec3 Conductor::EvaluateMultipleScatter(const float N_dot_I,
-                                                         const float N_dot_O,
+QUALIFIER_DEVICE Vec3 Conductor::EvaluateMultipleScatter(const float N_dot_I, const float N_dot_O,
                                                          const float roughness) const
 {
     const float brdf_i = GetBrdfAvg(N_dot_I, roughness),

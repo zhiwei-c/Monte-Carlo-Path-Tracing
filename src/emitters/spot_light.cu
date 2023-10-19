@@ -1,7 +1,7 @@
 #include "spot_light.cuh"
 #include "../utils/math.cuh"
 
-QUALIFIER_DEVICE SpotLight::SpotLight(const uint64_t id, const Emitter::Info::Data::Spot &data)
+QUALIFIER_DEVICE SpotLight::SpotLight(const uint32_t id, const Emitter::Info::Data::Spot &data)
 
     : Emitter(id, Emitter::Type::kSpot), intensity_(data.intensity),
       cutoff_angle_(data.cutoff_angle), cos_cutoff_angle_(cosf(data.cutoff_angle)),
@@ -12,17 +12,19 @@ QUALIFIER_DEVICE SpotLight::SpotLight(const uint64_t id, const Emitter::Info::Da
 {
 }
 
-QUALIFIER_DEVICE bool SpotLight::GetRadiance(const Vec3 &origin, const Accel *accel, Bsdf **bsdf_buffer,
-                                             Texture **texture_buffer, const float *pixel_buffer,
-                                             uint64_t *seed, Vec3 *radiance, Vec3 *wi) const
+QUALIFIER_DEVICE bool SpotLight::GetRadiance(const Vec3 &origin, const Accel *accel,
+                                             Bsdf **bsdf_buffer, Texture **texture_buffer,
+                                             const float *pixel_buffer, uint32_t *seed,
+                                             Vec3 *radiance, Vec3 *wi) const
 {
     const float distance = Length(position_world_ - origin);
     if (distance < kEpsilonFloat)
         return false;
+
     *wi = Normalize(origin - position_world_);
-    Intersection its;
-    accel->Intersect(Ray(origin, -*wi), bsdf_buffer, texture_buffer, pixel_buffer, seed, &its);
-    if (its.valid() && its.distance() + kEpsilonDistance < distance)
+    Intersection its = accel->TraceRay(Ray(origin, -*wi), bsdf_buffer, texture_buffer,
+                                       pixel_buffer, seed);
+    if (its.valid && its.distance + kEpsilonDistance < distance)
         return false;
 
     const Vec3 dir_local = TransfromVector(to_local_, *wi);

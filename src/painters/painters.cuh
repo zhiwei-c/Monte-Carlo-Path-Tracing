@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../accelerators/accelerators.cuh"
+#include "../accelerators/accel.cuh"
 #include "../renderer/camera.cuh"
 #include "../renderer/integrator.cuh"
 #include "../utils/config_parser.cuh"
@@ -16,10 +16,11 @@ protected:
     Painter() {}
 
     Camera *camera_;
-    uint64_t num_texture_;
-    uint64_t num_bsdf_;
-    uint64_t num_emitter_;
-    uint64_t num_area_light_;
+    uint32_t num_texture_;
+    uint32_t num_bsdf_;
+    uint32_t num_primitive_;
+    uint32_t num_emitter_;
+    uint32_t num_area_light_;
     float *brdf_avg_buffer_;
     float *albedo_avg_buffer_;
     float *pixel_buffer_;
@@ -28,7 +29,7 @@ protected:
     Emitter **emitter_buffer_;
     Primitive *primitive_buffer_;
     Instance *instance_buffer_;
-    uint64_t *area_light_id_buffer_;
+    uint32_t *area_light_id_buffer_;
     EnvMap *env_map_;
     Sun *sun_;
     BvhNode *bvh_node_buffer_;

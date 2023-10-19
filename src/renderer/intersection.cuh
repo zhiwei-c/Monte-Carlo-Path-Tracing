@@ -4,42 +4,59 @@
 #include "../bsdfs/bsdfs.cuh"
 #include "../textures/texture.cuh"
 
-class Intersection
+struct Intersection
 {
-public:
-    QUALIFIER_DEVICE Intersection();
-    QUALIFIER_DEVICE explicit Intersection(const Vec3 &pos);
-    QUALIFIER_DEVICE Intersection(const uint64_t id_instance, const float distance);
-    QUALIFIER_DEVICE Intersection(const uint64_t id_instance, const bool inside,
-                                  const Vec2 &texcoord, const Vec3 &pos, const Vec3 &normal,
-                                  const float distance, const uint64_t id_bsdf, const float pdf_area);
+    bool valid;
+    bool absorb;
+    bool inside;
+    float distance;
+    float pdf_area;
+    uint32_t id_instance;
+    uint32_t id_bsdf;
+    Vec2 texcoord;
+    Vec3 position;
+    Vec3 tangent;
+    Vec3 bitangent;
+    Vec3 normal;
 
-    QUALIFIER_DEVICE SamplingRecord Sample(const Vec3 &wo, Bsdf **bsdf,
-                                           const float *pixel_buffer, Texture **texture_buffer,
-                                           uint64_t *seed) const;
-    QUALIFIER_DEVICE SamplingRecord Evaluate(const Vec3 &wi, const Vec3 &wo, Bsdf **bsdf,
-                                             const float *pixel_buffer,
-                                             Texture **texture_buffer,
-                                             uint64_t *seed) const;
+    QUALIFIER_DEVICE Intersection()
+        : valid(false), absorb(false), inside(false), id_instance(kInvalidId), id_bsdf(kInvalidId),
+          position(Vec3(0)), normal(Vec3(0)), texcoord(Vec2(0)), distance(kMaxFloat),
+          pdf_area(0)
+    {
+    }
 
-    QUALIFIER_DEVICE bool valid() const { return valid_; }
-    QUALIFIER_DEVICE bool absorb() const { return absorb_; }
-    QUALIFIER_DEVICE uint64_t id_bsdf() const { return id_bsdf_; }
-    QUALIFIER_DEVICE Vec3 pos() const { return pos_; }
-    QUALIFIER_DEVICE Vec3 normal() const { return normal_; }
-    QUALIFIER_DEVICE Vec2 texcoord() const { return texcoord_; }
-    QUALIFIER_DEVICE float distance() const { return distance_; }
-    QUALIFIER_DEVICE float pdf_area() const { return pdf_area_; }
+    QUALIFIER_DEVICE Intersection(const Vec3 &in_position)
+        : valid(true), absorb(false), inside(false), id_instance(kInvalidId), id_bsdf(kInvalidId),
+          position(in_position), normal(Vec3(0)), texcoord(Vec2(0)), distance(kMaxFloat),
+          pdf_area(0)
+    {
+    }
 
-private:
-    bool valid_;
-    bool absorb_;
-    bool inside_;
-    float distance_;
-    float pdf_area_;
-    uint64_t id_instance_;
-    uint64_t id_bsdf_;
-    Vec2 texcoord_;
-    Vec3 pos_;
-    Vec3 normal_;
+    QUALIFIER_DEVICE Intersection(const uint32_t in_id_instance, const float in_distance)
+        : valid(true), absorb(true), inside(false), id_instance(in_id_instance), id_bsdf(kInvalidId),
+          position(Vec3(0)), normal(Vec3(0)), texcoord(Vec2(0)), distance(in_distance),
+          pdf_area(0)
+    {
+    }
+
+    QUALIFIER_DEVICE Intersection(const uint32_t in_id_instance, const Vec2 &in_texcoord,
+                                  const Vec3 &in_position, const Vec3 &in_normal,
+                                  const uint32_t in_id_bsdf, const float in_pdf_area)
+        : valid(true), absorb(false), inside(false), id_instance(in_id_instance),
+          id_bsdf(in_id_bsdf), position(in_position), normal(in_normal), texcoord(in_texcoord),
+          distance(kMaxFloat), pdf_area(in_pdf_area)
+    {
+    }
+
+    QUALIFIER_DEVICE Intersection(const uint32_t in_id_instance, const bool in_inside,
+                                  const Vec2 &in_texcoord, const Vec3 &in_position,
+                                  const Vec3 &in_normal, const Vec3 &in_tangent,
+                                  const Vec3 &in_bitangent, const float in_distance,
+                                  const uint32_t in_id_bsdf, const float in_pdf_area)
+        : valid(true), absorb(false), inside(in_inside), id_instance(in_id_instance),
+          id_bsdf(in_id_bsdf), position(in_position), normal(in_normal), texcoord(in_texcoord),
+          distance(in_distance), pdf_area(in_pdf_area)
+    {
+    }
 };

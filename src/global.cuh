@@ -11,7 +11,7 @@
 #define QUALIFIER_DEVICE
 #endif
 
-constexpr uint64_t kInvalidId = std::numeric_limits<uint64_t>::max();
+constexpr uint32_t kInvalidId = std::numeric_limits<uint32_t>::max();
 constexpr float kMaxFloat = std::numeric_limits<float>::max();
 constexpr float kLowestFloat = std::numeric_limits<float>::lowest();
 constexpr float kEpsilonFloat = std::numeric_limits<float>::epsilon();

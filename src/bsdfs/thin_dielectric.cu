@@ -2,9 +2,8 @@
 
 #include "../utils/math.cuh"
 
-QUALIFIER_DEVICE void ThinDielectric::Evaluate(const float *pixel_buffer,
-                                               Texture **texture_buffer,
-                                               uint64_t *seed, SamplingRecord *rec) const
+QUALIFIER_DEVICE void ThinDielectric::Evaluate(Texture **texture_buffer, const float *pixel_buffer,
+                                               uint32_t *seed, SamplingRecord *rec) const
 {
     bool reflect = true;
     Vec3 wo = rec->wo;
@@ -62,9 +61,8 @@ QUALIFIER_DEVICE void ThinDielectric::Evaluate(const float *pixel_buffer,
     }
 }
 
-QUALIFIER_DEVICE void ThinDielectric::Sample(const float *pixel_buffer,
-                                             Texture **texture_buffer,
-                                             uint64_t *seed, SamplingRecord *rec) const
+QUALIFIER_DEVICE void ThinDielectric::Sample(Texture **texture_buffer, const float *pixel_buffer,
+                                             uint32_t *seed, SamplingRecord *rec) const
 {
     // 根据GGX法线分布函数重要抽样微平面法线，生成入射光线方向
     Vec3 h(0);

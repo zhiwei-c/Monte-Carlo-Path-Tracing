@@ -300,8 +300,9 @@ namespace
 
 } // namespace
 
-std::vector<Primitive> ModelLoader::Load(const std::string &filename, const Mat4 &to_world,
-                                         bool flip_texcoords, bool face_normals, uint64_t id_bsdf)
+std::vector<Primitive::Info> ModelLoader::Load(const std::string &filename, const Mat4 &to_world,
+                                               bool flip_texcoords, bool face_normals,
+                                               uint32_t id_bsdf)
 {
     fprintf(stderr, "[info] read file \"%s\"\n", filename.c_str());
     int assimp_option = aiProcess_Triangulate | aiProcess_GenUVCoords | aiProcess_CalcTangentSpace;
@@ -319,9 +320,9 @@ std::vector<Primitive> ModelLoader::Load(const std::string &filename, const Mat4
     return ProcessNode(scene, scene->mRootNode, face_normals, to_world, id_bsdf);
 }
 
-std::vector<Primitive> ModelLoader::Load(const std::string &filename, int index_shape,
-                                         const Mat4 &to_world, bool flip_texcoords, bool face_normals,
-                                         uint64_t id_bsdf)
+std::vector<Primitive::Info> ModelLoader::Load(const std::string &filename, int index_shape,
+                                               const Mat4 &to_world, bool flip_texcoords,
+                                               bool face_normals, uint32_t id_bsdf)
 {
     std::vector<Vec3> positions, normals;
     std::vector<Vec2> texcoords;
@@ -335,12 +336,12 @@ std::vector<Primitive> ModelLoader::Load(const std::string &filename, int index_
     for (Vec3 &normal : normals)
         normal = TransfromVector(normal_to_world, normal);
 
-    std::vector<Primitive> primitive_buffer(indices.size());
+    std::vector<Primitive::Info> primitive_info_buffer(indices.size());
     Vertex triangle_vertices[3];
     for (size_t face_index = 0; face_index < indices.size(); ++face_index)
     {
         for (int v = 0; v < 3; ++v)
-            triangle_vertices[v].pos = positions[indices[face_index][v]];
+            triangle_vertices[v].position = positions[indices[face_index][v]];
 
         if (!texcoords.empty())
         {
@@ -350,8 +351,8 @@ std::vector<Primitive> ModelLoader::Load(const std::string &filename, int index_
 
         if (face_normals || normals.empty())
         {
-            const Vec3 v0v1 = triangle_vertices[1].pos - triangle_vertices[0].pos,
-                       v0v2 = triangle_vertices[2].pos - triangle_vertices[0].pos,
+            const Vec3 v0v1 = triangle_vertices[1].position - triangle_vertices[0].position,
+                       v0v2 = triangle_vertices[2].position - triangle_vertices[0].position,
                        normal = Normalize(Cross(v0v1, v0v2));
             for (int v = 0; v < 3; ++v)
                 triangle_vertices[v].normal = normal;
@@ -377,26 +378,29 @@ std::vector<Primitive> ModelLoader::Load(const std::string &filename, int index_
                                                              triangle_vertices[v].tangent));
         }
 
-        primitive_buffer[face_index] = Primitive(triangle_vertices, id_bsdf);
+        primitive_info_buffer[face_index] = Primitive::Info::CreateTriangle(triangle_vertices,
+                                                                            id_bsdf);
     }
 
-    return primitive_buffer;
+    return primitive_info_buffer;
 }
 
-std::vector<Primitive> ModelLoader::ProcessNode(const aiScene *scene, aiNode *node, bool face_normals,
-                                                const Mat4 &to_world, uint64_t id_bsdf)
+std::vector<Primitive::Info> ModelLoader::ProcessNode(const aiScene *scene, aiNode *node,
+                                                      bool face_normals, const Mat4 &to_world,
+                                                      uint32_t id_bsdf)
 {
-    std::vector<Primitive> primitive_buffer;
+    std::vector<Primitive::Info> primitive_info_buffer;
     const unsigned int thread_num = std::thread::hardware_concurrency();
     for (unsigned int i = 0; i < node->mNumMeshes; ++i)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
         unsigned int face_nums = mesh->mNumFaces;
 
-        std::vector<Primitive> local_primitive_buffer(face_nums);
+        std::vector<Primitive::Info> local_primitive_info_buffer(face_nums);
         if (face_nums < thread_num)
         {
-            ProcessMesh(mesh, 0, face_nums, face_normals, to_world, id_bsdf, local_primitive_buffer);
+            ProcessMesh(mesh, 0, face_nums, face_normals, to_world, id_bsdf,
+                        local_primitive_info_buffer);
         }
         else
         {
@@ -407,29 +411,31 @@ std::vector<Primitive> ModelLoader::ProcessNode(const aiScene *scene, aiNode *no
                 unsigned int begin = j * block_length,
                              end = (j == thread_num - 1) ? face_nums : ((j + 1) * block_length);
                 workers.push_back(std::thread{ProcessMesh, mesh, begin, end, face_normals, to_world,
-                                              id_bsdf, std::ref(local_primitive_buffer)});
+                                              id_bsdf, std::ref(local_primitive_info_buffer)});
             }
-            for (uint64_t i = 0; i < workers.size(); ++i)
+            for (uint32_t i = 0; i < workers.size(); ++i)
                 workers[i].join();
         }
-        primitive_buffer.insert(primitive_buffer.end(), local_primitive_buffer.begin(),
-                                local_primitive_buffer.end());
+        primitive_info_buffer.insert(primitive_info_buffer.end(),
+                                     local_primitive_info_buffer.begin(),
+                                     local_primitive_info_buffer.end());
     }
 
     for (unsigned int i = 0; i < node->mNumChildren; ++i)
     {
-        std::vector<Primitive> local_primitive_buffer = ProcessNode(scene, node->mChildren[i],
-                                                                    face_normals, to_world, id_bsdf);
-        primitive_buffer.insert(primitive_buffer.end(), local_primitive_buffer.begin(),
-                                local_primitive_buffer.end());
+        std::vector<Primitive::Info> local_primitive_info_buffer = ProcessNode(
+            scene, node->mChildren[i], face_normals, to_world, id_bsdf);
+        primitive_info_buffer.insert(primitive_info_buffer.end(),
+                                     local_primitive_info_buffer.begin(),
+                                     local_primitive_info_buffer.end());
     }
 
-    return primitive_buffer;
+    return primitive_info_buffer;
 }
 
-void ModelLoader::ProcessMesh(aiMesh *mesh, uint64_t begin, uint64_t end, bool face_normals,
-                              const Mat4 &to_world, uint64_t id_bsdf,
-                              std::vector<Primitive> &primitive_buffer)
+void ModelLoader::ProcessMesh(aiMesh *mesh, uint32_t begin, uint32_t end, bool face_normals,
+                              const Mat4 &to_world, uint32_t id_bsdf,
+                              std::vector<Primitive::Info> &primitive_info_buffer)
 {
     const Mat4 normal_to_world = to_world.Transpose().Inverse();
     Vertex triangle_vertices[3];
@@ -440,16 +446,16 @@ void ModelLoader::ProcessMesh(aiMesh *mesh, uint64_t begin, uint64_t end, bool f
 
         for (int v = 0; v < 3; ++v)
         {
-            triangle_vertices[v].pos = {mesh->mVertices[indices[v]].x,
+            triangle_vertices[v].position = {mesh->mVertices[indices[v]].x,
                                         mesh->mVertices[indices[v]].y,
                                         mesh->mVertices[indices[v]].z};
-            triangle_vertices[v].pos = TransfromPoint(to_world, triangle_vertices[v].pos);
+            triangle_vertices[v].position = TransfromPoint(to_world, triangle_vertices[v].position);
         }
 
         if (face_normals)
         {
-            const Vec3 v0v1 = triangle_vertices[1].pos - triangle_vertices[0].pos,
-                       v0v2 = triangle_vertices[2].pos - triangle_vertices[0].pos;
+            const Vec3 v0v1 = triangle_vertices[1].position - triangle_vertices[0].position,
+                       v0v2 = triangle_vertices[2].position - triangle_vertices[0].position;
             const Vec3 normal = TransfromVector(normal_to_world, Normalize(Cross(v0v1, v0v2)));
             for (int v = 0; v < 3; ++v)
                 triangle_vertices[v].normal = normal;
@@ -508,7 +514,8 @@ void ModelLoader::ProcessMesh(aiMesh *mesh, uint64_t begin, uint64_t end, bool f
             }
         }
 
-        primitive_buffer[face_index] = Primitive(triangle_vertices, id_bsdf);
+        primitive_info_buffer[face_index] = Primitive::Info::CreateTriangle(triangle_vertices,
+                                                                            id_bsdf);
     }
 }
 

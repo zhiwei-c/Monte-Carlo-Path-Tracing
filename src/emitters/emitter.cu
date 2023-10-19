@@ -9,7 +9,7 @@ namespace
 
 Emitter::Info Emitter::Info::CreateSpotLight(const Mat4 &to_world, const Vec3 &intensity,
                                              const float cutoff_angle, const float beam_width,
-                                             const uint64_t id_texture)
+                                             const uint32_t id_texture)
 {
     Info info;
     info.type = Emitter::Type::kSpot;
@@ -22,7 +22,7 @@ Emitter::Info Emitter::Info::CreateSpotLight(const Mat4 &to_world, const Vec3 &i
 }
 
 Emitter::Info Emitter::Info::CreateSun(const Vec3 &direction, const Vec3 &radiance,
-                                       const float radius_scale, uint64_t id_texture)
+                                       const float radius_scale, uint32_t id_texture)
 {
     Info info;
     info.type = Emitter::Type::kSun;

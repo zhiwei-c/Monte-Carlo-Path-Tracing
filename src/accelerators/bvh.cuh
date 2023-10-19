@@ -10,15 +10,15 @@
 struct BvhNode
 {
     bool leaf;
-    uint64_t id;
-    uint64_t id_left;
-    uint64_t id_right;
-    uint64_t object_id;
+    uint32_t id;
+    uint32_t id_left;
+    uint32_t id_right;
+    uint32_t object_id;
     AABB aabb;
 
     QUALIFIER_DEVICE BvhNode();
-    QUALIFIER_DEVICE BvhNode(const uint64_t _id, const AABB &_aabb);
-    QUALIFIER_DEVICE BvhNode(const uint64_t _id, const uint64_t _object_id, const AABB &_aabb);
+    QUALIFIER_DEVICE BvhNode(const uint32_t _id, const AABB &_aabb);
+    QUALIFIER_DEVICE BvhNode(const uint32_t _id, const uint32_t _object_id, const AABB &_aabb);
 };
 
 class BvhBuilder
@@ -31,11 +31,11 @@ public:
     };
 
 protected:
-    AABB GetAabbBottomUpIndexed(const uint64_t begin, const uint64_t end);
+    AABB GetAabbBottomUpIndexed(const uint32_t begin, const uint32_t end);
 
-    uint64_t max_depth_;
-    uint64_t num_objects_;
-    std::vector<AABB> aabb_buffer_;
-    std::vector<uint64_t> id_map_;
+    uint32_t max_depth_;
+    uint32_t num_object_;
+    AABB *aabb_buffer_;
+    std::vector<uint32_t> id_map_;
     std::vector<BvhNode> *bvh_node_buffer_;
 };

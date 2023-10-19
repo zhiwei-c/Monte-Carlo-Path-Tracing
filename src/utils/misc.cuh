@@ -58,7 +58,7 @@ inline void CheckCuda(cudaError_t result, char const *const func, const char *co
 {
     if (result)
     {
-        fprintf(stderr, "CUDA error = %llu at %s : %d inside function '%s' \n", static_cast<uint64_t>(result), file, line, func);
+        fprintf(stderr, "CUDA error = %llu at %s:%d inside function '%s' \n", static_cast<uint32_t>(result), file, line, func);
         cudaDeviceReset();
         exit(99);
     }
@@ -66,7 +66,7 @@ inline void CheckCuda(cudaError_t result, char const *const func, const char *co
 
 inline void PrintError(char const *const func, const char *const file, int const line)
 {
-    fprintf(stderr, "error at %s : %d inside function '%s' \n", file, line, func);
+    fprintf(stderr, "error at %s:%d inside function '%s' \n", file, line, func);
     cudaDeviceReset();
     exit(1);
 }

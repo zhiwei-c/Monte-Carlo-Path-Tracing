@@ -2,8 +2,8 @@
 
 #include "../utils/math.cuh"
 
-QUALIFIER_DEVICE void Diffuse::Evaluate(const float *pixel_buffer, Texture **texture_buffer,
-                                        uint64_t *seed, SamplingRecord *rec) const
+QUALIFIER_DEVICE void Diffuse::Evaluate(Texture **texture_buffer, const float *pixel_buffer,
+                                        uint32_t *seed, SamplingRecord *rec) const
 {
     // 反推余弦加权重要抽样时的概率
     rec->pdf = PdfHemisCos(ToLocal(rec->wo, rec->normal));
@@ -18,8 +18,8 @@ QUALIFIER_DEVICE void Diffuse::Evaluate(const float *pixel_buffer, Texture **tex
     rec->attenuation = albedo * kPiInv * N_dot_I;
 }
 
-QUALIFIER_DEVICE void Diffuse::Sample(const float *pixel_buffer, Texture **texture_buffer,
-                                      uint64_t *seed, SamplingRecord *rec) const
+QUALIFIER_DEVICE void Diffuse::Sample(Texture **texture_buffer, const float *pixel_buffer,
+                                      uint32_t *seed, SamplingRecord *rec) const
 {
     // 余弦加权重要抽样入射光线的方向
     Vec3 wi_local = Vec3(0);

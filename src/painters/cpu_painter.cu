@@ -15,49 +15,49 @@
 namespace cpu
 {
     std::mutex mutex_patch;
-    std::vector<std::vector<std::array<uint64_t, 3>>> patches;
+    std::vector<std::vector<std::array<uint32_t, 3>>> patches;
 
-    void GeneratePatchInfo(const uint64_t width, const uint64_t height)
+    void GeneratePatchInfo(const uint32_t width, const uint32_t height)
     {
-        const uint64_t resolution = width * height;
-        std::vector<std::array<uint64_t, 3>> pixels(resolution);
-        auto GetMortonCode = [](const uint64_t column, const uint64_t row)
+        const uint32_t resolution = width * height;
+        std::vector<std::array<uint32_t, 3>> pixels(resolution);
+        auto GetMortonCode = [](const uint32_t column, const uint32_t row)
         {
-            uint64_t morton = 0;
-            for (uint64_t i = 0; i < sizeof(row) * 8; ++i)
+            uint32_t morton = 0;
+            for (uint32_t i = 0; i < sizeof(row) * 8; ++i)
             {
-                morton |= ((row & static_cast<uint64_t>(1) << i) << i |
-                           (column & static_cast<uint64_t>(1) << i) << (i + 1));
+                morton |= ((row & static_cast<uint32_t>(1) << i) << i |
+                           (column & static_cast<uint32_t>(1) << i) << (i + 1));
             }
             return morton;
         };
-        for (uint64_t j = 0; j < height; ++j)
+        for (uint32_t j = 0; j < height; ++j)
         {
-            for (uint64_t i = 0; i < width; ++i)
+            for (uint32_t i = 0; i < width; ++i)
                 pixels[j * width + i] = {i, j, GetMortonCode(i, j)};
         }
         std::sort(pixels.begin(), pixels.end(),
-                  [](const std::array<uint64_t, 3> &a, const std::array<uint64_t, 3> &b)
+                  [](const std::array<uint32_t, 3> &a, const std::array<uint32_t, 3> &b)
                   { return a.at(2) < b.at(2); });
 
-        constexpr uint64_t patch_size = 64;
-        const uint64_t num_patch = (pixels.size() + patch_size - 1) / patch_size;
-        ::cpu::patches = std::vector<std::vector<std::array<uint64_t, 3>>>(num_patch);
+        constexpr uint32_t patch_size = 64;
+        const uint32_t num_patch = (pixels.size() + patch_size - 1) / patch_size;
+        ::cpu::patches = std::vector<std::vector<std::array<uint32_t, 3>>>(num_patch);
 
-        uint64_t begin, end;
-        for (uint64_t i = 0; i < num_patch; ++i)
+        uint32_t begin, end;
+        for (uint32_t i = 0; i < num_patch; ++i)
         {
             begin = i * patch_size,
             end = std::min((i + 1) * patch_size, resolution);
-            ::cpu::patches[i] = std::vector<std::array<uint64_t, 3>>(
+            ::cpu::patches[i] = std::vector<std::array<uint32_t, 3>>(
                 pixels.begin() + begin, pixels.begin() + end);
         }
     }
 
-    void DispatchRays(Integrator *integrator, Camera *camera, uint64_t &count_pacth,
+    void DispatchRays(Integrator *integrator, Camera *camera, uint32_t &count_pacth,
                       Timer &timer, float *frame_buffer)
     {
-        uint64_t id_patch = 0;
+        uint32_t id_patch = 0;
         const double one_div_num_patch = 1.0 / patches.size();
         while (true)
         {
@@ -67,12 +67,12 @@ namespace cpu
                     break;
                 id_patch = count_pacth++;
             }
-            for (const std::array<uint64_t, 3> &pixel : patches[id_patch])
+            for (const std::array<uint32_t, 3> &pixel : patches[id_patch])
             {
-                const uint64_t i = pixel.at(0),
+                const uint32_t i = pixel.at(0),
                                j = pixel.at(1),
                                pixel_index = (j * camera->width() + i) * 3;
-                uint64_t seed = Tea(pixel_index, 0, 4);
+                uint32_t seed = Tea(pixel_index, 0, 4);
 
                 Vec3 color;
                 for (uint32_t s = 0; s < camera->spp(); ++s)
@@ -83,7 +83,7 @@ namespace cpu
                                 y = 1.0f - 2.0f * (j + v) / camera->height();
                     const Vec3 look_dir = Normalize(camera->front() + x * camera->view_dx() +
                                                     y * camera->view_dy());
-                    color += integrator->TraceRay(camera->eye(), look_dir, &seed);
+                    color += integrator->GenerateRay(camera->eye(), look_dir, &seed);
                 }
                 color *= camera->spp_inv();
 
@@ -117,7 +117,7 @@ CpuPainter::CpuPainter(BvhBuilder::Type bvh_type, const SceneInfo &info)
     if (!info.texture_info_buffer.empty())
     {
         texture_buffer_ = new Texture *[num_texture_];
-        for (uint64_t i = 0; i < num_texture_; ++i)
+        for (uint32_t i = 0; i < num_texture_; ++i)
         {
             switch (info.texture_info_buffer[i].type)
             {
@@ -143,10 +143,10 @@ CpuPainter::CpuPainter(BvhBuilder::Type bvh_type, const SceneInfo &info)
 
     std::vector<std::vector<float>> brdf_avg_buffer(Bsdf::kLutResolution, std::vector<float>(Bsdf::kLutResolution));
     std::vector<float> albedo_avg_buffer(Bsdf::kLutResolution);
-    for (uint64_t i = 0; i < Bsdf::kLutResolution; ++i)
+    for (uint32_t i = 0; i < Bsdf::kLutResolution; ++i)
     {
         albedo_avg_buffer[i] = albedo_avg_buffer_[i];
-        for (uint64_t j = 0; j < Bsdf::kLutResolution; ++j)
+        for (uint32_t j = 0; j < Bsdf::kLutResolution; ++j)
             brdf_avg_buffer[i][j] = brdf_avg_buffer_[i * Bsdf::kLutResolution + j];
     }
 
@@ -156,7 +156,7 @@ CpuPainter::CpuPainter(BvhBuilder::Type bvh_type, const SceneInfo &info)
     if (!info.bsdf_info_buffer.empty())
     {
         bsdf_buffer_ = new Bsdf *[num_bsdf_];
-        for (uint64_t i = 0; i < num_bsdf_; ++i)
+        for (uint32_t i = 0; i < num_bsdf_; ++i)
         {
             switch (info.bsdf_info_buffer[i].type)
             {
@@ -186,35 +186,40 @@ CpuPainter::CpuPainter(BvhBuilder::Type bvh_type, const SceneInfo &info)
         }
     }
 
-    // 创建图元及用于加速计算的数据结构
+    // 创建图元
+    num_primitive_ = info.primitive_info_buffer.size();
+    fprintf(stderr, "[info] total primitive num : %lu\n", num_primitive_);
+
     primitive_buffer_ = nullptr;
+    std::vector<AABB> aabb_buffer(num_primitive_);
+    if (num_primitive_ > 0)
+    {
+        primitive_buffer_ = new Primitive[num_primitive_];
+        for (uint32_t i = 0; i < num_primitive_; ++i)
+        {
+            primitive_buffer_[i] = Primitive(i, info.primitive_info_buffer[i]);
+            aabb_buffer[i] = primitive_buffer_[i].aabb();
+        }
+    }
+
+    // 创建用于加速计算的数据结构
     bvh_node_buffer_ = nullptr;
     accel_ = nullptr;
-    if (!info.primitive_buffer.empty())
+    if (num_primitive_ > 0)
     {
-        fprintf(stderr, "[info] total primitive num : %llu\n", info.primitive_buffer.size());
-        primitive_buffer_ = new Primitive[info.primitive_buffer.size()];
-        std::copy(info.primitive_buffer.begin(), info.primitive_buffer.end(), primitive_buffer_);
-
-        std::vector<AABB> aabb_buffer(info.primitive_buffer.size());
-        for (uint64_t i = 0; i < info.primitive_buffer.size(); ++i)
-        {
-            aabb_buffer[i] = info.primitive_buffer[i].GetAabb();
-        }
-
         std::vector<BvhNode> bvh_node_buffer;
         switch (bvh_type)
         {
         case BvhBuilder::Type::kNormal:
         {
             NormalBvhBuilder builder;
-            builder.Build(aabb_buffer, &bvh_node_buffer);
+            builder.Build(num_primitive_, aabb_buffer.data(), &bvh_node_buffer);
             break;
         }
         case BvhBuilder::Type::kLinear:
         {
             LinearBvhBuilder builder;
-            builder.Build(aabb_buffer, &bvh_node_buffer);
+            builder.Build(num_primitive_, aabb_buffer.data(), &bvh_node_buffer);
             break;
         }
         }
@@ -225,24 +230,25 @@ CpuPainter::CpuPainter(BvhBuilder::Type bvh_type, const SceneInfo &info)
     }
 
     // 创建物体实例，处理面光源信息
-    std::vector<uint64_t> area_light_id_buffer;
     instance_buffer_ = nullptr;
-    if (!info.instance_buffer.empty())
+    std::vector<uint32_t> area_light_id_buffer;
+    if (!info.instance_info_buffer.empty())
     {
-        for (uint64_t i = 0; i < info.instance_buffer.size(); ++i)
+        uint32_t num_instance = info.instance_info_buffer.size();
+        instance_buffer_ = new Instance[num_instance];
+        for (uint32_t i = 0; i < num_instance; ++i)
         {
-            if (info.instance_buffer[i].IsEmitter())
+            instance_buffer_[i] = Instance(i, info.instance_info_buffer[i], primitive_buffer_);
+
+            if (info.instance_info_buffer[i].is_emitter)
                 area_light_id_buffer.push_back(i);
         }
-
-        instance_buffer_ = new Instance[info.instance_buffer.size()];
-        std::copy(info.instance_buffer.begin(), info.instance_buffer.end(), instance_buffer_);
     }
     num_area_light_ = area_light_id_buffer.size();
     area_light_id_buffer_ = nullptr;
     if (!area_light_id_buffer.empty())
     {
-        area_light_id_buffer_ = new uint64_t[num_area_light_];
+        area_light_id_buffer_ = new uint32_t[num_area_light_];
         std::copy(area_light_id_buffer.begin(), area_light_id_buffer.end(), area_light_id_buffer_);
     }
 
@@ -259,7 +265,7 @@ CpuPainter::CpuPainter(BvhBuilder::Type bvh_type, const SceneInfo &info)
     if (!info.emitter_info_buffer.empty())
     {
         emitter_buffer_ = new Emitter *[num_emitter_];
-        for (uint64_t i = 0; i < num_emitter_; ++i)
+        for (uint32_t i = 0; i < num_emitter_; ++i)
         {
             switch (info.emitter_info_buffer[i].type)
             {
@@ -300,19 +306,19 @@ CpuPainter::~CpuPainter()
     SAFE_DELETE_ARRAY(albedo_avg_buffer_);
 
     SAFE_DELETE_ARRAY(pixel_buffer_);
-    for (uint64_t i = 0; i < num_texture_; ++i)
+    for (uint32_t i = 0; i < num_texture_; ++i)
         SAFE_DELETE_ELEMENT(texture_buffer_[i]);
 
     SAFE_DELETE_ARRAY(texture_buffer_);
 
-    for (uint64_t i = 0; i < num_bsdf_; ++i)
+    for (uint32_t i = 0; i < num_bsdf_; ++i)
         SAFE_DELETE_ELEMENT(bsdf_buffer_[i]);
     SAFE_DELETE_ARRAY(bsdf_buffer_);
 
     SAFE_DELETE_ARRAY(primitive_buffer_);
     SAFE_DELETE_ARRAY(instance_buffer_);
 
-    for (uint64_t i = 0; i < num_emitter_; ++i)
+    for (uint32_t i = 0; i < num_emitter_; ++i)
         SAFE_DELETE_ELEMENT(emitter_buffer_[i]);
     SAFE_DELETE_ARRAY(emitter_buffer_);
 
@@ -328,7 +334,7 @@ CpuPainter::~CpuPainter()
 
 void CpuPainter::Draw(const std::string &filename)
 {
-    uint64_t count_pacth = 0;
+    uint32_t count_pacth = 0;
     float *frame_buffer = new float[camera_->width() * camera_->height() * 3];
     ::cpu::GeneratePatchInfo(camera_->width(), camera_->height());
 
@@ -336,10 +342,10 @@ void CpuPainter::Draw(const std::string &filename)
     {
         std::vector<Vec3> colors_tmp, ret;
         {
-            int i = 368,
-                j = 69;
-            const uint64_t pixel_index = (j * camera_->width() + i) * 3;
-            uint64_t seed = Tea(pixel_index, 0, 4);
+            int i = 305,
+                j = 474;
+            const uint32_t pixel_index = (j * camera_->width() + i) * 3;
+            uint32_t seed = Tea(pixel_index, 0, 4);
             Vec3 color, color_tmp;
             for (uint32_t s = 0; s < camera_->spp(); ++s)
             {
@@ -350,7 +356,7 @@ void CpuPainter::Draw(const std::string &filename)
                 const Vec3 look_dir = Normalize(camera_->front() + x * camera_->view_dx() +
                                                 y * camera_->view_dy());
                 const Vec3 eye = camera_->eye();
-                color_tmp = integrator_->TraceRay(eye, look_dir, &seed);
+                color_tmp = integrator_->GenerateRay(eye, look_dir, &seed);
                 colors_tmp.push_back(color_tmp);
                 color += color_tmp;
             }

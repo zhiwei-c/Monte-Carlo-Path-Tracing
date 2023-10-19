@@ -2,9 +2,8 @@
 
 #include "../utils/math.cuh"
 
-QUALIFIER_DEVICE void Plastic::Evaluate(const float *pixel_buffer,
-                                        Texture **texture_buffer,
-                                        uint64_t *seed, SamplingRecord *rec) const
+QUALIFIER_DEVICE void Plastic::Evaluate(Texture **texture_buffer, const float *pixel_buffer,
+                                        uint32_t *seed, SamplingRecord *rec) const
 {
     // 反射光线与法线方向应该位于同侧
     const float N_dot_O = Dot(rec->wo, rec->normal);
@@ -62,9 +61,8 @@ QUALIFIER_DEVICE void Plastic::Evaluate(const float *pixel_buffer,
     }
 }
 
-QUALIFIER_DEVICE void Plastic::Sample(const float *pixel_buffer,
-                                      Texture **texture_buffer,
-                                      uint64_t *seed, SamplingRecord *rec) const
+QUALIFIER_DEVICE void Plastic::Sample(Texture **texture_buffer, const float *pixel_buffer,
+                                      uint32_t *seed, SamplingRecord *rec) const
 {
     // 计算塑料清漆层和基底层反射的权重
     const Vec3 kd = texture_buffer[id_diffuse_reflectance_]->GetColor(rec->texcoord, pixel_buffer),

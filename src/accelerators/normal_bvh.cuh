@@ -5,8 +5,8 @@
 class NormalBvhBuilder : public BvhBuilder
 {
 public:
-    void Build(const std::vector<AABB> &aabb_buffer, std::vector<BvhNode> *bvh_node_buffer);
+    void Build(uint32_t num_object, AABB *aabb_buffer, std::vector<BvhNode> *bvh_node_buffer);
 
 private:
-    uint64_t BuildBvhTopDown(const uint64_t begin, const uint64_t end);
+    uint32_t BuildBvhTopDown(const uint32_t begin, const uint32_t end);
 };

@@ -31,7 +31,7 @@ QUALIFIER_DEVICE bool AABB::Intersect(const Ray &ray) const
         t_exit = fminf(t_max, t_exit);
     }
     t_exit *= kAabbErrorBound;
-    return 0.0f < t_exit && t_enter < t_exit && t_enter < ray.t_max;
+    return 0.0f < t_exit && t_enter < t_exit;
 }
 
 QUALIFIER_DEVICE AABB &AABB::operator+=(const Vec3 &v)

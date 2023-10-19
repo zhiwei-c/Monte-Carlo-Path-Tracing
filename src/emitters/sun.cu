@@ -4,14 +4,13 @@
 
 QUALIFIER_DEVICE bool Sun::GetRadiance(const Vec3 &origin, const Accel *accel, Bsdf **bsdf_buffer,
                                        Texture **texture_buffer, const float *pixel_buffer,
-                                       uint64_t *seed, Vec3 *radiance, Vec3 *wi) const
+                                       uint32_t *seed, Vec3 *radiance, Vec3 *wi) const
 {
     const Vec3 dir = SampleConeUniform(cos_cutoff_angle_, RandomFloat(seed), RandomFloat(seed));
     *wi = ToWorld(dir, direction_);
-
-    Intersection its;
-    accel->Intersect(Ray(origin, -*wi), bsdf_buffer, texture_buffer, pixel_buffer, seed, &its);
-    if (its.valid())
+    Intersection its = accel->TraceRay(Ray(origin, -*wi), bsdf_buffer, texture_buffer, pixel_buffer,
+                                       seed);
+    if (its.valid)
     {
         return false;
     }

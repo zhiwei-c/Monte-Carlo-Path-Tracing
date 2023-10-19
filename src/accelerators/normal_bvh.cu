@@ -1,23 +1,23 @@
 #include "normal_bvh.cuh"
 
-void NormalBvhBuilder::Build(const std::vector<AABB> &aabb_buffer,
+void NormalBvhBuilder::Build(uint32_t num_object, AABB *aabb_buffer, 
                              std::vector<BvhNode> *bvh_node_buffer)
 {
+    num_object_ = num_object;
     aabb_buffer_ = aabb_buffer;
     bvh_node_buffer_ = bvh_node_buffer;
 
-    num_objects_ = aabb_buffer.size();
-    id_map_ = std::vector<uint64_t>(num_objects_);
-    for (uint64_t i = 0; i < num_objects_; ++i)
+    id_map_ = std::vector<uint32_t>(num_object_);
+    for (uint32_t i = 0; i < num_object_; ++i)
         id_map_[i] = i;
 
     *bvh_node_buffer_ = {};
-    BuildBvhTopDown(0, num_objects_);
+    BuildBvhTopDown(0, num_object_);
 }
 
-uint64_t NormalBvhBuilder::BuildBvhTopDown(const uint64_t begin, const uint64_t end)
+uint32_t NormalBvhBuilder::BuildBvhTopDown(const uint32_t begin, const uint32_t end)
 {
-    const uint64_t id_node = bvh_node_buffer_->size();
+    const uint32_t id_node = bvh_node_buffer_->size();
 
     if (begin + 1 == end)
     {
@@ -39,12 +39,12 @@ uint64_t NormalBvhBuilder::BuildBvhTopDown(const uint64_t begin, const uint64_t 
         }
     }
     std::sort(id_map_.begin() + begin, id_map_.begin() + end,
-              [&](const uint64_t id1, const uint64_t id2)
+              [&](const uint32_t id1, const uint32_t id2)
               { return aabb_buffer_[id1].center()[dim_target] <
                        aabb_buffer_[id2].center()[dim_target]; });
 
     bvh_node_buffer_->push_back(BvhNode(id_node, aabb_current));
-    const uint64_t middle = (begin + end) / 2;
+    const uint32_t middle = (begin + end) / 2;
     (*bvh_node_buffer_)[id_node].id_left = BuildBvhTopDown(begin, middle);
     (*bvh_node_buffer_)[id_node].id_right = BuildBvhTopDown(middle, end);
     return id_node;

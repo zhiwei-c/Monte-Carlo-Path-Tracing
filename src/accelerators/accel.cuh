@@ -15,10 +15,11 @@ public:
 
     QUALIFIER_DEVICE bool Empty() const { return bvh_node_buffer_ == nullptr; }
 
-    QUALIFIER_DEVICE void Intersect(const Ray &ray, Bsdf **bsdf_buffer, Texture **texture_buffer,
-                                    const float *pixel_buffer, uint64_t *seed, Intersection *its) const;
+    QUALIFIER_DEVICE Intersection TraceRay(const Ray &ray, Bsdf **bsdf_buffer,
+                                           Texture **texture_buffer, const float *pixel_buffer,
+                                           uint32_t *seed) const;
 
 private:
-    const Primitive *primitive_buffer_;
+    Primitive *primitive_buffer_;
     const BvhNode *bvh_node_buffer_;
 };

@@ -41,14 +41,17 @@ inline QUALIFIER_DEVICE int Modulo(const int a, const int b)
     return c;
 }
 
-inline QUALIFIER_DEVICE float Lerp(const float v1, const float v2, const float t)
+template <typename T>
+inline QUALIFIER_DEVICE T Lerp(const T &v1, const T &v2, const float t)
 {
     return (1.0f - t) * v1 + t * v2;
 }
 
-inline QUALIFIER_DEVICE Vec3 Lerp(const Vec3 &v1, const Vec3 &v2, const float t)
+template <typename T>
+inline QUALIFIER_DEVICE T Lerp(const T *v, const float alpha, const float beta,
+                               const float gamma)
 {
-    return (1.0f - t) * v1 + t * v2;
+    return alpha * v[0] + beta * v[1] + gamma * v[2];
 }
 
 inline QUALIFIER_DEVICE Vec3 TransfromPoint(const Mat4 &m, const Vec3 &p)
@@ -63,10 +66,10 @@ inline QUALIFIER_DEVICE Vec3 TransfromVector(const Mat4 &m, const Vec3 &v)
     return Normalize({temp.x, temp.y, temp.z});
 }
 
-inline QUALIFIER_DEVICE uint64_t Tea(uint64_t v0, uint64_t v1, const int cycle)
+inline QUALIFIER_DEVICE uint32_t Tea(uint32_t v0, uint32_t v1, const int cycle)
 {
-    uint64_t s0 = 0;
-    for (uint64_t n = 0; n < cycle; n++)
+    uint32_t s0 = 0;
+    for (uint32_t n = 0; n < cycle; n++)
     {
         s0 += 0x9e3779b9;
         v0 += ((v1 << 4) + 0xa341316c) ^ (v1 + s0) ^ ((v1 >> 5) + 0xc8013ea4);
@@ -89,7 +92,7 @@ inline QUALIFIER_DEVICE float GetVanDerCorputSequence(uint32_t index, const int 
 }
 
 // Generate random float in [0, 1) with a simple linear congruential generator.
-inline QUALIFIER_DEVICE float RandomFloat(uint64_t *previous)
+inline QUALIFIER_DEVICE float RandomFloat(uint32_t *previous)
 {
     *previous = *previous * 1664525u + 1013904223u;
     return static_cast<float>(*previous & 0x00ffffff) / static_cast<float>(0x01000000u);

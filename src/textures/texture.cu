@@ -21,7 +21,7 @@ Texture::Info Texture::Info::CreateCheckerboard(const Vec3 &color0, const Vec3 &
     return info;
 }
 
-Texture::Info Texture::Info::CreateBitmap(const uint64_t offset, const int width,
+Texture::Info Texture::Info::CreateBitmap(const uint32_t offset, const int width,
                                           const int height, const int channel)
 {
     Texture::Info info;
@@ -33,7 +33,8 @@ Texture::Info Texture::Info::CreateBitmap(const uint64_t offset, const int width
     return info;
 }
 
-QUALIFIER_DEVICE Vec3 CheckerboardTexture::GetColor(const Vec2 &texcoord, const float *pixel_buffer) const
+QUALIFIER_DEVICE Vec3 CheckerboardTexture::GetColor(const Vec2 &texcoord,
+                                                    const float *pixel_buffer) const
 {
     Vec3 uv = TransfromPoint(to_uv_, {texcoord.u, texcoord.v, 0.0f});
     while (uv.x > 1)
@@ -78,24 +79,28 @@ QUALIFIER_DEVICE Vec3 Bitmap::GetColor(const Vec2 &texcoord, const float *pixel_
     const int x_upper = (t_x > 0.0f) ? x_lower + 1 : x_lower,
               y_upper = (t_y > 0.0f) ? y_lower + 1 : y_lower;
 
-    uint64_t offset = offset_ + (x_lower + width_ * y_lower) * channel_;
+    uint32_t offset = offset_ + (x_lower + width_ * y_lower) * channel_;
     const Vec3 color_lower_lower = (channel_ == 1) ? Vec3(pixel_buffer[offset])
-                                                   : Vec3{pixel_buffer[offset], pixel_buffer[offset + 1],
+                                                   : Vec3{pixel_buffer[offset],
+                                                          pixel_buffer[offset + 1],
                                                           pixel_buffer[offset + 2]};
 
     offset = offset_ + (x_lower + width_ * y_upper) * channel_;
     const Vec3 color_lower_upper = (channel_ == 1) ? Vec3(pixel_buffer[offset])
-                                                   : Vec3{pixel_buffer[offset], pixel_buffer[offset + 1],
+                                                   : Vec3{pixel_buffer[offset],
+                                                          pixel_buffer[offset + 1],
                                                           pixel_buffer[offset + 2]};
 
     offset = offset_ + (x_upper + width_ * y_lower) * channel_;
     const Vec3 color_upper_lower = (channel_ == 1) ? Vec3(pixel_buffer[offset])
-                                                   : Vec3{pixel_buffer[offset], pixel_buffer[offset + 1],
+                                                   : Vec3{pixel_buffer[offset],
+                                                          pixel_buffer[offset + 1],
                                                           pixel_buffer[offset + 2]};
 
     offset = offset_ + (x_upper + width_ * y_upper) * channel_;
     const Vec3 color_upper_upper = (channel_ == 1) ? Vec3(pixel_buffer[offset])
-                                                   : Vec3{pixel_buffer[offset], pixel_buffer[offset + 1],
+                                                   : Vec3{pixel_buffer[offset],
+                                                          pixel_buffer[offset + 1],
                                                           pixel_buffer[offset + 2]};
 
     const Vec3 color_lower_lerp = Lerp(color_lower_lower, color_lower_upper, t_y),
@@ -124,7 +129,7 @@ QUALIFIER_DEVICE Vec2 Bitmap::GetGradient(const Vec2 &texcoord, const float *pix
         const int x_upper = (t_x > 0.0f) ? x_lower + 1 : x_lower,
                   y_upper = (t_y > 0.0f) ? y_lower + 1 : y_lower;
 
-        uint64_t offset = offset_ + (x_lower + width_ * y_lower) * channel_;
+        uint32_t offset = offset_ + (x_lower + width_ * y_lower) * channel_;
         const Vec3 color_lower_lower = (channel_ == 1) ? Vec3(pixel_buffer[offset])
                                                        : Vec3{pixel_buffer[offset],
                                                               pixel_buffer[offset + 1],
@@ -166,7 +171,7 @@ QUALIFIER_DEVICE Vec2 Bitmap::GetGradient(const Vec2 &texcoord, const float *pix
 }
 
 QUALIFIER_DEVICE bool Bitmap::IsTransparent(const Vec2 &texcoord, const float *pixel_buffer,
-                                            uint64_t *seed) const
+                                            uint32_t *seed) const
 {
     if (channel_ != 1 && channel_ != 4)
         return false;
@@ -188,17 +193,21 @@ QUALIFIER_DEVICE bool Bitmap::IsTransparent(const Vec2 &texcoord, const float *p
     const int x_upper = (t_x > 0.0f) ? x_lower + 1 : x_lower,
               y_upper = (t_y > 0.0f) ? y_lower + 1 : y_lower;
 
-    uint64_t offset = offset_ + (x_lower + width_ * y_lower) * channel_;
-    const float aplha_lower_lower = (channel_ == 1) ? pixel_buffer[offset] : pixel_buffer[offset + 3];
+    uint32_t offset = offset_ + (x_lower + width_ * y_lower) * channel_;
+    const float aplha_lower_lower = (channel_ == 1) ? pixel_buffer[offset]
+                                                    : pixel_buffer[offset + 3];
 
     offset = offset_ + (x_lower + width_ * y_upper) * channel_;
-    const float aplha_lower_upper = (channel_ == 1) ? pixel_buffer[offset] : pixel_buffer[offset + 3];
+    const float aplha_lower_upper = (channel_ == 1) ? pixel_buffer[offset]
+                                                    : pixel_buffer[offset + 3];
 
     offset = offset_ + (x_upper + width_ * y_lower) * channel_;
-    const float aplha_upper_lower = (channel_ == 1) ? pixel_buffer[offset] : pixel_buffer[offset + 3];
+    const float aplha_upper_lower = (channel_ == 1) ? pixel_buffer[offset]
+                                                    : pixel_buffer[offset + 3];
 
     offset = offset_ + (x_upper + width_ * y_upper) * channel_;
-    const float aplha_upper_upper = (channel_ == 1) ? pixel_buffer[offset] : pixel_buffer[offset + 3];
+    const float aplha_upper_upper = (channel_ == 1) ? pixel_buffer[offset]
+                                                    : pixel_buffer[offset + 3];
 
     const float aplha_lower_lerp = Lerp(aplha_lower_lower, aplha_lower_upper, t_y),
                 aplha_upper_lerp = Lerp(aplha_upper_lower, aplha_upper_upper, t_y);

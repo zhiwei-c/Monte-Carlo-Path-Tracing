@@ -5,6 +5,7 @@
 #include <array>
 
 #include <cstdio>
+#include <cmath>
 #include <tinyexr.h>
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION

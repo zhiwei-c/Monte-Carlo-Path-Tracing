@@ -89,6 +89,16 @@ namespace
         }
     }
 
+    __global__ void CreateInstanceBuffer(size_t num_instance,
+                                         Instance::Info *instance_info_buffer,
+                                         Primitive *primirive_buffer,
+                                         Instance *instance_buffer)
+    {
+        size_t id = blockIdx.x * blockDim.x + threadIdx.x;
+        if (id < num_instance)
+            instance_buffer[id] = Instance(id, instance_info_buffer[id], primirive_buffer);
+    }
+
     __global__ void CreateEmitterBuffer(size_t num_emitter, Emitter::Info *emitter_info_buffer,
                                         Sun *sun, Emitter **emitter_buffer)
     {
@@ -121,7 +131,8 @@ namespace
         }
     }
 
-    __global__ void CreateAccel(Primitive *primitive_buffer, BvhNode *bvh_node_buffer, Accel *accel)
+    __global__ void CreateAccel(Primitive *primitive_buffer, BvhNode *bvh_node_buffer,
+                                Accel *accel)
     {
         size_t id = blockIdx.x * blockDim.x + threadIdx.x;
         if (id == 0)
@@ -133,8 +144,8 @@ namespace
     __global__ void CreateIntegrator(float *pixel_buffer, Texture **texture_buffer,
                                      Bsdf **bsdf_buffer, Primitive *primitive_buffer,
                                      Instance *instance_buffer, Accel *accel,
-                                     uint64_t num_emitter, Emitter **emitter_buffer,
-                                     uint64_t num_area_light, uint64_t *area_light_id_buffer,
+                                     uint32_t num_emitter, Emitter **emitter_buffer,
+                                     uint32_t num_area_light, uint32_t *area_light_id_buffer,
                                      EnvMap *env_map, Sun *sun, Integrator *integrator)
     {
         size_t id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -152,8 +163,8 @@ namespace
         size_t j = blockIdx.y * blockDim.y + threadIdx.y;
         if (i < camera->width() && j < camera->height())
         {
-            const uint64_t pixel_index = j * camera->width() + i;
-            uint64_t seed = Tea(pixel_index, 0, 4);
+            const uint32_t pixel_index = j * camera->width() + i;
+            uint32_t seed = Tea(pixel_index, 0, 4);
             Vec3 color;
             for (uint32_t s = 0; s < camera->spp(); ++s)
             {
@@ -163,7 +174,7 @@ namespace
                             y = 1.0f - 2.0f * (j + v) / camera->height();
                 const Vec3 look_dir = Normalize(camera->front() + x * camera->view_dx() +
                                                 y * camera->view_dy());
-                color += integrator->TraceRay(camera->eye(), look_dir, &seed);
+                color += integrator->GenerateRay(camera->eye(), look_dir, &seed);
             }
             color *= camera->spp_inv();
 
@@ -223,13 +234,16 @@ CudaPainter::CudaPainter(BvhBuilder::Type bvh_type, const SceneInfo &info)
                                albedo_avg_buffer.size() * sizeof(float), cudaMemcpyHostToDevice));
 
     // 创建 BSDF
-    bsdf_buffer_ = nullptr;
     num_bsdf_ = info.bsdf_info_buffer.size();
+
+    bsdf_buffer_ = nullptr;
     CheckCudaErrors(cudaMallocManaged(&bsdf_buffer_, num_bsdf_ * sizeof(Bsdf *)));
+
     Bsdf::Info *bsdf_info_buffer = nullptr;
     CheckCudaErrors(cudaMallocManaged(&bsdf_info_buffer, num_bsdf_ * sizeof(Bsdf::Info)));
     CheckCudaErrors(cudaMemcpy(bsdf_info_buffer, info.bsdf_info_buffer.data(),
                                num_bsdf_ * sizeof(Bsdf::Info), cudaMemcpyHostToDevice));
+
     threads_per_block_ = {32, 1, 1};
     num_blocks_ = {static_cast<unsigned int>(num_bsdf_ / 32 + 1), 1, 1};
     ::CreateBsdfBuffer<<<num_blocks_, threads_per_block_>>>(num_bsdf_, bsdf_info_buffer,
@@ -241,40 +255,48 @@ CudaPainter::CudaPainter(BvhBuilder::Type bvh_type, const SceneInfo &info)
     CheckCudaErrors(cudaGetLastError());
     CheckCudaErrors(cudaFree(bsdf_info_buffer));
 
-    // 创建图元及用于加速计算的数据结构
+    //
+    // 创建图元
+    //
+    num_primitive_ = info.primitive_info_buffer.size();
+    fprintf(stderr, "[info] total primitive num : %lu\n", num_primitive_);
+
+    std::vector<Primitive> primitive_buffer(num_primitive_);
+    std::vector<AABB> aabb_buffer(num_primitive_);
+    for (uint32_t i = 0; i < num_primitive_; ++i)
+    {
+        primitive_buffer[i] = Primitive(i, info.primitive_info_buffer[i]);
+        aabb_buffer[i] = primitive_buffer[i].aabb();
+    }
     primitive_buffer_ = nullptr;
+    CheckCudaErrors(cudaMallocManaged(&primitive_buffer_, num_primitive_ * sizeof(Primitive)));
+    CheckCudaErrors(cudaMemcpy(primitive_buffer_, primitive_buffer.data(),
+                               num_primitive_ * sizeof(Primitive), cudaMemcpyHostToDevice));
+
+
+    // 创建用于加速计算的数据结构
     bvh_node_buffer_ = nullptr;
     accel_ = nullptr;
-    if (!info.primitive_buffer.empty())
+    if (num_primitive_ > 0)
     {
-        uint64_t num_primitive = info.primitive_buffer.size();
-        fprintf(stderr, "[info] total primitive num : %llu\n", num_primitive);
-        CheckCudaErrors(cudaMallocManaged(&primitive_buffer_, num_primitive * sizeof(Primitive)));
-        CheckCudaErrors(cudaMemcpy(primitive_buffer_, info.primitive_buffer.data(),
-                                   num_primitive * sizeof(Primitive), cudaMemcpyHostToDevice));
-
-        std::vector<AABB> aabb_buffer(info.primitive_buffer.size());
-        for (uint64_t i = 0; i < info.primitive_buffer.size(); ++i)
-            aabb_buffer[i] = info.primitive_buffer[i].GetAabb();
-
         std::vector<BvhNode> bvh_node_buffer;
         switch (bvh_type)
         {
         case BvhBuilder::Type::kNormal:
         {
             NormalBvhBuilder builder;
-            builder.Build(aabb_buffer, &bvh_node_buffer);
+            builder.Build(num_primitive_, aabb_buffer.data(), &bvh_node_buffer);
             break;
         }
         case BvhBuilder::Type::kLinear:
         {
             LinearBvhBuilder builder;
-            builder.Build(aabb_buffer, &bvh_node_buffer);
+            builder.Build(num_primitive_, aabb_buffer.data(), &bvh_node_buffer);
             break;
         }
         }
 
-        uint64_t num_bvh_node = bvh_node_buffer.size();
+        uint32_t num_bvh_node = bvh_node_buffer.size();
         CheckCudaErrors(cudaMallocManaged(&bvh_node_buffer_, num_bvh_node * sizeof(BvhNode)));
         CheckCudaErrors(cudaMemcpy(bvh_node_buffer_, bvh_node_buffer.data(),
                                    num_bvh_node * sizeof(BvhNode), cudaMemcpyHostToDevice));
@@ -288,29 +310,42 @@ CudaPainter::CudaPainter(BvhBuilder::Type bvh_type, const SceneInfo &info)
         CheckCudaErrors(cudaDeviceSynchronize());
     }
 
-    // 创建物体实例，处理面光源信息
-    std::vector<uint64_t> area_light_id_buffer;
+    // 创建物体实例
+    uint32_t num_instance = info.instance_info_buffer.size();
     instance_buffer_ = nullptr;
-    if (!info.instance_buffer.empty())
-    {
-        for (uint64_t i = 0; i < info.instance_buffer.size(); ++i)
-        {
-            if (info.instance_buffer[i].IsEmitter())
-                area_light_id_buffer.push_back(i);
-        }
+    CheckCudaErrors(cudaMallocManaged(&instance_buffer_, num_instance * sizeof(Instance)));
 
-        uint64_t num_instance = info.instance_buffer.size();
-        CheckCudaErrors(cudaMallocManaged(&instance_buffer_, num_instance * sizeof(Instance)));
-        CheckCudaErrors(cudaMemcpy(instance_buffer_, info.instance_buffer.data(),
-                                   num_instance * sizeof(Instance), cudaMemcpyHostToDevice));
+    Instance::Info *instance_info_buffer = nullptr;
+    CheckCudaErrors(cudaMallocManaged(&instance_info_buffer,
+                                      num_instance * sizeof(Instance::Info)));
+    CheckCudaErrors(cudaMemcpy(instance_info_buffer, info.instance_info_buffer.data(),
+                               num_instance * sizeof(Instance::Info), cudaMemcpyHostToDevice));
+
+    threads_per_block_ = {32, 1, 1};
+    num_blocks_ = {static_cast<unsigned int>(num_instance / 32 + 1), 1, 1};
+    ::CreateInstanceBuffer<<<num_blocks_, threads_per_block_>>>(num_instance,
+                                                                instance_info_buffer,
+                                                                primitive_buffer_,
+                                                                instance_buffer_);
+    CheckCudaErrors(cudaGetLastError());
+    CheckCudaErrors(cudaDeviceSynchronize());
+    CheckCudaErrors(cudaGetLastError());
+    CheckCudaErrors(cudaFree(instance_info_buffer));
+
+    // 处理面光源信息
+    std::vector<uint32_t> area_light_id_buffer;
+    for (uint32_t i = 0; i < num_instance; ++i)
+    {
+        if (info.instance_info_buffer[i].is_emitter)
+            area_light_id_buffer.push_back(i);
     }
     num_area_light_ = area_light_id_buffer.size();
     area_light_id_buffer_ = nullptr;
     if (!area_light_id_buffer.empty())
     {
-        CheckCudaErrors(cudaMallocManaged(&area_light_id_buffer_, num_area_light_ * sizeof(uint64_t)));
+        CheckCudaErrors(cudaMallocManaged(&area_light_id_buffer_, num_area_light_ * sizeof(uint32_t)));
         CheckCudaErrors(cudaMemcpy(area_light_id_buffer_, area_light_id_buffer.data(),
-                                   num_area_light_ * sizeof(uint64_t), cudaMemcpyHostToDevice));
+                                   num_area_light_ * sizeof(uint32_t), cudaMemcpyHostToDevice));
     }
 
     //
@@ -344,7 +379,7 @@ CudaPainter::CudaPainter(BvhBuilder::Type bvh_type, const SceneInfo &info)
     pixel_buffer_ = nullptr;
     if (!info.pixel_buffer.empty())
     {
-        uint64_t num_pixel = info.pixel_buffer.size();
+        uint32_t num_pixel = info.pixel_buffer.size();
         CheckCudaErrors(cudaMallocManaged(&pixel_buffer_, num_pixel * sizeof(float)));
         CheckCudaErrors(cudaMemcpy(pixel_buffer_, info.pixel_buffer.data(),
                                    num_pixel * sizeof(float), cudaMemcpyHostToDevice));
@@ -435,7 +470,7 @@ void CudaPainter::Draw(const std::string &filename)
 
     // 创建帧
     float *frame_buffer = nullptr;
-    uint64_t num_component = 3 * camera_->width() * camera_->height();
+    uint32_t num_component = 3 * camera_->width() * camera_->height();
     CheckCudaErrors(cudaMallocManaged((void **)&frame_buffer, num_component * sizeof(float)));
 
     threads_per_block_ = {8, 8, 1};

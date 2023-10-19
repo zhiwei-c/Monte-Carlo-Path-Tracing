@@ -3,7 +3,7 @@
 class Dielectric : public Bsdf
 {
 public:
-    QUALIFIER_DEVICE Dielectric(const uint64_t id, const Bsdf::Info::Data &data)
+    QUALIFIER_DEVICE Dielectric(const uint32_t id, const Bsdf::Info::Data &data)
         : Bsdf(id, kDielectric, data.twosided, data.id_opacity, data.id_bumpmap),
           eta_(data.dielectric.eta), eta_inv_(1.0f / data.dielectric.eta),
           id_roughness_(data.dielectric.id_roughness),
@@ -15,11 +15,11 @@ public:
     {
     }
 
-    QUALIFIER_DEVICE void Evaluate(const float *pixel_buffer, Texture **texture_buffer,
-                                   uint64_t *seed, SamplingRecord *rec) const override;
+    QUALIFIER_DEVICE void Evaluate(Texture **texture_buffer, const float *pixel_buffer,
+                                   uint32_t *seed, SamplingRecord *rec) const override;
 
-    QUALIFIER_DEVICE void Sample(const float *pixel_buffer, Texture **texture_buffer,
-                                 uint64_t *seed, SamplingRecord *rec) const override;
+    QUALIFIER_DEVICE void Sample(Texture **texture_buffer, const float *pixel_buffer,
+                                 uint32_t *seed, SamplingRecord *rec) const override;
 
 private:
     QUALIFIER_DEVICE float EvaluateMultipleScatter(const float N_dot_I, const float N_dot_O,
@@ -31,7 +31,7 @@ private:
     float reflectivity_;
     float F_avg_;
     float F_avg_inv_;
-    uint64_t id_roughness_;
-    uint64_t id_specular_reflectance_;
-    uint64_t id_specular_transmittance_;
+    uint32_t id_roughness_;
+    uint32_t id_specular_reflectance_;
+    uint32_t id_specular_transmittance_;
 };

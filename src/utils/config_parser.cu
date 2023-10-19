@@ -323,6 +323,7 @@ void ConfigParser::ReadCamera(bool is_realtime, pugi::xml_node sensor_node)
     }
     }
     uint32_t spp = 1;
+#ifdef ENABLE_VIEWER
     if (is_realtime)
     {
         fprintf(stderr, "[info] spp is forced to be set to 1 when real-time previewing.\n",
@@ -330,6 +331,7 @@ void ConfigParser::ReadCamera(bool is_realtime, pugi::xml_node sensor_node)
     }
     else
     {
+#endif
         for (pugi::xml_node node : sensor_node.child("sampler").children("integer"))
         {
             switch (Hash(node.attribute("name").value()))
@@ -358,7 +360,9 @@ void ConfigParser::ReadCamera(bool is_realtime, pugi::xml_node sensor_node)
                 break;
             }
         }
+#ifdef ENABLE_VIEWER
     }
+#endif
 
     Vec3 eye = {0.0f, 0.0f, 0.0f},
          look_at = {0.0f, 0.0f, 1.0f},
@@ -375,29 +379,35 @@ void ConfigParser::ReadCamera(bool is_realtime, pugi::xml_node sensor_node)
 }
 
 void ConfigParser::CreateSphere(const Vec3 &center, const float radius, const Mat4 &to_world,
-                                const uint64_t id_bsdf)
+                                const uint32_t id_bsdf)
 {
-    const uint64_t index_offset = info_.primitive_buffer.size(),
-                   num_primitives = 1;
-    info_.primitive_buffer.emplace_back(center, radius, to_world, id_bsdf);
-    info_.instance_buffer.emplace_back(
-        info_.instance_buffer.size(),
-        info_.bsdf_info_buffer[id_bsdf].type == Bsdf::Type::kAreaLight, index_offset,
-        num_primitives, info_.primitive_buffer.data());
+    const uint32_t index_offset = info_.primitive_info_buffer.size();
+
+    const Primitive::Info sphere_info = Primitive::Info::CreateSphere(center, radius, to_world, id_bsdf);
+    info_.primitive_info_buffer.push_back(sphere_info);
+
+    Instance::Info instance_info;
+    instance_info.index_offset = index_offset;
+    instance_info.num_primitive = 1;
+    instance_info.is_emitter = info_.bsdf_info_buffer[id_bsdf].type == Bsdf::Type::kAreaLight;
+    info_.instance_info_buffer.push_back(instance_info);
 }
 
-void ConfigParser::CreateDisk(const Mat4 &to_world, const uint64_t id_bsdf)
+void ConfigParser::CreateDisk(const Mat4 &to_world, const uint32_t id_bsdf)
 {
-    const uint64_t index_offset = info_.primitive_buffer.size(),
-                   num_primitives = 1;
-    info_.primitive_buffer.emplace_back(to_world, id_bsdf);
-    info_.instance_buffer.emplace_back(
-        info_.instance_buffer.size(),
-        info_.bsdf_info_buffer[id_bsdf].type == Bsdf::Type::kAreaLight, index_offset,
-        num_primitives, info_.primitive_buffer.data());
+    const uint32_t index_offset = info_.primitive_info_buffer.size();
+
+    const Primitive::Info disk_info = Primitive::Info::CreateDisk(to_world, id_bsdf);
+    info_.primitive_info_buffer.push_back(disk_info);
+
+    Instance::Info instance_info;
+    instance_info.index_offset = index_offset;
+    instance_info.num_primitive = 1;
+    instance_info.is_emitter = info_.bsdf_info_buffer[id_bsdf].type == Bsdf::Type::kAreaLight;
+    info_.instance_info_buffer.push_back(instance_info);
 }
 
-void ConfigParser::CreateRectangle(const Mat4 &to_world, const uint64_t id_bsdf)
+void ConfigParser::CreateRectangle(const Mat4 &to_world, const uint32_t id_bsdf)
 {
     const Uvec3 indices[] = {{0, 1, 2}, {2, 3, 0}};
     std::vector<Vertex> vertices = {
@@ -408,29 +418,31 @@ void ConfigParser::CreateRectangle(const Mat4 &to_world, const uint64_t id_bsdf)
     };
 
     const Mat4 normal_to_world = to_world.Transpose().Inverse();
-    for (uint64_t i = 0; i < vertices.size(); ++i)
+    for (uint32_t i = 0; i < vertices.size(); ++i)
     {
-        vertices[i].pos = TransfromPoint(to_world, vertices[i].pos);
+        vertices[i].position = TransfromPoint(to_world, vertices[i].position);
         vertices[i].normal = TransfromVector(normal_to_world, vertices[i].normal);
     }
 
-    const uint64_t index_offset = info_.primitive_buffer.size(),
+    const uint32_t index_offset = info_.primitive_info_buffer.size(),
                    num_primitives = sizeof(indices) / sizeof(Uvec3);
     Vertex v[3];
     for (int i = 0; i < num_primitives; ++i)
     {
         for (int j = 0; j < 3; ++j)
             v[j] = vertices[indices[i][j]];
-        info_.primitive_buffer.emplace_back(v, id_bsdf);
+        const Primitive::Info triangle_info = Primitive::Info::CreateTriangle(v, id_bsdf);
+        info_.primitive_info_buffer.push_back(triangle_info);
     }
 
-    info_.instance_buffer.emplace_back(
-        info_.instance_buffer.size(),
-        info_.bsdf_info_buffer[id_bsdf].type == Bsdf::Type::kAreaLight, index_offset,
-        num_primitives, info_.primitive_buffer.data());
+    Instance::Info instance_info;
+    instance_info.index_offset = index_offset;
+    instance_info.num_primitive = num_primitives;
+    instance_info.is_emitter = info_.bsdf_info_buffer[id_bsdf].type == Bsdf::Type::kAreaLight;
+    info_.instance_info_buffer.push_back(instance_info);
 }
 
-void ConfigParser::CreateCube(const Mat4 &to_world, const uint64_t id_bsdf)
+void ConfigParser::CreateCube(const Mat4 &to_world, const uint32_t id_bsdf)
 {
     const Uvec3 indices[] = {
         // bottom
@@ -485,51 +497,54 @@ void ConfigParser::CreateCube(const Mat4 &to_world, const uint64_t id_bsdf)
         {{0, 0}, {-1, 1, -1}, {0, 0, -1}},
     };
     const Mat4 normal_to_world = to_world.Transpose().Inverse();
-    for (uint64_t i = 0; i < vertices.size(); ++i)
+    for (uint32_t i = 0; i < vertices.size(); ++i)
     {
-        vertices[i].pos = TransfromPoint(to_world, vertices[i].pos);
+        vertices[i].position = TransfromPoint(to_world, vertices[i].position);
         vertices[i].normal = TransfromVector(normal_to_world, vertices[i].normal);
     }
 
-    const uint64_t index_offset = info_.primitive_buffer.size(),
+    const uint32_t index_offset = info_.primitive_info_buffer.size(),
                    num_primitives = sizeof(indices) / sizeof(Uvec3);
     Vertex v[3];
     for (int i = 0; i < num_primitives; ++i)
     {
         for (int j = 0; j < 3; ++j)
             v[j] = vertices[indices[i][j]];
-        info_.primitive_buffer.emplace_back(v, id_bsdf);
+        const Primitive::Info triangle_info = Primitive::Info::CreateTriangle(v, id_bsdf);
+        info_.primitive_info_buffer.push_back(triangle_info);
     }
 
-    info_.instance_buffer.emplace_back(
-        info_.instance_buffer.size(),
-        info_.bsdf_info_buffer[id_bsdf].type == Bsdf::Type::kAreaLight, index_offset,
-        num_primitives, info_.primitive_buffer.data());
+    Instance::Info instance_info;
+    instance_info.index_offset = index_offset;
+    instance_info.num_primitive = num_primitives;
+    instance_info.is_emitter = info_.bsdf_info_buffer[id_bsdf].type == Bsdf::Type::kAreaLight;
+    info_.instance_info_buffer.push_back(instance_info);
 }
 
 void ConfigParser::CreateMeshes(const std::string &filename, const int index_shape,
                                 const Mat4 &to_world, const bool flip_texcoords,
-                                const bool face_normals, const uint64_t id_bsdf)
+                                const bool face_normals, const uint32_t id_bsdf)
 {
     ModelLoader loader;
-    std::vector<Primitive> local_primitive_buffer =
+    std::vector<Primitive::Info> local_primitive_info_buffer =
         GetSuffix(filename) == "serialized"
             ? loader.Load(filename, index_shape, to_world, flip_texcoords, face_normals, id_bsdf)
             : loader.Load(filename, to_world, flip_texcoords, face_normals, id_bsdf);
 
-    const uint64_t index_offset = info_.primitive_buffer.size(),
-                   num_primitives = local_primitive_buffer.size();
+    const uint32_t index_offset = info_.primitive_info_buffer.size();
 
-    info_.primitive_buffer.insert(info_.primitive_buffer.end(), local_primitive_buffer.begin(),
-                                  local_primitive_buffer.end());
+    info_.primitive_info_buffer.insert(info_.primitive_info_buffer.end(),
+                                       local_primitive_info_buffer.begin(),
+                                       local_primitive_info_buffer.end());
 
-    info_.instance_buffer.emplace_back(
-        info_.instance_buffer.size(),
-        info_.bsdf_info_buffer[id_bsdf].type == Bsdf::Type::kAreaLight, index_offset,
-        num_primitives, info_.primitive_buffer.data());
+    Instance::Info instance_info;
+    instance_info.index_offset = index_offset;
+    instance_info.num_primitive = local_primitive_info_buffer.size();
+    instance_info.is_emitter = info_.bsdf_info_buffer[id_bsdf].type == Bsdf::Type::kAreaLight;
+    info_.instance_info_buffer.push_back(instance_info);
 }
 
-uint64_t ConfigParser::ReadTexture(const pugi::xml_node &parent_node,
+uint32_t ConfigParser::ReadTexture(const pugi::xml_node &parent_node,
                                    const std::vector<std::string> &valid_names,
                                    const float defalut_value)
 {
@@ -540,7 +555,7 @@ uint64_t ConfigParser::ReadTexture(const pugi::xml_node &parent_node,
     }
     else
     {
-        const uint64_t index = info_.texture_info_buffer.size();
+        const uint32_t index = info_.texture_info_buffer.size();
         const std::string id = "texture_" + std::to_string(index);
         id_texture_mp_[id] = index;
         info_.texture_info_buffer.push_back(Texture::Info::CreateConstant(Vec3(defalut_value)));
@@ -548,7 +563,7 @@ uint64_t ConfigParser::ReadTexture(const pugi::xml_node &parent_node,
     }
 }
 
-uint64_t ConfigParser::ReadTexture(const pugi::xml_node &texture_node, const float scale,
+uint32_t ConfigParser::ReadTexture(const pugi::xml_node &texture_node, const float scale,
                                    const float defalut_value)
 {
     std::string id = texture_node.attribute("id").as_string();
@@ -562,7 +577,7 @@ uint64_t ConfigParser::ReadTexture(const pugi::xml_node &texture_node, const flo
         return index;
     }
 
-    uint64_t id_texture = kInvalidId;
+    uint32_t id_texture = kInvalidId;
     std::string node_name = texture_node.name();
     switch (Hash(node_name.c_str()))
     {
@@ -667,7 +682,7 @@ uint64_t ConfigParser::ReadTexture(const pugi::xml_node &texture_node, const flo
                 exit(1);
             }
             const float gamma = mitsuba_parser::ReadFloat(texture_node, {"gamma"}, 0.0f);
-            const uint64_t index = info_.texture_info_buffer.size();
+            const uint32_t index = info_.texture_info_buffer.size();
             if (id.empty())
                 id = "texture_" + std::to_string(index);
             id_texture = ReadBitmap(config_file_directory_ + child_node.attribute("value").as_string(),
@@ -695,8 +710,8 @@ uint64_t ConfigParser::ReadTexture(const pugi::xml_node &texture_node, const flo
     return id_texture;
 }
 
-uint64_t ConfigParser::ReadBsdf(pugi::xml_node bsdf_node, std::string id, uint64_t id_opacity,
-                                uint64_t id_bumpmap, bool twosided)
+uint32_t ConfigParser::ReadBsdf(pugi::xml_node bsdf_node, std::string id, uint32_t id_opacity,
+                                uint32_t id_bumpmap, bool twosided)
 {
     if (id.empty())
         id = bsdf_node.attribute("id").as_string();
@@ -737,26 +752,26 @@ uint64_t ConfigParser::ReadBsdf(pugi::xml_node bsdf_node, std::string id, uint64
     }
     }
 
-    const uint64_t index = info_.bsdf_info_buffer.size();
+    const uint32_t index = info_.bsdf_info_buffer.size();
     if (id.empty())
         id = "bsdf_" + std::to_string(index);
 
-    uint64_t id_bsdf = index;
+    uint32_t id_bsdf = index;
     bool is_thin_dielectric = false;
     switch (Hash(type.c_str()))
     {
     case "roughdiffuse"_hash:
     {
         bool use_fast_aaprox = mitsuba_parser::ReadBoolean(bsdf_node, {"useFastApprox"}, false);
-        uint64_t id_reflectance = ReadTexture(bsdf_node, {"reflectance"}, 0.5f);
-        uint64_t id_roughness = ReadTexture(bsdf_node, {"alpha"}, 0.2f);
+        uint32_t id_reflectance = ReadTexture(bsdf_node, {"reflectance"}, 0.5f);
+        uint32_t id_roughness = ReadTexture(bsdf_node, {"alpha"}, 0.2f);
         info_.bsdf_info_buffer.push_back(Bsdf::Info::CreateRoughDiffuse(
             id_reflectance, id_roughness, use_fast_aaprox, twosided, id_opacity, id_bumpmap));
         break;
     }
     case "diffuse"_hash:
     {
-        uint64_t id_reflectance = ReadTexture(bsdf_node, {"reflectance"}, 0.5f);
+        uint32_t id_reflectance = ReadTexture(bsdf_node, {"reflectance"}, 0.5f);
         info_.bsdf_info_buffer.push_back(Bsdf::Info::CreateDiffuse(id_reflectance, twosided,
                                                                    id_opacity, id_bumpmap));
         break;
@@ -771,14 +786,14 @@ uint64_t ConfigParser::ReadBsdf(pugi::xml_node bsdf_node, std::string id, uint64
         twosided = true;
         const float int_ior = ReadDielectricIor(bsdf_node, {"int_ior", "intIOR"}, 1.5046f);
         const float ext_ior = ReadDielectricIor(bsdf_node, {"ext_ior", "extIOR"}, 1.000277f);
-        uint64_t id_roughness;
+        uint32_t id_roughness;
         if (type == "roughdielectric")
             id_roughness = ReadTexture(bsdf_node, {"alpha", "alpha_u", "alphaU"}, 0.1f);
         else
             id_roughness = ReadTexture(bsdf_node, std::vector<std::string>{}, 0.001f);
-        const uint64_t id_specular_reflectance = ReadTexture(
+        const uint32_t id_specular_reflectance = ReadTexture(
             bsdf_node, {"specularReflectance", "specular_reflectance"}, 1.0f);
-        const uint64_t id_specular_transmittance = ReadTexture(
+        const uint32_t id_specular_transmittance = ReadTexture(
             bsdf_node, {"specularTransmittance", "specular_transmittance"}, 1.0f);
         if (is_thin_dielectric)
             info_.bsdf_info_buffer.push_back(Bsdf::Info::CreateDielectric(
@@ -793,12 +808,12 @@ uint64_t ConfigParser::ReadBsdf(pugi::xml_node bsdf_node, std::string id, uint64
     case "conductor"_hash:
     case "roughconductor"_hash:
     {
-        uint64_t id_roughness;
+        uint32_t id_roughness;
         if (type == "roughconductor")
             id_roughness = ReadTexture(bsdf_node, {"alpha", "alpha_u", "alphaU"}, 0.1f);
         else
             id_roughness = ReadTexture(bsdf_node, std::vector<std::string>{}, 0.001f);
-        const uint64_t id_specular_reflectance = ReadTexture(
+        const uint32_t id_specular_reflectance = ReadTexture(
             bsdf_node, {"specularReflectance", "specular_reflectance"}, 1.0f);
         Vec3 eta, k;
         ReadConductorIor(bsdf_node, &eta, &k);
@@ -811,14 +826,14 @@ uint64_t ConfigParser::ReadBsdf(pugi::xml_node bsdf_node, std::string id, uint64
     {
         const float int_ior = ReadDielectricIor(bsdf_node, {"int_ior", "intIOR"}, 1.5046f);
         const float ext_ior = ReadDielectricIor(bsdf_node, {"ext_ior", "extIOR"}, 1.000277f);
-        uint64_t id_roughness;
+        uint32_t id_roughness;
         if (type == "roughplastic")
             id_roughness = ReadTexture(bsdf_node, {"alpha", "alpha_u", "alphaU"}, 0.1f);
         else
             id_roughness = ReadTexture(bsdf_node, std::vector<std::string>{}, 0.001f);
-        const uint64_t id_diffuse_reflectance = ReadTexture(
+        const uint32_t id_diffuse_reflectance = ReadTexture(
             bsdf_node, {"diffuseReflectance", "diffuse_reflectance"}, 1.0f);
-        const uint64_t id_specular_reflectance = ReadTexture(
+        const uint32_t id_specular_reflectance = ReadTexture(
             bsdf_node, {"specularReflectance", "specular_reflectance"}, 1.0f);
         info_.bsdf_info_buffer.push_back(Bsdf::Info::CreatePlastic(
             id_roughness, id_diffuse_reflectance, id_specular_reflectance, int_ior / ext_ior,
@@ -829,7 +844,7 @@ uint64_t ConfigParser::ReadBsdf(pugi::xml_node bsdf_node, std::string id, uint64
     {
         fprintf(stderr, "[warning] unsupport bsdf type '%s', use default 'diffuse' instead.\n",
                 type.c_str());
-        uint64_t id_reflectance = ReadTexture(bsdf_node, std::vector<std::string>{}, 0.5f);
+        uint32_t id_reflectance = ReadTexture(bsdf_node, std::vector<std::string>{}, 0.5f);
         info_.bsdf_info_buffer.push_back(Bsdf::Info::CreateDiffuse(id_reflectance, twosided,
                                                                    id_opacity, id_bumpmap));
         break;
@@ -842,7 +857,7 @@ uint64_t ConfigParser::ReadBsdf(pugi::xml_node bsdf_node, std::string id, uint64
 void ConfigParser::ReadShape(pugi::xml_node shape_node)
 {
     std::string id = shape_node.attribute("id").value();
-    const uint64_t index = info_.instance_buffer.size();
+    const uint32_t index = info_.instance_info_buffer.size();
     if (id.empty())
         id = "shape_" + std::to_string(index);
 
@@ -867,7 +882,7 @@ void ConfigParser::ReadShape(pugi::xml_node shape_node)
         }
     }
 
-    uint64_t id_bsdf;
+    uint32_t id_bsdf;
     if (shape_node.child("emitter"))
     {
         pugi::xml_node emitter_node = shape_node.child("emitter");
@@ -880,7 +895,7 @@ void ConfigParser::ReadShape(pugi::xml_node shape_node)
         }
 
         const Vec3 radiance = mitsuba_parser::ReadVec3(emitter_node, {"radiance"}, Vec3(1));
-        const uint64_t index_texture = info_.texture_info_buffer.size();
+        const uint32_t index_texture = info_.texture_info_buffer.size();
         const std::string texture_id = "texture_" + std::to_string(index_texture);
         id_texture_mp_[texture_id] = info_.texture_info_buffer.size();
         info_.texture_info_buffer.push_back(Texture::Info::CreateConstant(radiance));
@@ -969,7 +984,7 @@ void ConfigParser::ReadEmitter(pugi::xml_node emitter_node)
     {
     case "constant"_hash:
     {
-        const uint64_t id_radiance = ReadTexture(emitter_node, {"radiance"}, 1.0f);
+        const uint32_t id_radiance = ReadTexture(emitter_node, {"radiance"}, 1.0f);
         info_.env_map = new EnvMap(id_radiance, 1.0f, Mat4());
         break;
     }
@@ -978,7 +993,7 @@ void ConfigParser::ReadEmitter(pugi::xml_node emitter_node)
         const std::string filename = emitter_node.child("string").attribute("value").as_string();
         const float gamma = mitsuba_parser::ReadFloat(emitter_node, {"gamma"}, 0.0f);
         int width_target = static_cast<int>(info_.camera.width() * 360 / info_.camera.fov_x());
-        const uint64_t id_radiance = ReadBitmap(config_file_directory_ + filename,
+        const uint32_t id_radiance = ReadBitmap(config_file_directory_ + filename,
                                                 filename, gamma, 1.0f, &width_target);
         Mat4 to_world = mitsuba_parser::ReadTransform4(emitter_node.child("transform"));
         float scale = mitsuba_parser::ReadFloat(emitter_node, {"scale"}, 1.0f);
@@ -1034,9 +1049,9 @@ void ConfigParser::ReadEmitter(pugi::xml_node emitter_node)
             std::vector<float> data;
             CreateSkyTexture(sun_direction, albedo, turbidity, stretch, sky_scale,
                              extend, width, height, &data);
-            const uint64_t offset = info_.pixel_buffer.size();
+            const uint32_t offset = info_.pixel_buffer.size();
             info_.pixel_buffer.insert(info_.pixel_buffer.end(), data.begin(), data.end());
-            const uint64_t index = info_.texture_info_buffer.size();
+            const uint32_t index = info_.texture_info_buffer.size();
             id_texture_mp_["sky_texture"] = index;
             info_.texture_info_buffer.push_back(Texture::Info::CreateBitmap(offset, width, height,
                                                                             channel));
@@ -1048,9 +1063,9 @@ void ConfigParser::ReadEmitter(pugi::xml_node emitter_node)
             std::vector<float> data;
             CreateSunTexture(sun_direction, turbidity, sun_scale, sun_radius_scale, width, height,
                              &sun_radiance, &data);
-            const uint64_t offset = info_.pixel_buffer.size();
+            const uint32_t offset = info_.pixel_buffer.size();
             info_.pixel_buffer.insert(info_.pixel_buffer.end(), data.begin(), data.end());
-            const uint64_t index = info_.texture_info_buffer.size();
+            const uint32_t index = info_.texture_info_buffer.size();
             id_texture_mp_["sun_texture"] = index;
             info_.texture_info_buffer.push_back(Texture::Info::CreateBitmap(
                 offset, width, height, channel));
@@ -1077,7 +1092,7 @@ void ConfigParser::ReadEmitter(pugi::xml_node emitter_node)
         float beam_width = mitsuba_parser::ReadFloat(
             emitter_node, {"beamWidth", "beam_width"}, cutoff_angle * 0.75f);
         Mat4 to_world = mitsuba_parser::ReadTransform4(emitter_node.child("transform"));
-        uint64_t id_texture = kInvalidId;
+        uint32_t id_texture = kInvalidId;
         if (emitter_node.child("texture"))
             id_texture = ReadTexture(emitter_node.child("texture"), 1.0f, 1.0f);
         info_.emitter_info_buffer.push_back(Emitter::Info::CreateSpotLight(
@@ -1092,7 +1107,7 @@ void ConfigParser::ReadEmitter(pugi::xml_node emitter_node)
     }
 }
 
-uint64_t ConfigParser::ReadBitmap(const std::string &filename, const std::string &id, float gamma,
+uint32_t ConfigParser::ReadBitmap(const std::string &filename, const std::string &id, float gamma,
                                   float scale, int *width_max)
 {
     int width, height, channel;
@@ -1101,10 +1116,10 @@ uint64_t ConfigParser::ReadBitmap(const std::string &filename, const std::string
     for (float &item : data)
         item *= scale;
 
-    const uint64_t offset = info_.pixel_buffer.size();
+    const uint32_t offset = info_.pixel_buffer.size();
     info_.pixel_buffer.insert(info_.pixel_buffer.end(), data.begin(), data.end());
 
-    const uint64_t index = info_.texture_info_buffer.size();
+    const uint32_t index = info_.texture_info_buffer.size();
     id_texture_mp_[id] = index;
     info_.texture_info_buffer.push_back(Texture::Info::CreateBitmap(offset, width, height,
                                                                     channel));

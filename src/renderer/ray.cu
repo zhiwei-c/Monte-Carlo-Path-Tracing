@@ -461,14 +461,6 @@ namespace
     }
 } // namespace
 
-QUALIFIER_DEVICE Ray::Ray(const Vec3 &origin, const Vec3 &dir)
-    : t_max(kMaxFloat),
-      origin(origin),
-      dir(dir),
-      dir_inv(Vec3(1.0f / dir.x, 1.0f / dir.y, 1.0f / dir.z))
-{
-}
-
 QUALIFIER_DEVICE Vec3 Reflect(const Vec3 &wi, const Vec3 &normal)
 {
     return Normalize(wi - 2.0f * Dot(wi, normal) * normal);
@@ -494,7 +486,6 @@ QUALIFIER_DEVICE float FresnelSchlick(float cos_theta, float relectivity)
 
 QUALIFIER_DEVICE Vec3 FresnelSchlick(float cos_theta, const Vec3 &relectivity)
 {
-    assert(cos_theta >= 0.0f);
     return relectivity + (1.0f - relectivity) * pow(1.0f - cos_theta, 5);
 }
 

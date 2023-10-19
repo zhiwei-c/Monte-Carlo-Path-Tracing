@@ -6,12 +6,39 @@
 
 struct Ray
 {
-    float t_max;
     Vec3 origin;
     Vec3 dir;
     Vec3 dir_inv;
 
-    QUALIFIER_DEVICE Ray(const Vec3 &origin, const Vec3 &dir);
+    QUALIFIER_DEVICE Ray(const Vec3 &origin, const Vec3 &dir)
+        : origin(origin), dir(dir)
+    {
+        for (int i = 0; i < 3; ++i)
+            dir_inv[i] = 1.0f / (dir[i] != 0 ? dir[i] : kEpsilonFloat);
+    }
+};
+
+struct Hit
+{
+    bool valid;
+    bool absorb;
+    bool inside;
+    float distance;
+    float pdf_area;
+    uint32_t id_instance;
+    uint32_t id_bsdf;
+    Vec2 texcoord;
+    Vec3 position;
+    Vec3 normal;
+    Vec3 tangent;
+    Vec3 bitangent;
+
+    QUALIFIER_DEVICE Hit()
+        : valid(false), absorb(false), inside(false), distance(kMaxFloat), pdf_area(0),
+          id_instance(kInvalidId), id_bsdf(kInvalidId), texcoord(Vec2()), position(Vec3()),
+          normal(Vec3()), tangent(Vec3()), bitangent(Vec3())
+    {
+    }
 };
 
 QUALIFIER_DEVICE Vec3 Reflect(const Vec3 &wi, const Vec3 &normal);

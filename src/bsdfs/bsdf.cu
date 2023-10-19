@@ -6,8 +6,8 @@
 #include "../utils/math.cuh"
 #include "ior.cuh"
 
-Bsdf::Info Bsdf::Info::CreateAreaLight(const uint64_t id_radiance, const bool twosided,
-                                       const uint64_t id_opacity, const uint64_t id_bumpmap)
+Bsdf::Info Bsdf::Info::CreateAreaLight(const uint32_t id_radiance, const bool twosided,
+                                       const uint32_t id_opacity, const uint32_t id_bumpmap)
 {
     Bsdf::Info info;
     info.type = Bsdf::Type::kAreaLight;
@@ -18,8 +18,8 @@ Bsdf::Info Bsdf::Info::CreateAreaLight(const uint64_t id_radiance, const bool tw
     return info;
 }
 
-Bsdf::Info Bsdf::Info::CreateDiffuse(const uint64_t id_diffuse_reflectance, const bool twosided,
-                                     const uint64_t id_opacity, const uint64_t id_bumpmap)
+Bsdf::Info Bsdf::Info::CreateDiffuse(const uint32_t id_diffuse_reflectance, const bool twosided,
+                                     const uint32_t id_opacity, const uint32_t id_bumpmap)
 {
     Bsdf::Info info;
     info.type = Bsdf::Type::kDiffuse;
@@ -30,10 +30,10 @@ Bsdf::Info Bsdf::Info::CreateDiffuse(const uint64_t id_diffuse_reflectance, cons
     return info;
 }
 
-Bsdf::Info Bsdf::Info::CreateRoughDiffuse(const uint64_t id_diffuse_reflectance,
-                                          const uint64_t id_roughness, const bool use_fast_approx,
-                                          const bool twosided, const uint64_t id_opacity,
-                                          const uint64_t id_bumpmap)
+Bsdf::Info Bsdf::Info::CreateRoughDiffuse(const uint32_t id_diffuse_reflectance,
+                                          const uint32_t id_roughness, const bool use_fast_approx,
+                                          const bool twosided, const uint32_t id_opacity,
+                                          const uint32_t id_bumpmap)
 {
     Bsdf::Info info;
     info.type = Bsdf::Type::kRoughDiffuse;
@@ -46,10 +46,10 @@ Bsdf::Info Bsdf::Info::CreateRoughDiffuse(const uint64_t id_diffuse_reflectance,
     return info;
 }
 
-Bsdf::Info Bsdf::Info::CreateConductor(const uint64_t id_roughness,
-                                       const uint64_t id_specular_reflectance, const Vec3 &eta,
-                                       const Vec3 &k, const bool twosided, const uint64_t id_opacity,
-                                       const uint64_t id_bumpmap)
+Bsdf::Info Bsdf::Info::CreateConductor(const uint32_t id_roughness,
+                                       const uint32_t id_specular_reflectance, const Vec3 &eta,
+                                       const Vec3 &k, const bool twosided,
+                                       const uint32_t id_opacity, const uint32_t id_bumpmap)
 {
     Bsdf::Info info;
     info.type = Bsdf::Type::kConductor;
@@ -67,11 +67,11 @@ Bsdf::Info Bsdf::Info::CreateConductor(const uint64_t id_roughness,
     return info;
 }
 
-Bsdf::Info Bsdf::Info::CreateDielectric(const uint64_t id_roughness,
-                                        const uint64_t id_specular_reflectance,
-                                        const uint64_t id_specular_transmittance, const float eta,
+Bsdf::Info Bsdf::Info::CreateDielectric(const uint32_t id_roughness,
+                                        const uint32_t id_specular_reflectance,
+                                        const uint32_t id_specular_transmittance, const float eta,
                                         bool is_thin_dielectric, const bool twosided,
-                                        const uint64_t id_opacity, const uint64_t id_bumpmap)
+                                        const uint32_t id_opacity, const uint32_t id_bumpmap)
 {
     Bsdf::Info info;
     info.type = is_thin_dielectric ? Bsdf::Type::kThinDielectric : Bsdf::Type::kDielectric;
@@ -85,10 +85,11 @@ Bsdf::Info Bsdf::Info::CreateDielectric(const uint64_t id_roughness,
     return info;
 }
 
-Bsdf::Info Bsdf::Info::CreatePlastic(const uint64_t id_roughness, const uint64_t id_diffuse_reflectance,
-                                     const uint64_t id_specular_reflectance, const float eta,
-                                     const bool twosided, const uint64_t id_opacity,
-                                     const uint64_t id_bumpmap)
+Bsdf::Info Bsdf::Info::CreatePlastic(const uint32_t id_roughness,
+                                     const uint32_t id_diffuse_reflectance,
+                                     const uint32_t id_specular_reflectance, const float eta,
+                                     const bool twosided, const uint32_t id_opacity,
+                                     const uint32_t id_bumpmap)
 {
     Bsdf::Info info;
     info.type = Bsdf::Type::kPlastic;
@@ -169,8 +170,8 @@ QUALIFIER_DEVICE void Bsdf::ComputeKullaConty(float *brdf_buffer, float *albedo_
 
 QUALIFIER_DEVICE Vec3 Bsdf::ApplyBumpMapping(const Vec3 &normal, const Vec3 &tangent,
                                              const Vec3 &bitangent, const Vec2 &texcoord,
-                                             const float *pixel_buffer, Texture **texture_buffer,
-                                             uint64_t *seed) const
+                                             Texture **texture_buffer, const float *pixel_buffer,
+                                             uint32_t *seed) const
 {
     if (id_bumpmap_ == kInvalidId)
         return normal;
@@ -185,11 +186,11 @@ QUALIFIER_DEVICE void Bsdf::SetKullaConty(float *brdf, float *albedo_avg)
     brdf_ = brdf, albedo_avg_ = albedo_avg;
 }
 
-QUALIFIER_DEVICE bool Bsdf::IsTransparent(const Vec2 &texcoord, const float *pixel_buffer,
-                                          Texture **texture_buffer, uint64_t *seed) const
+QUALIFIER_DEVICE bool Bsdf::IsTransparent(const Vec2 &texcoord, Texture **texture_buffer,
+                                          const float *pixel_buffer, uint32_t *seed) const
 {
-    return (id_opacity_ != kInvalidId &&
-            texture_buffer[id_opacity_]->IsTransparent(texcoord, pixel_buffer, seed));
+    return id_opacity_ != kInvalidId &&
+           texture_buffer[id_opacity_]->IsTransparent(texcoord, pixel_buffer, seed);
 }
 
 QUALIFIER_DEVICE float Bsdf::GetAlbedoAvg(const float roughness) const
@@ -197,13 +198,9 @@ QUALIFIER_DEVICE float Bsdf::GetAlbedoAvg(const float roughness) const
     const float offset = roughness * kLutResolution;
     const int offset_int = static_cast<int>(offset);
     if (offset_int >= kLutResolution - 1)
-    {
         return albedo_avg_[kLutResolution - 1];
-    }
     else
-    {
         return Lerp(albedo_avg_[offset_int], albedo_avg_[offset_int + 1], offset - offset_int);
-    }
 }
 
 QUALIFIER_DEVICE float Bsdf::GetBrdfAvg(const float cos_theta, const float roughness) const

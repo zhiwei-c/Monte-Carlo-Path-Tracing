@@ -13,7 +13,7 @@ namespace
     char text[256];
     int raw_width, raw_height;
     int window_width, window_height;
-    uint64_t index_frame = 0, last_time = 0, current_time = 0;
+    uint32_t index_frame = 0, last_time = 0, current_time = 0;
     float *frame_raw = nullptr, *frame_device = nullptr, *frame_host = nullptr, *frame_screen = nullptr;
     double fps = 0.0, count_frame_cyc = 0.0, aspect;
     dim3 num_blocks, threads_per_block;
@@ -21,15 +21,15 @@ namespace
     Camera *camera = nullptr;
     Integrator *integrator = nullptr;
 
-    __global__ void DispatchRays(Camera *camera, Integrator *integrator, uint64_t index_frame,
+    __global__ void DispatchRays(Camera *camera, Integrator *integrator, uint32_t index_frame,
                                  float *frame_raw, float *frame_device)
     {
         size_t i = blockIdx.x * blockDim.x + threadIdx.x;
         size_t j = blockIdx.y * blockDim.y + threadIdx.y;
         if (i < camera->width() && j < camera->height())
         {
-            const uint64_t pixel_index = j * camera->width() + i;
-            uint64_t seed = Tea(pixel_index, index_frame, 4);
+            const uint32_t pixel_index = j * camera->width() + i;
+            uint32_t seed = Tea(pixel_index, index_frame, 4);
 
             const float u = GetVanDerCorputSequence(index_frame + 1, 2),
                         v = GetVanDerCorputSequence(index_frame + 1, 3),
@@ -37,7 +37,7 @@ namespace
                         y = 2.0f * (j + v) / camera->height() - 1.0f;
             const Vec3 look_dir = Normalize(camera->front() + x * camera->view_dx() +
                                             y * camera->view_dy());
-            Vec3 color = integrator->TraceRay(camera->eye(), look_dir, &seed);
+            Vec3 color = integrator->GenerateRay(camera->eye(), look_dir, &seed);
 
             float color_temp;
             for (int c = 0; c < 3; ++c)
@@ -114,7 +114,7 @@ namespace
         case 'S':
         {
             std::vector<float> data(3 * raw_width * raw_height);
-            uint64_t offset_src, offset_dst;
+            uint32_t offset_src, offset_dst;
             for (int j = 0; j < raw_height; ++j)
             {
                 for (int i = 0; i < raw_width; ++i)
@@ -128,6 +128,9 @@ namespace
             image_io::Write(raw_width, raw_height, data.data(), filename);
             break;
         }
+        case 27:
+            glutLeaveMainLoop();
+            break;
         default:
             break;
         }
@@ -185,7 +188,7 @@ CudaViewer::CudaViewer(int argc, char **argv, BvhBuilder::Type bvh_type, const S
     ::num_blocks = {static_cast<unsigned int>(camera_->width() / 8 + 1),
                     static_cast<unsigned int>(camera_->height() / 8 + 1), 1};
 
-    uint64_t num_component = 3 * window_width * window_height;
+    uint32_t num_component = 3 * window_width * window_height;
     ::frame_host = new float[num_component];
     CheckCudaErrors(cudaMallocManaged((void **)&::frame_raw, num_component * sizeof(float)));
     CheckCudaErrors(cudaMallocManaged((void **)&::frame_device, num_component * sizeof(float)));
@@ -204,6 +207,8 @@ CudaViewer::CudaViewer(int argc, char **argv, BvhBuilder::Type bvh_type, const S
     glutKeyboardFunc(::PressCharkey);
     glutSpecialFunc(::PressSpeckey);
     glutReshapeFunc(::Reshape);
+
+    glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 
     // set the background color
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
