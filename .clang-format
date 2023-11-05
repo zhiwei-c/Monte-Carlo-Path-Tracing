@@ -1,0 +1,15 @@
+# Defines the LLVM style for automatic reformatting.
+# http://clang.llvm.org/docs/ClangFormatStyleOptions.html
+BasedOnStyle: LLVM
+UseTab: Never
+IndentWidth: 4
+TabWidth: 4
+BreakBeforeBraces: Allman
+AllowShortIfStatementsOnASingleLine: false
+IndentCaseLabels: false
+ColumnLimit: 100
+AccessModifierOffset: -4
+NamespaceIndentation: Inner
+FixNamespaceComments: false
+
+AlwaysBreakTemplateDeclarations: Yes

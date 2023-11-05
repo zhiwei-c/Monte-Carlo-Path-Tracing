@@ -1,3 +1,4 @@
 #pragma once
 
-#include "tensor/tensor.cuh"
+#include "rtcore.cuh"
+#include "tensor.cuh"
