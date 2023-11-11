@@ -7,7 +7,10 @@ namespace rt
 
 QUALIFIER_D_H AABB::AABB() : min_{kMaxFloat}, max_{kLowestFloat} {}
 
-QUALIFIER_D_H AABB::AABB(const Vec3 &min, const Vec3 &max) : min_(min), max_(max) {}
+QUALIFIER_D_H AABB::AABB(const Vec3 &min, const Vec3 &max)
+    : min_(min), max_(max)
+{
+}
 
 QUALIFIER_D_H AABB &AABB::operator+=(const Vec3 &v)
 {

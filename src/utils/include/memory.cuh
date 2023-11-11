@@ -51,9 +51,9 @@ T *MallocElement(const BackendType &backend_type)
         default:
         {
             cudaDeviceReset();
-            std::ostringstream info;
-            info << "CUDA error : \"" << ret << "\".";
-            throw std::exception(info.str().c_str());
+            std::ostringstream oss;
+            oss << "CUDA error : \"" << ret << "\". when malloc memory.";
+            throw std::exception(oss.str().c_str());
             break;
         }
         }
@@ -63,7 +63,7 @@ T *MallocElement(const BackendType &backend_type)
 }
 
 template <typename T>
-T *MallocArray(const BackendType &backend_type, size_t num)
+T *MallocArray(const BackendType &backend_type, const uint64_t num)
 {
 #ifdef ENABLE_CUDA
     if (backend_type == BackendType::kCpu)
@@ -91,9 +91,9 @@ T *MallocArray(const BackendType &backend_type, size_t num)
         default:
         {
             cudaDeviceReset();
-            std::ostringstream info;
-            info << "CUDA error : \"" << ret << "\".";
-            throw std::exception(info.str().c_str());
+            std::ostringstream oss;
+            oss << "CUDA error : \"" << ret << "\". when malloc memory.";
+            throw std::exception(oss.str().c_str());
             break;
         }
         }
@@ -105,7 +105,7 @@ T *MallocArray(const BackendType &backend_type, size_t num)
 template <typename T>
 T *MallocArray(const BackendType &backend_type, const std::vector<T> &src)
 {
-    size_t num = src.size();
+    uint64_t num = src.size();
 
 #ifdef ENABLE_CUDA
     if (backend_type == BackendType::kCpu)
@@ -135,9 +135,9 @@ T *MallocArray(const BackendType &backend_type, const std::vector<T> &src)
         default:
         {
             cudaDeviceReset();
-            std::ostringstream info;
-            info << "CUDA error : \"" << ret << "\".";
-            throw std::exception(info.str().c_str());
+            std::ostringstream oss;
+            oss << "CUDA error : \"" << ret << "\". when malloc memory.";
+            throw std::exception(oss.str().c_str());
             break;
         }
         }
@@ -146,12 +146,36 @@ T *MallocArray(const BackendType &backend_type, const std::vector<T> &src)
         if (ret)
         {
             cudaDeviceReset();
-            std::ostringstream info;
-            info << "CUDA error : \"" << ret << "\".";
-            throw std::exception(info.str().c_str());
+            std::ostringstream oss;
+            oss << "CUDA error : \"" << ret << "\". when copy memory.";
+            throw std::exception(oss.str().c_str());
         }
 
         return dest;
+    }
+#endif
+}
+
+template <typename T>
+void CopyArray(const BackendType &backend_type, T *dest, T *src, const uint64_t num)
+{
+#ifdef ENABLE_CUDA
+    if (backend_type == BackendType::kCpu)
+    {
+#endif
+        std::copy(src, src + num, dest);
+#ifdef ENABLE_CUDA
+    }
+    else
+    {
+        cudaError_t ret = cudaMemcpy(dest, src, num * sizeof(T), cudaMemcpyDefault);
+        if (ret)
+        {
+            cudaDeviceReset();
+            std::ostringstream oss;
+            oss << "CUDA error : \"" << ret << "\". when copy memory.";
+            throw std::exception(oss.str().c_str());
+        }
     }
 #endif
 }
@@ -176,9 +200,9 @@ void DeleteElement(const BackendType &backend_type, T *data)
         if (ret)
         {
             cudaDeviceReset();
-            std::ostringstream info;
-            info << "CUDA error : \"" << ret << "\".";
-            throw std::exception(info.str().c_str());
+            std::ostringstream oss;
+            oss << "CUDA error : \"" << ret << "\" when delete memory.";
+            throw std::exception(oss.str().c_str());
         }
         data = nullptr;
     }
@@ -205,9 +229,9 @@ void DeleteArray(const BackendType &backend_type, T *data)
         if (ret)
         {
             cudaDeviceReset();
-            std::ostringstream info;
-            info << "CUDA error : \"" << ret << "\".";
-            throw std::exception(info.str().c_str());
+            std::ostringstream oss;
+            oss << "CUDA error : \"" << ret << "\" when delete memory.";
+            throw std::exception(oss.str().c_str());
         }
         data = nullptr;
     }

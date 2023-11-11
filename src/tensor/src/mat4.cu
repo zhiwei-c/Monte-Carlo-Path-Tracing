@@ -14,18 +14,26 @@ QUALIFIER_D_H Mat4::Mat4()
 {
 }
 
-QUALIFIER_D_H Mat4::Mat4(const Mat4 &m) : rows{m.rows[0], m.rows[1], m.rows[2], m.rows[3]} {}
+QUALIFIER_D_H Mat4::Mat4(const Mat4 &m)
+    : rows{m.rows[0], m.rows[1], m.rows[2], m.rows[3]}
+{
+}
 
-QUALIFIER_D_H Mat4::Mat4(const Vec4 &row0, const Vec4 &row1, const Vec4 &row2, const Vec4 &row3)
+QUALIFIER_D_H Mat4::Mat4(const Vec4 &row0, const Vec4 &row1, const Vec4 &row2,
+                         const Vec4 &row3)
     : rows{row0, row1, row2, row3}
 {
 }
 
-QUALIFIER_D_H Mat4::Mat4(const float x0, const float y0, const float z0, const float w0,
-                         const float x1, const float y1, const float z1, const float w1,
-                         const float x2, const float y2, const float z2, const float w2,
-                         const float x3, const float y3, const float z3, const float w3)
-    : rows{{x0, y0, z0, w0}, {x1, y1, z1, w1}, {x2, y2, z2, w2}, {x3, y3, z3, w3}}
+QUALIFIER_D_H
+Mat4::Mat4(const float x0, const float y0, const float z0, const float w0,
+           const float x1, const float y1, const float z1, const float w1,
+           const float x2, const float y2, const float z2, const float w2,
+           const float x3, const float y3, const float z3, const float w3)
+    : rows{{x0, y0, z0, w0},
+           {x1, y1, z1, w1},
+           {x2, y2, z2, w2},
+           {x3, y3, z3, w3}}
 {
 }
 
@@ -120,9 +128,12 @@ QUALIFIER_D_H Mat4 Mat4::Inverse() const
                 coef22 = rows[1].x * rows[3].y - rows[3].x * rows[1].y,
                 coef23 = rows[1].x * rows[2].y - rows[2].x * rows[1].y;
 
-    const Vec4 fac0 = {coef00, coef00, coef02, coef03}, fac1 = {coef04, coef04, coef06, coef07},
-               fac2 = {coef08, coef08, coef10, coef11}, fac3 = {coef12, coef12, coef14, coef15},
-               fac4 = {coef16, coef16, coef18, coef19}, fac5 = {coef20, coef20, coef22, coef23};
+    const Vec4 fac0 = {coef00, coef00, coef02, coef03},
+               fac1 = {coef04, coef04, coef06, coef07},
+               fac2 = {coef08, coef08, coef10, coef11},
+               fac3 = {coef12, coef12, coef14, coef15},
+               fac4 = {coef16, coef16, coef18, coef19},
+               fac5 = {coef20, coef20, coef22, coef23};
 
     const Vec4 vec0 = {rows[1].x, rows[0].x, rows[0].x, rows[0].x},
                vec1 = {rows[1].y, rows[0].y, rows[0].y, rows[0].y},
@@ -134,8 +145,10 @@ QUALIFIER_D_H Mat4 Mat4::Inverse() const
                inv2 = {vec0 * fac1 - vec1 * fac3 + vec3 * fac5},
                inv3 = {vec0 * fac2 - vec1 * fac4 + vec2 * fac5};
 
-    const Vec4 sign_a = {+1.0f, -1.0f, +1.0f, -1.0f}, sign_b = {-1.0f, +1.0f, -1.0f, +1.0f};
-    const Mat4 inverse = {inv0 * sign_a, inv1 * sign_b, inv2 * sign_a, inv3 * sign_b};
+    const Vec4 sign_a = {+1.0f, -1.0f, +1.0f, -1.0f},
+               sign_b = {-1.0f, +1.0f, -1.0f, +1.0f};
+    const Mat4 inverse = {inv0 * sign_a, inv1 * sign_b, inv2 * sign_a,
+                          inv3 * sign_b};
 
     const Vec4 row0 = {inverse[0].x, inverse[1].x, inverse[2].x, inverse[3].x};
 
@@ -144,20 +157,21 @@ QUALIFIER_D_H Mat4 Mat4::Inverse() const
 
     const float one_over_determinant = 1.0f / dot1;
 
-    return {one_over_determinant * inverse[0], one_over_determinant * inverse[1],
-            one_over_determinant * inverse[2], one_over_determinant * inverse[3]};
+    return {
+        one_over_determinant * inverse[0], one_over_determinant * inverse[1],
+        one_over_determinant * inverse[2], one_over_determinant * inverse[3]};
 }
 
 QUALIFIER_D_H Mat4 operator+(const Mat4 &m0, const Mat4 &m1)
 {
-    return {m0.rows[0] + m1.rows[0], m0.rows[1] + m1.rows[1], m0.rows[2] + m1.rows[2],
-            m0.rows[3] + m1.rows[3]};
+    return {m0.rows[0] + m1.rows[0], m0.rows[1] + m1.rows[1],
+            m0.rows[2] + m1.rows[2], m0.rows[3] + m1.rows[3]};
 }
 
 QUALIFIER_D_H Mat4 operator-(const Mat4 &m0, const Mat4 &m1)
 {
-    return {m0.rows[0] - m1.rows[0], m0.rows[1] - m1.rows[1], m0.rows[2] - m1.rows[2],
-            m0.rows[3] - m1.rows[3]};
+    return {m0.rows[0] - m1.rows[0], m0.rows[1] - m1.rows[1],
+            m0.rows[2] - m1.rows[2], m0.rows[3] - m1.rows[3]};
 }
 
 QUALIFIER_D_H Mat4 Mul(const Mat4 &m0, const Mat4 &m1)
@@ -173,7 +187,8 @@ QUALIFIER_D_H Vec4 Mul(const Mat4 &m, const Vec4 &vec)
 QUALIFIER_D_H Vec4 Mul(const Vec4 vec, const Mat4 &m)
 {
     const Mat4 m_trans = m.Transpose();
-    return {Dot(vec, m_trans[0]), Dot(vec, m_trans[1]), Dot(vec, m_trans[2]), Dot(vec, m_trans[3])};
+    return {Dot(vec, m_trans[0]), Dot(vec, m_trans[1]), Dot(vec, m_trans[2]),
+            Dot(vec, m_trans[3])};
 }
 
 QUALIFIER_D_H Mat4 operator*(const Mat4 &m, const float t)
@@ -232,13 +247,24 @@ QUALIFIER_D_H Mat4 Rotate(const float angle, Vec3 axis)
 
 QUALIFIER_D_H Mat4 LookAtLH(const Vec3 &eye, const Vec3 &target, Vec3 up)
 {
-    const Vec3 front = Normalize(target - eye), right = Normalize(Cross(up, front));
+    const Vec3 front = Normalize(target - eye),
+               right = Normalize(Cross(up, front));
     up = Normalize(Cross(front, right));
 
     return {{right.x, right.y, right.z, -Dot(right, eye)},
             {up.x, up.y, up.z, -Dot(up, eye)},
             {front.x, front.y, front.z, -Dot(front, eye)},
             {0.0f, 0.0f, 0.0f, 1.0f}};
+}
+
+QUALIFIER_D_H Vec3 TransformPoint(const Mat4 &m, const Vec3 &p)
+{
+    return Mul(m, Vec4{p, 1.0f}).position();
+}
+
+QUALIFIER_D_H Vec3 TransformVector(const Mat4 &m, const Vec3 &v)
+{
+    return Mul(m, Vec4{v, 0.0f}).direction();
 }
 
 } // namespace rt

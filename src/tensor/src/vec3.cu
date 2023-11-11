@@ -5,6 +5,11 @@
 namespace rt
 {
 
+QUALIFIER_D_H Uvec3::Uvec3(const uint32_t x, const uint32_t y, const uint32_t z)
+    : x(x), y(y), z(z)
+{
+}
+
 QUALIFIER_D_H uint32_t &Uvec3::operator[](const int i)
 {
     switch (i)
@@ -31,6 +36,11 @@ QUALIFIER_D_H uint32_t Uvec3::operator[](const int i) const
     }
 }
 
+QUALIFIER_D_H Vec3::Vec3(const float x, const float y, const float z)
+    : x(x), y(y), z(z)
+{
+}
+
 QUALIFIER_D_H float &Vec3::operator[](const int i)
 {
     switch (i)
@@ -55,6 +65,11 @@ QUALIFIER_D_H float Vec3::operator[](const int i) const
     default:
         return z;
     }
+}
+
+QUALIFIER_D_H void Vec3::operator=(const Vec3 &vec)
+{
+    x = vec.x, y = vec.y, z = vec.z;
 }
 
 QUALIFIER_D_H Vec3 &Vec3::operator+=(const Vec3 &vec)
@@ -176,7 +191,8 @@ QUALIFIER_D_H float Dot(const Vec3 &v1, const Vec3 &v2)
 
 QUALIFIER_D_H Vec3 Cross(const Vec3 &v1, const Vec3 &v2)
 {
-    return {v1.y * v2.z - v1.z * v2.y, -v1.x * v2.z + v1.z * v2.x, v1.x * v2.y - v1.y * v2.x};
+    return {v1.y * v2.z - v1.z * v2.y, -v1.x * v2.z + v1.z * v2.x,
+            v1.x * v2.y - v1.y * v2.x};
 }
 
 QUALIFIER_D_H Vec3 Min(const Vec3 &v1, const Vec3 &v2)
@@ -187,6 +203,11 @@ QUALIFIER_D_H Vec3 Min(const Vec3 &v1, const Vec3 &v2)
 QUALIFIER_D_H Vec3 Max(const Vec3 &v1, const Vec3 &v2)
 {
     return {fmaxf(v1.x, v2.x), fmaxf(v1.y, v2.y), fmaxf(v1.z, v2.z)};
+}
+
+QUALIFIER_D_H Vec3 rt::Sqrt(const Vec3 &v)
+{
+    return {sqrtf(v.x), sqrtf(v.y), sqrtf(v.z)};
 }
 
 } // namespace rt

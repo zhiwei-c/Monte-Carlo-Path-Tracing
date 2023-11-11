@@ -5,8 +5,11 @@ namespace rt
 
 QUALIFIER_D_H BLAS::BLAS() : nodes_(nullptr), primitives_(nullptr) {}
 
-QUALIFIER_D_H BLAS::BLAS(BvhNode *nodes, Primitive *primitives)
-    : nodes_(nodes), primitives_(primitives)
+QUALIFIER_D_H BLAS::BLAS(const uint64_t offset_node, const BvhNode *node_buffer,
+                         const uint64_t offset_primitive,
+                         const Primitive *primitive_buffer)
+    : nodes_(node_buffer + offset_node),
+      primitives_(primitive_buffer + offset_primitive)
 {
 }
 
@@ -15,7 +18,7 @@ QUALIFIER_D_H void BLAS::Intersect(Ray *ray, Hit *hit) const
     uint32_t stack[65];
     stack[0] = 0;
     int ptr = 0;
-    BvhNode *node = nullptr;
+    const BvhNode *node = nullptr;
     while (ptr >= 0)
     {
         node = nodes_ + stack[ptr];
@@ -37,10 +40,10 @@ QUALIFIER_D_H void BLAS::Intersect(Ray *ray, Hit *hit) const
     }
 }
 
-QUALIFIER_D_H Hit rt::BLAS::Sample(const float xi_0, const float xi_1, const float xi_2) const
+QUALIFIER_D_H Hit rt::BLAS::Sample(const Vec3 &xi) const
 {
-    BvhNode *node = nodes_;
-    float thresh = node->area * xi_0;
+    const BvhNode *node = nodes_;
+    float thresh = node->area * xi.x;
     while (!node->leaf)
     {
         if (thresh < nodes_[node->id_left].area)
@@ -49,12 +52,12 @@ QUALIFIER_D_H Hit rt::BLAS::Sample(const float xi_0, const float xi_1, const flo
         }
         else
         {
-            node = nodes_ + node->id_right;
             thresh -= nodes_[node->id_left].area;
+            node = nodes_ + node->id_right;
         }
     }
 
-    return primitives_[node->id_object].Sample(xi_0, xi_1, xi_2);
+    return primitives_[node->id_object].Sample(xi.y, xi.z);
 }
 
 } // namespace rt

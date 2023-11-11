@@ -19,8 +19,8 @@ struct BvhNode
 
     QUALIFIER_D_H BvhNode();
     QUALIFIER_D_H BvhNode(const uint32_t _id);
-    QUALIFIER_D_H BvhNode(const uint32_t _id, const uint32_t _id_object, const AABB &_aabb,
-                          const float _area);
+    QUALIFIER_D_H BvhNode(const uint32_t _id, const uint32_t _id_object,
+                          const AABB &_aabb, const float _area);
 };
 
 class BvhBuilder

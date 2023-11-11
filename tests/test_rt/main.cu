@@ -1,13 +1,15 @@
 #include <cstdio>
 
-#include "camera.cuh"
+#include "model_loader.cuh"
 #include "ray_tracer.cuh"
+
+using namespace rt;
 
 #ifdef ENABLE_CUDA
 #define CheckCudaErrors(val) CheckCuda((val), #val, __FILE__, __LINE__)
 
-inline void CheckCuda(cudaError_t result, char const *const func, const char *const file,
-                      const int line)
+inline void CheckCuda(cudaError_t result, char const *const func,
+                      const char *const file, const int line)
 {
     if (result)
     {
@@ -32,19 +34,20 @@ __global__ void TestKernel(Camera *camera, TLAS *tlas, float *frame_buffer)
         Vec3 color;
         for (uint32_t s = 0; s < camera->spp(); ++s)
         {
-            const float u = s * camera->spp_inv(), v = GetVanDerCorputSequence<2>(s + 1),
+            const float u = s * camera->spp_inv(),
+                        v = GetVanDerCorputSequence<2>(s + 1),
                         x = 2.0f * (i + u) / camera->width() - 1.0f,
                         y = 1.0f - 2.0f * (j + v) / camera->height();
             const Vec3 look_dir =
-                Normalize(camera->front() + x * camera->view_dx() + y * camera->view_dy());
-            Hit hit;
+                Normalize(camera->front() + x * camera->view_dx() +
+                          y * camera->view_dy());
             Ray ray = Ray(camera->eye(), look_dir);
-            tlas->Intersect(&ray, &hit);
+            Hit hit = tlas->Intersect(&ray);
             if (hit.valid)
-                // color += hit.normal * 0.5f + Vec3{0.5f};
-                color += {hit.texcoord.u, hit.texcoord.v, 0.0f};
-            else
-                printf("(%ld, %ld), %ld\n", i, j, s);
+                color += hit.normal * 0.5f + Vec3{0.5f};
+            // color += {hit.texcoord.u, hit.texcoord.v, 0.0f};
+            // else
+            // printf("(%ld, %ld), %ld\n", i, j, s);
         }
         color *= camera->spp_inv();
         for (int channel = 0; channel < 3; ++channel)
@@ -68,19 +71,20 @@ void TestKernelCpu(Camera *camera, TLAS *tlas, float *frame_buffer)
         Vec3 color;
         for (uint32_t s = 0; s < camera->spp(); ++s)
         {
-            const float u = s * camera->spp_inv(), v = GetVanDerCorputSequence<2>(s + 1),
+            const float u = s * camera->spp_inv(),
+                        v = GetVanDerCorputSequence<2>(s + 1),
                         x = 2.0f * (i + u) / camera->width() - 1.0f,
                         y = 1.0f - 2.0f * (j + v) / camera->height();
             const Vec3 look_dir =
-                Normalize(camera->front() + x * camera->view_dx() + y * camera->view_dy());
-            Hit hit;
+                Normalize(camera->front() + x * camera->view_dx() +
+                          y * camera->view_dy());
             Ray ray = Ray(camera->eye(), look_dir);
-            tlas->Intersect(&ray, &hit);
+            Hit hit = tlas->Intersect(&ray);
             if (hit.valid)
-                // color += hit.normal * 0.5f + Vec3{0.5f};
-                color += {hit.texcoord.u, hit.texcoord.v, 0.0f};
-            else
-                printf("(%d, %d), %ld\n", i, j, s);
+                color += hit.normal * 0.5f + Vec3{0.5f};
+            // color += {hit.texcoord.u, hit.texcoord.v, 0.0f};
+            // else
+            // printf("(%d, %d), %ld\n", i, j, s);
         }
         color *= camera->spp_inv();
         for (int channel = 0; channel < 3; ++channel)
@@ -109,64 +113,97 @@ void Test(BackendType backend_type, const std::string &output_filname)
     // 0 Floor
     info = {};
     info.type = Instance::Type::kRectangle;
-    info.cube.to_world = {{0, 1, 0, 0}, {0, 0, 2, 0}, {1, 0, 0, 0}, {0, 0, 0, 1}};
+    info.rectangle.to_world = {
+        {0, 1, 0, 0}, {0, 0, 2, 0}, {1, 0, 0, 0}, {0, 0, 0, 1}};
     scene->AddInstance(info);
     // 1 Ceiling
     info = {};
     info.type = Instance::Type::kRectangle;
-    info.cube.to_world = {{-1, 0, 0, 0}, {0, 0, -2, 2}, {0, -1, 0, 0}, {0, 0, 0, 1}};
+    info.rectangle.to_world = {
+        {-1, 0, 0, 0}, {0, 0, -2, 2}, {0, -1, 0, 0}, {0, 0, 0, 1}};
     scene->AddInstance(info);
     // 2 BackWall
     info = {};
     info.type = Instance::Type::kRectangle;
-    info.cube.to_world = {{0, 1, 0, 0}, {1, 0, 0, 1}, {0, 0, -2, -1}, {0, 0, 0, 1}};
+    info.rectangle.to_world = {
+        {0, 1, 0, 0}, {1, 0, 0, 1}, {0, 0, -2, -1}, {0, 0, 0, 1}};
     scene->AddInstance(info);
     // 3 RightWall
     info = {};
     info.type = Instance::Type::kRectangle;
-    info.cube.to_world = {{0, 0, 2, 1}, {1, 0, 0, 1}, {0, 1, 0, 0}, {0, 0, 0, 1}};
+    info.rectangle.to_world = {
+        {0, 0, 2, 1}, {1, 0, 0, 1}, {0, 1, 0, 0}, {0, 0, 0, 1}};
     scene->AddInstance(info);
     // 4 LeftWall
     info = {};
     info.type = Instance::Type::kRectangle;
-    info.cube.to_world = {{0, 0, -2, -1}, {1, 0, 0, 1}, {0, -1, 0, 0}, {0, 0, 0, 1}};
+    info.rectangle.to_world = {
+        {0, 0, -2, -1}, {1, 0, 0, 1}, {0, -1, 0, 0}, {0, 0, 0, 1}};
     scene->AddInstance(info);
     // 5 Light
     info = {};
     info.type = Instance::Type::kRectangle;
-    info.cube.to_world = {
-        {0.235, 0, 0, -0.005}, {0, 0, -0.0893, 1.98}, {0, 0.19, 0, -0.03}, {0, 0, 0, 1}};
+    info.rectangle.to_world = {{0.235, 0, 0, -0.005},
+                               {0, 0, -0.0893, 1.98},
+                               {0, 0.19, 0, -0.03},
+                               {0, 0, 0, 1}};
     scene->AddInstance(info);
-    // 6  Tall Box
+    // // 6  Tall Box
+    // info = {};
+    // info.type = Instance::Type::kCube;
+    // info.cube.to_world = {{0.286776, 0.098229, 0, -0.335439},
+    //                       {0, 0, -0.6, 0.6},
+    //                       {-0.0997984, 0.282266, 0, -0.291415},
+    //                       {0, 0, 0, 1}};
+    // scene->AddInstance(info);
+    // // 7 Short Box
+    // info = {};
+    // info.type = Instance::Type::kCube;
+    // info.cube.to_world = {{0.0851643, 0.289542, 0, 0.328631},
+    //                       {0, 0, -0.3, 0.3},
+    //                       {-0.284951, 0.0865363, 0, 0.374592},
+    //                       {0, 0, 0, 1}};
+    // scene->AddInstance(info);
+    // // 8 Sphere
+    // info = {};
+    // info.type = Instance::Type::kSphere;
+    // info.sphere.center = {0.328631014f, 0.75f, 0.374592006f};
+    // info.sphere.radius = 0.15f;
+    // info.sphere.to_world = {};
+    // scene->AddInstance(info);
+
+    // 6 happy Buddha
     info = {};
-    info.type = Instance::Type::kCube;
-    info.cube.to_world = {{0.286776, 0.098229, 0, -0.335439},
-                          {0, 0, -0.6, 0.6},
-                          {-0.0997984, 0.282266, 0, -0.291415},
-                          {0, 0, 0, 1}};
+    info.type = Instance::Type::kMeshes;
+    info.meshes = model_loader::Load(
+        GetDirectory(__FILE__) + "happy_vrip_2.ply", true, false);
+    info.meshes.to_world = Scale({6.0f, 6.0f, 6.0f});
+    info.meshes.to_world =
+        Mul(Translate({0.0327015072f, -0.299091011f, 0.0402149931f}),
+            info.meshes.to_world);
+    info.meshes.to_world = Mul(Translate({-0.5f, 0, 0}), info.meshes.to_world);
     scene->AddInstance(info);
-    // 7 Short Box
+    // 7 Bunny
     info = {};
-    info.type = Instance::Type::kCube;
-    info.cube.to_world = {{0.0851643, 0.289542, 0, 0.328631},
-                          {0, 0, -0.3, 0.3},
-                          {-0.284951, 0.0865363, 0, 0.374592},
-                          {0, 0, 0, 1}};
+    info.type = Instance::Type::kMeshes;
+    info.meshes = model_loader::Load(
+        GetDirectory(__FILE__) + "bun_zipper_1.ply", true, false);
+    info.meshes.to_world = Scale({4.0f, 4.0f, 4.0f});
+    info.meshes.to_world =
+        Mul(Translate({0.0672739968f, -0.133556396f, 0.00636819750f}),
+            info.meshes.to_world);
+    info.meshes.to_world = Mul(Translate({0.5f, 0, 0}), info.meshes.to_world);
     scene->AddInstance(info);
 
-    // 8 Sphere
-    info = {};
-    info.type = Instance::Type::kSphere;
-    info.sphere.center = {0.328631014f, 0.75f, 0.374592006f};
-    info.sphere.radius = 0.15f;
-    info.sphere.to_world = {};
-    scene->AddInstance(info);
+    scene->Commit();
+    TLAS *tlas = scene->GetTlas();
+    Instance *instances = scene->GetInstances();
 
-    TLAS *tlas = scene->Commit();
     Camera *camera = MallocElement<Camera>(backend_type);
     *camera = Camera();
 
-    float *frame = MallocArray<float>(backend_type, camera->height() * camera->width() * 3);
+    float *frame = MallocArray<float>(backend_type,
+                                      camera->height() * camera->width() * 3);
 
 #ifdef ENABLE_CUDA
     if (backend_type == BackendType::kCpu)
@@ -179,7 +216,8 @@ void Test(BackendType backend_type, const std::string &output_filname)
     {
         dim3 threads_per_block = {8, 8, 1},
              num_blocks = {static_cast<unsigned int>(camera->width() / 8 + 1),
-                           static_cast<unsigned int>(camera->height() / 8 + 1), 1};
+                           static_cast<unsigned int>(camera->height() / 8 + 1),
+                           1};
         TestKernel<<<num_blocks, threads_per_block>>>(camera, tlas, frame);
         CheckCudaErrors(cudaGetLastError());
         CheckCudaErrors(cudaDeviceSynchronize());
@@ -198,6 +236,6 @@ int main()
     Test(BackendType::kCuda, "result_cuda.png");
     cudaDeviceReset();
 #endif
-    Test(BackendType::kCpu, "result_cpu.png");
+    // Test(BackendType::kCpu, "result_cpu.png");
     return 0;
 }

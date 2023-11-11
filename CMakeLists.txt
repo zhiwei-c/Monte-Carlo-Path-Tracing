@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.17)
 
 option(ENABLE_CUDA "Specifies whether or not enable GPU-accelerated computing." ON)
-option(ENABLE_WATERTIGHT_TRIANGLES "Specifies whether or not enable Woop's watertight ray/triangle intersection algorithm." ON)
+option(ENABLE_WATERTIGHT_TRIANGLES "Specifies whether or not enable Woop's watertight ray/triangle intersection algorithm." OFF)
 
 project(RayTracer LANGUAGES CXX C)
 

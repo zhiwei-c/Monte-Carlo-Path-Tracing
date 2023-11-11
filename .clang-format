@@ -7,7 +7,7 @@ TabWidth: 4
 BreakBeforeBraces: Allman
 AllowShortIfStatementsOnASingleLine: false
 IndentCaseLabels: false
-ColumnLimit: 100
+ColumnLimit: 80
 AccessModifierOffset: -4
 NamespaceIndentation: Inner
 FixNamespaceComments: false

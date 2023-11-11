@@ -21,6 +21,10 @@ struct Ray
 
     QUALIFIER_D_H Ray();
     QUALIFIER_D_H Ray(const Vec3 &_origin, const Vec3 &_dir);
+
+    QUALIFIER_D_H static Vec3 Reflect(const Vec3 &wi, const Vec3 &normal);
+    QUALIFIER_D_H static bool Refract(const Vec3 &wi, const Vec3 &normal,
+                                      const float eta_inv, Vec3 *wt);
 };
 
 struct Hit
@@ -36,10 +40,11 @@ struct Hit
     Vec3 bitangent;
 
     QUALIFIER_D_H Hit();
-    QUALIFIER_D_H Hit(const bool _id_primitve, const Vec2 &_texcoord, const Vec3 &_position,
-                      const Vec3 &_normal);
-    QUALIFIER_D_H Hit(const bool _id_primitve, const bool _inside, const Vec2 &_texcoord,
-                      const Vec3 &_position, const Vec3 &_normal, const Vec3 &_tangent,
+    QUALIFIER_D_H Hit(const bool _id_primitve, const Vec2 &_texcoord,
+                      const Vec3 &_position, const Vec3 &_normal);
+    QUALIFIER_D_H Hit(const bool _id_primitve, const bool _inside,
+                      const Vec2 &_texcoord, const Vec3 &_position,
+                      const Vec3 &_normal, const Vec3 &_tangent,
                       const Vec3 &_bitangent);
 };
 

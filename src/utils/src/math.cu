@@ -5,12 +5,25 @@
 namespace rt
 {
 
+QUALIFIER_D_H Vec3 RandomVec3(uint32_t *seed)
+{
+    return {RandomFloat(seed), RandomFloat(seed), RandomFloat(seed)};
+}
+
+QUALIFIER_D_H float MisWeight(float pdf1, float pdf2)
+{
+    pdf1 *= pdf1;
+    pdf2 *= pdf2;
+    return pdf1 / (pdf1 + pdf2);
+}
+
 QUALIFIER_D_H Vec2 SampleDiskUnifrom(const float xi_0, const float xi_1)
 {
     const float r1 = 2.0f * xi_0 - 1.0f, r2 = 2.0f * xi_1 - 1.0f;
 
     /* Modified concencric map code with less branching (by Dave Cline), see
-       http://psgraphics.blogspot.ch/2011/01/improved-code-for-concentric-map.html */
+       http://psgraphics.blogspot.ch/2011/01/improved-code-for-concentric-map.html
+     */
     float phi, r;
     if (r1 == 0.0f && r2 == 0.0f)
     {
@@ -29,14 +42,17 @@ QUALIFIER_D_H Vec2 SampleDiskUnifrom(const float xi_0, const float xi_1)
     return {r * cosf(phi), r * sinf(phi)};
 }
 
-QUALIFIER_D_H Vec3 SampleConeUniform(const float cos_cutoff, const float xi_0, const float xi_1)
+QUALIFIER_D_H Vec3 SampleConeUniform(const float cos_cutoff, const float xi_0,
+                                     const float xi_1)
 {
-    const float cos_theta = 1.0f - (1.0f - cos_cutoff) * xi_0, phi = k2Pi * xi_1;
+    const float cos_theta = 1.0f - (1.0f - cos_cutoff) * xi_0,
+                phi = k2Pi * xi_1;
     const float sin_theta = sqrtf(1.0f - Sqr(cos_theta));
     return {sin_theta * cosf(phi), sin_theta * sinf(phi), cos_theta};
 }
 
-QUALIFIER_D_H void SampleHemisCos(const float xi_0, const float xi_1, Vec3 *vec, float *pdf)
+QUALIFIER_D_H void SampleHemisCos(const float xi_0, const float xi_1, Vec3 *vec,
+                                  float *pdf)
 {
     const float cos_theta = sqrtf(xi_0), phi = k2Pi * xi_1;
     const float sin_theta = sqrt(1.0f - Sqr(cos_theta));
@@ -44,24 +60,28 @@ QUALIFIER_D_H void SampleHemisCos(const float xi_0, const float xi_1, Vec3 *vec,
     *pdf = k1DivPi * cos_theta;
 }
 
-QUALIFIER_D_H void SampleGgx(const float xi_0, const float xi_1, const float roughness, Vec3 *vec,
-                             float *pdf)
+QUALIFIER_D_H void SampleGgx(const float xi_0, const float xi_1,
+                             const float roughness, Vec3 *vec, float *pdf)
 {
     const float alpha_2 = Sqr(roughness);
     const float tan_theta_2 = alpha_2 * xi_0 / (1.0f - xi_0), phi = k2Pi * xi_1;
     const float cos_theta = 1.0f / sqrt(1.0f + tan_theta_2),
                 sin_theta = sqrt(1.0f - Sqr(cos_theta));
     *vec = {sin_theta * cosf(phi), sin_theta * sinf(phi), cos_theta};
-    *pdf = 1.0f / (kPi * alpha_2 * pow(cos_theta, 3) * Sqr(1.0f + tan_theta_2 / alpha_2));
+    *pdf = 1.0f / (kPi * alpha_2 * pow(cos_theta, 3) *
+                   Sqr(1.0f + tan_theta_2 / alpha_2));
 }
 
-QUALIFIER_D_H void SampleGgx(const float xi_0, const float xi_1, const float roughness_u,
-                             const float roughness_v, Vec3 *vec, float *pdf)
+QUALIFIER_D_H void SampleGgx(const float xi_0, const float xi_1,
+                             const float roughness_u, const float roughness_v,
+                             Vec3 *vec, float *pdf)
 {
-    const float phi = (atanf(roughness_v / roughness_u * tanf(kPi + k2Pi * xi_1)) +
-                       kPi * floorf(2.0f * xi_1 + 0.5f));
+    const float phi =
+        (atanf(roughness_v / roughness_u * tanf(kPi + k2Pi * xi_1)) +
+         kPi * floorf(2.0f * xi_1 + 0.5f));
     const float cos_phi = cosf(phi), sin_phi = sinf(phi),
-                alpha_2 = 1.0f / (Sqr(cos_phi / roughness_u) + Sqr(sin_phi / roughness_v));
+                alpha_2 = 1.0f / (Sqr(cos_phi / roughness_u) +
+                                  Sqr(sin_phi / roughness_v));
     const float tan_theta_2 = alpha_2 * xi_0 / (1.0 - xi_0);
     const float cos_theta = 1.0f / sqrtf(1.0f + tan_theta_2),
                 sin_theta = sqrtf(1.0f - Sqr(cos_theta));
@@ -77,22 +97,52 @@ QUALIFIER_D_H float PdfGgx(const float roughness, const Vec3 &vec)
     const float cos_theta = vec.z;
     if (cos_theta <= 0.0f)
         return 0.0f;
-    const float cos_theta_2 = Sqr(cos_theta), tan_theta_2 = (1.0f - cos_theta_2) / cos_theta_2,
+    const float cos_theta_2 = Sqr(cos_theta),
+                tan_theta_2 = (1.0f - cos_theta_2) / cos_theta_2,
                 cos_theta_3 = pow(cos_theta, 3), alpha_2 = Sqr(roughness);
     return alpha_2 / (kPi * cos_theta_3 * Sqr(alpha_2 + tan_theta_2));
 }
 
-QUALIFIER_D_H float PdfGgx(const float roughness_u, const float roughness_v, const Vec3 &vec)
+QUALIFIER_D_H float PdfGgx(const float roughness_u, const float roughness_v,
+                           const Vec3 &vec)
 {
     const float cos_theta = vec.z;
     if (cos_theta <= 0.0f)
         return 0.0f;
     const float cos_theta_2 = Sqr(cos_theta);
     return cos_theta / (kPi * roughness_u * roughness_v *
-                        Sqr(Sqr(vec.x / roughness_u) + Sqr(vec.y / roughness_v) + cos_theta_2));
+                        Sqr(Sqr(vec.x / roughness_u) +
+                            Sqr(vec.y / roughness_v) + cos_theta_2));
 }
 
-QUALIFIER_D_H uint32_t BinarySearch(const uint32_t num, float *cdf, const float target)
+QUALIFIER_D_H float SmithG1Ggx(const float roughness, const Vec3 &v,
+                               const Vec3 &h)
+{
+    const float N_dot_V = v.z;
+    if (N_dot_V * h.z <= 0)
+        return 0;
+
+    const float cos_theta_2 = Sqr(N_dot_V),
+                tan_theta_2 = (1.0f - cos_theta_2) / cos_theta_2,
+                alpha_2 = Sqr(roughness);
+
+    return 2.0f / (1.0f + sqrtf(1.0 + alpha_2 * tan_theta_2));
+}
+
+QUALIFIER_D_H float SmithG1Ggx(const float roughness_u, const float roughness_v,
+                               const Vec3 &v, const Vec3 &h)
+{
+    const float N_dot_V = v.z;
+    if (N_dot_V * h.z <= 0)
+        return 0;
+
+    const float xy_alpha_2 = Sqr(roughness_u * v.x) + Sqr(roughness_v * v.y),
+                tan_theta_2 = xy_alpha_2 / Sqr(N_dot_V);
+    return 2.0f / (1.0f + sqrtf(1.0f + tan_theta_2));
+}
+
+QUALIFIER_D_H uint32_t BinarySearch(const uint32_t num, float *cdf,
+                                    const float target)
 {
     uint32_t begin = 0, end = num, middle;
     while (begin + 1 != end)
@@ -108,7 +158,8 @@ QUALIFIER_D_H uint32_t BinarySearch(const uint32_t num, float *cdf, const float 
     return end;
 }
 
-QUALIFIER_D_H bool SolveQuadratic(const float a, const float b, const float c, float *x0, float *x1)
+QUALIFIER_D_H bool SolveQuadratic(const float a, const float b, const float c,
+                                  float *x0, float *x1)
 {
     /* Linear case */
     if (a == 0.0f)
@@ -152,7 +203,8 @@ QUALIFIER_D_H bool SolveQuadratic(const float a, const float b, const float c, f
 }
 
 // (right, up, front)
-QUALIFIER_D_H void CartesianToSpherical(Vec3 vec, float *theta, float *phi, float *r)
+QUALIFIER_D_H void CartesianToSpherical(Vec3 vec, float *theta, float *phi,
+                                        float *r)
 {
     if (r != nullptr)
         *r = Length(vec);
@@ -171,10 +223,12 @@ QUALIFIER_D_H void CartesianToSpherical(Vec3 vec, float *theta, float *phi, floa
 }
 
 // (right, up, front)
-QUALIFIER_D_H Vec3 SphericalToCartesian(const float theta, const float phi, const float r)
+QUALIFIER_D_H Vec3 SphericalToCartesian(const float theta, const float phi,
+                                        const float r)
 {
     const float sin_theta = sinf(theta);
-    return {r * sinf(phi) * sin_theta, r * cosf(theta), r * cosf(phi) * sin_theta};
+    return {r * sinf(phi) * sin_theta, r * cosf(theta),
+            r * cosf(phi) * sin_theta};
 }
 
 } // namespace rt

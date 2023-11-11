@@ -5,16 +5,19 @@ namespace rt
 
 QUALIFIER_D_H TLAS::TLAS() : nodes_(nullptr), instances_(nullptr) {}
 
-QUALIFIER_D_H TLAS::TLAS(BvhNode *nodes, Instance *instances) : nodes_(nodes), instances_(instances)
+QUALIFIER_D_H TLAS::TLAS(const uint64_t offset_node, const BvhNode *node_buffer,
+                         const Instance *instances)
+    : nodes_(node_buffer + offset_node), instances_(instances)
 {
 }
 
-QUALIFIER_D_H void TLAS::Intersect(Ray *ray, Hit *hit) const
+QUALIFIER_D_H Hit TLAS::Intersect(Ray *ray) const
 {
     uint32_t stack[65];
     stack[0] = 0;
     int ptr = 0;
-    BvhNode *node = nullptr;
+    const BvhNode *node = nullptr;
+    Hit hit;
     while (ptr >= 0)
     {
         node = nodes_ + stack[ptr];
@@ -23,7 +26,7 @@ QUALIFIER_D_H void TLAS::Intersect(Ray *ray, Hit *hit) const
         {
             if (node->leaf)
             {
-                instances_[node->id_object].Intersect(ray, hit);
+                instances_[node->id_object].Intersect(ray, &hit);
                 break;
             }
             else
@@ -34,6 +37,7 @@ QUALIFIER_D_H void TLAS::Intersect(Ray *ray, Hit *hit) const
             }
         }
     }
+    return hit;
 }
 
 } // namespace rt

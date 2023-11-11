@@ -32,7 +32,8 @@ int GetConsecutiveHighOrderZeroBitsNum(const uint64_t n)
     return count;
 }
 
-// Calculates a 30-bit Morton code for the given 3D point located within the unit cube [0,1].
+// Calculates a 30-bit Morton code for the given 3D point located within the
+// unit cube [0,1].
 uint32_t GetMorton3D(const rt::Vec3 &v)
 {
     const float x = fminf(fmaxf(v.x * 1024.0f, 0.0f), 1023.0f),
@@ -50,21 +51,21 @@ namespace rt
 {
 
 QUALIFIER_D_H BvhNode::BvhNode()
-    : leaf(true), id(kInvalidId), id_left(kInvalidId), id_right(kInvalidId), id_object(kInvalidId),
-      area(0), aabb(AABB())
+    : leaf(true), id(kInvalidId), id_left(kInvalidId), id_right(kInvalidId),
+      id_object(kInvalidId), area(0), aabb(AABB())
 {
 }
 
 QUALIFIER_D_H BvhNode::BvhNode(const uint32_t _id)
-    : leaf(false), id(_id), id_left(kInvalidId), id_right(kInvalidId), id_object(kInvalidId),
-      area(0), aabb(AABB())
+    : leaf(false), id(_id), id_left(kInvalidId), id_right(kInvalidId),
+      id_object(kInvalidId), area(0), aabb(AABB())
 {
 }
 
-QUALIFIER_D_H BvhNode::BvhNode(const uint32_t _id, const uint32_t _object_id, const AABB &_aabb,
-                               const float _area)
-    : leaf(true), id(_id), id_left(kInvalidId), id_right(kInvalidId), id_object(_object_id),
-      area(_area), aabb(_aabb)
+QUALIFIER_D_H BvhNode::BvhNode(const uint32_t _id, const uint32_t _object_id,
+                               const AABB &_aabb, const float _area)
+    : leaf(true), id(_id), id_left(kInvalidId), id_right(kInvalidId),
+      id_object(_object_id), area(_area), aabb(_aabb)
 {
 }
 
@@ -79,7 +80,9 @@ std::vector<BvhNode> BvhBuilder::Build(const std::vector<AABB> &aabbs,
     }
     catch (const std::exception &e)
     {
-        throw e;
+        std::ostringstream oss;
+        oss << "error when build BVH.\n\t" << e.what();
+        throw std::exception(oss.str().c_str());
     }
     return nodes;
 }
@@ -87,14 +90,14 @@ std::vector<BvhNode> BvhBuilder::Build(const std::vector<AABB> &aabbs,
 std::vector<BvhNode> BvhBuilder::BuildLinearBvh(const std::vector<AABB> &aabbs,
                                                 const std::vector<float> &areas)
 {
-    auto num_object = static_cast<uint32_t>(aabbs.size());
+    uint32_t num_object = static_cast<uint32_t>(aabbs.size());
     map_id_ = std::vector<uint32_t>(num_object);
-    for (size_t i = 0; i < num_object; ++i)
+    for (uint32_t i = 0; i < num_object; ++i)
         map_id_[i] = i;
 
     aabbs_ = aabbs;
     if (!GenerateMorton())
-        throw std::exception("[error] Build linear BVH failed.\n");
+        throw std::exception("error when generate Morton code.");
 
     areas_ = areas, nodes_ = {};
     BuildLinearBvhTopDown(0, num_object);
@@ -103,7 +106,7 @@ std::vector<BvhNode> BvhBuilder::BuildLinearBvh(const std::vector<AABB> &aabbs,
 
 bool BvhBuilder::GenerateMorton()
 {
-    auto num_object = static_cast<uint32_t>(aabbs_.size());
+    uint32_t num_object = static_cast<uint32_t>(aabbs_.size());
     AABB aabb_all;
     for (const AABB &aabb : aabbs_)
         aabb_all += aabb;
@@ -135,7 +138,8 @@ bool BvhBuilder::GenerateMorton()
     return unique;
 }
 
-uint32_t BvhBuilder::BuildLinearBvhTopDown(const uint32_t begin, const uint32_t end)
+uint32_t BvhBuilder::BuildLinearBvhTopDown(const uint32_t begin,
+                                           const uint32_t end)
 {
     const uint32_t id_node = nodes_.size();
     if (begin + 1 > end)
@@ -144,8 +148,9 @@ uint32_t BvhBuilder::BuildLinearBvhTopDown(const uint32_t begin, const uint32_t 
     }
     else if (begin + 1 == end)
     {
-        nodes_.push_back(
-            BvhNode(id_node, map_id_[begin], aabbs_[map_id_[begin]], areas_[map_id_[begin]]));
+        nodes_.push_back(BvhNode(id_node, map_id_[begin],
+                                 aabbs_[map_id_[begin]],
+                                 areas_[map_id_[begin]]));
         return id_node;
     }
     else
@@ -154,10 +159,10 @@ uint32_t BvhBuilder::BuildLinearBvhTopDown(const uint32_t begin, const uint32_t 
         const uint32_t middle = FindSplit(begin, end) + 1;
         nodes_[id_node].id_left = BuildLinearBvhTopDown(begin, middle);
         nodes_[id_node].id_right = BuildLinearBvhTopDown(middle, end);
-        nodes_[id_node].area =
-            nodes_[nodes_[id_node].id_left].area + nodes_[nodes_[id_node].id_right].area,
-        nodes_[id_node].aabb =
-            nodes_[nodes_[id_node].id_left].aabb + nodes_[nodes_[id_node].id_right].aabb;
+        nodes_[id_node].area = nodes_[nodes_[id_node].id_left].area +
+                               nodes_[nodes_[id_node].id_right].area,
+        nodes_[id_node].aabb = nodes_[nodes_[id_node].id_left].aabb +
+                               nodes_[nodes_[id_node].id_right].aabb;
         return id_node;
     }
 }
@@ -165,13 +170,15 @@ uint32_t BvhBuilder::BuildLinearBvhTopDown(const uint32_t begin, const uint32_t 
 uint32_t BvhBuilder::FindSplit(const uint32_t first, const uint32_t last)
 {
     // Identical Morton codes => split the range in the middle.
-    const uint64_t first_code = mortons_[map_id_[first]], last_code = mortons_[map_id_[last - 1]];
+    const uint64_t first_code = mortons_[map_id_[first]],
+                   last_code = mortons_[map_id_[last - 1]];
     if (first_code == last_code)
         return (first + last) >> 1;
 
-    // Calculate the number of highest bits that are the same for all objects, using the
-    // count-leading-zeros intrinsic.
-    const int common_prefix = GetConsecutiveHighOrderZeroBitsNum(first_code ^ last_code);
+    // Calculate the number of highest bits that are the same for all objects,
+    // using the count-leading-zeros intrinsic.
+    const int common_prefix =
+        GetConsecutiveHighOrderZeroBitsNum(first_code ^ last_code);
 
     // Use binary search to find where the next bit differs.
     // Specifically, we are looking for the highest object that
@@ -186,7 +193,8 @@ uint32_t BvhBuilder::FindSplit(const uint32_t first, const uint32_t last)
         if (new_split < last)
         {
             const uint64_t split_code = mortons_[map_id_[new_split]];
-            const int split_prefix = GetConsecutiveHighOrderZeroBitsNum(first_code ^ split_code);
+            const int split_prefix =
+                GetConsecutiveHighOrderZeroBitsNum(first_code ^ split_code);
             if (split_prefix > common_prefix)
                 split = new_split; // accept proposal
         }
