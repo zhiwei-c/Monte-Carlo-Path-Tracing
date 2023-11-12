@@ -3,7 +3,7 @@
 #include <cassert>
 #include <cmath>
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Mat4::Mat4()
@@ -55,6 +55,11 @@ QUALIFIER_D_H void Mat4::operator=(const Mat4 &m)
     rows[1] = m.rows[1];
     rows[2] = m.rows[2];
     rows[3] = m.rows[3];
+}
+
+QUALIFIER_D_H Mat4 Mat4::operator-() const
+{
+    return {-rows[0], -rows[1], -rows[2], -rows[3]};
 }
 
 QUALIFIER_D_H Mat4 &Mat4::operator+=(const Mat4 &m)
@@ -267,4 +272,4 @@ QUALIFIER_D_H Vec3 TransformVector(const Mat4 &m, const Vec3 &v)
     return Mul(m, Vec4{v, 0.0f}).direction();
 }
 
-} // namespace rt
+} // namespace csrt

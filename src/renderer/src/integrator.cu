@@ -1,6 +1,6 @@
 #include "integrator.cuh"
 
-namespace rt
+namespace csrt
 {
 QUALIFIER_D_H Integrator::Integrator()
     : data_{}, size_cdf_area_light_(0), pdf_rr_rcp_(0)
@@ -13,8 +13,8 @@ QUALIFIER_D_H Integrator::Integrator(const Integrator::Data &data)
     pdf_rr_rcp_ = 1.0f / data_.pdf_rr;
 }
 
-QUALIFIER_D_H Vec3 rt::Integrator::Shade(const Vec3 &eye, const Vec3 &look_dir,
-                                         uint32_t *seed) const
+QUALIFIER_D_H Vec3 Integrator::Shade(const Vec3 &eye, const Vec3 &look_dir,
+                                     uint32_t *seed) const
 {
     //
     // 求取原初光线与场景的交点
@@ -240,4 +240,4 @@ QUALIFIER_D_H SamplingRecord Integrator::SampleRay(const Vec3 &wo,
     return rec;
 }
 
-} // namespace rt
+} // namespace csrt

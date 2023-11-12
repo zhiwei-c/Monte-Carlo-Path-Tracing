@@ -2,10 +2,10 @@
 
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
-QUALIFIER_D_H void rt::Bsdf::EvaluateDiffuse(SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::EvaluateDiffuse(SamplingRecord *rec) const
 {
     // 反射光线与法线方向应该位于同侧
     rec->pdf = Dot(rec->wo, rec->normal);
@@ -20,8 +20,8 @@ QUALIFIER_D_H void rt::Bsdf::EvaluateDiffuse(SamplingRecord *rec) const
     rec->attenuation = albedo * k1DivPi * N_dot_I;
 }
 
-QUALIFIER_D_H void rt::Bsdf::SampleDiffuse(const Vec3 &xi,
-                                           SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::SampleDiffuse(const Vec3 &xi,
+                                       SamplingRecord *rec) const
 {
     Vec3 wi_local;
     SampleHemisCos(xi.x, xi.y, &wi_local, &rec->pdf);
@@ -36,4 +36,4 @@ QUALIFIER_D_H void rt::Bsdf::SampleDiffuse(const Vec3 &xi,
     rec->attenuation = albedo * k1DivPi * N_dot_I;
 }
 
-} // namespace rt
+} // namespace csrt

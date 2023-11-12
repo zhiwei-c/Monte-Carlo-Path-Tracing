@@ -3,7 +3,7 @@
 #include "tensor.cuh"
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 class Texture
@@ -171,4 +171,4 @@ QUALIFIER_D_H inline Vec2 Texture::GetGradientBitmap(const Vec2 &texcoord) const
     return {(value_u - value) * norm, (value_v - value) * norm};
 }
 
-} // namespace rt
+} // namespace csrt

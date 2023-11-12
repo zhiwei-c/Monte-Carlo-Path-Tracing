@@ -2,8 +2,9 @@
 
 #include <cmath>
 
-namespace rt
+namespace csrt
 {
+
 QUALIFIER_D_H Vec4::Vec4(const Vec3 &vec, float w)
     : x(vec.x), y(vec.y), z(vec.z), w(w)
 {
@@ -177,4 +178,4 @@ QUALIFIER_D_H Vec4 Max(const Vec4 &v1, const Vec4 &v2)
             fmaxf(v1.w, v2.w)};
 }
 
-} // namespace rt
+} // namespace csrt

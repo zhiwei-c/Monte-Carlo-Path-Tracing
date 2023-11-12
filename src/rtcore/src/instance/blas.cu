@@ -1,6 +1,6 @@
 #include "instance.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H BLAS::BLAS() : nodes_(nullptr), primitives_(nullptr) {}
@@ -40,7 +40,7 @@ QUALIFIER_D_H void BLAS::Intersect(Ray *ray, Hit *hit) const
     }
 }
 
-QUALIFIER_D_H Hit rt::BLAS::Sample(const Vec3 &xi) const
+QUALIFIER_D_H Hit BLAS::Sample(const Vec3 &xi) const
 {
     const BvhNode *node = nodes_;
     float thresh = node->area * xi.x;
@@ -60,4 +60,4 @@ QUALIFIER_D_H Hit rt::BLAS::Sample(const Vec3 &xi) const
     return primitives_[node->id_object].Sample(xi.y, xi.z);
 }
 
-} // namespace rt
+} // namespace csrt

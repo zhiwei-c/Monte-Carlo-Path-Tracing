@@ -2,7 +2,7 @@
 
 #include <exception>
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Bsdf::Data::Data()
@@ -370,4 +370,4 @@ float Bsdf::AverageFresnel(const float eta)
     }
 }
 
-} // namespace rt
+} // namespace csrt

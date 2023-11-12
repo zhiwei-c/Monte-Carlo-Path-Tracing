@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace rt
+namespace csrt
 {
 
 struct BvhNode
@@ -45,4 +45,4 @@ protected:
     std::vector<BvhNode> nodes_;
 };
 
-} // namespace rt
+} // namespace csrt

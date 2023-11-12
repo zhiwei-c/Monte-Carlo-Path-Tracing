@@ -1,6 +1,6 @@
 #include "texture.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H float Texture::GetColorBitmap1(const Vec2 &texcoord) const
@@ -82,4 +82,4 @@ QUALIFIER_D_H bool Texture::IsTransparentBitmap4(const Vec2 &texcoord,
     return Lerp(color_0, color_1, t_x) > xi;
 }
 
-} // namespace rt
+} // namespace csrt

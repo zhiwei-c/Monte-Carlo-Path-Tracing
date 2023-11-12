@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Uvec3::Uvec3(const uint32_t x, const uint32_t y, const uint32_t z)
@@ -205,9 +205,9 @@ QUALIFIER_D_H Vec3 Max(const Vec3 &v1, const Vec3 &v2)
     return {fmaxf(v1.x, v2.x), fmaxf(v1.y, v2.y), fmaxf(v1.z, v2.z)};
 }
 
-QUALIFIER_D_H Vec3 rt::Sqrt(const Vec3 &v)
+QUALIFIER_D_H Vec3 Sqrt(const Vec3 &v)
 {
     return {sqrtf(v.x), sqrtf(v.y), sqrtf(v.z)};
 }
 
-} // namespace rt
+} // namespace csrt

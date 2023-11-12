@@ -2,7 +2,7 @@
 
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Hit::Hit()
@@ -30,4 +30,4 @@ QUALIFIER_D_H Hit::Hit(const bool _id_primitve, const bool _inside,
 {
 }
 
-} // namespace rt
+} // namespace csrt

@@ -3,10 +3,10 @@
 #include "rtcore.cuh"
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
-QUALIFIER_D_H void rt::Bsdf::EvaluateDielectric(SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::EvaluateDielectric(SamplingRecord *rec) const
 {
     float eta = data_.dielectric.eta;
     // 相对折射率的倒数，即入射侧介质和透射侧介质的绝对折射率之比
@@ -85,8 +85,8 @@ QUALIFIER_D_H void rt::Bsdf::EvaluateDielectric(SamplingRecord *rec) const
     }
 }
 
-QUALIFIER_D_H void rt::Bsdf::SampleDielectric(const Vec3 &xi,
-                                              SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::SampleDielectric(const Vec3 &xi,
+                                          SamplingRecord *rec) const
 {
     const float scale = 1.2f - 0.2f * sqrt(abs(Dot(-rec->wo, rec->normal)));
     const Texture &roughness_u =
@@ -181,4 +181,4 @@ QUALIFIER_D_H void rt::Bsdf::SampleDielectric(const Vec3 &xi,
     rec->valid = true;
 }
 
-} // namespace rt
+} // namespace csrt

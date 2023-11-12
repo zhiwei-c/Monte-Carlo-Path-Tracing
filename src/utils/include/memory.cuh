@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-namespace rt
+namespace csrt
 {
 
 enum class BackendType
@@ -45,7 +45,8 @@ T *MallocElement(const BackendType &backend_type)
         case 2:
         {
             cudaDeviceReset();
-            throw std::exception("cannot allocate enough GPU memory or other resources.");
+            throw std::exception(
+                "cannot allocate enough GPU memory or other resources.");
             break;
         }
         default:
@@ -85,7 +86,8 @@ T *MallocArray(const BackendType &backend_type, const uint64_t num)
         case 2:
         {
             cudaDeviceReset();
-            throw std::exception("cannot allocate enough GPU memory or other resources.");
+            throw std::exception(
+                "cannot allocate enough GPU memory or other resources.");
             break;
         }
         default:
@@ -129,7 +131,8 @@ T *MallocArray(const BackendType &backend_type, const std::vector<T> &src)
         case 2:
         {
             cudaDeviceReset();
-            throw std::exception("cannot allocate enough GPU memory or other resources.");
+            throw std::exception(
+                "cannot allocate enough GPU memory or other resources.");
             break;
         }
         default:
@@ -142,7 +145,8 @@ T *MallocArray(const BackendType &backend_type, const std::vector<T> &src)
         }
         }
 
-        ret = cudaMemcpy(dest, src.data(), num * sizeof(T), cudaMemcpyHostToDevice);
+        ret = cudaMemcpy(dest, src.data(), num * sizeof(T),
+                         cudaMemcpyHostToDevice);
         if (ret)
         {
             cudaDeviceReset();
@@ -157,7 +161,8 @@ T *MallocArray(const BackendType &backend_type, const std::vector<T> &src)
 }
 
 template <typename T>
-void CopyArray(const BackendType &backend_type, T *dest, T *src, const uint64_t num)
+void CopyArray(const BackendType &backend_type, T *dest, T *src,
+               const uint64_t num)
 {
 #ifdef ENABLE_CUDA
     if (backend_type == BackendType::kCpu)
@@ -168,7 +173,8 @@ void CopyArray(const BackendType &backend_type, T *dest, T *src, const uint64_t 
     }
     else
     {
-        cudaError_t ret = cudaMemcpy(dest, src, num * sizeof(T), cudaMemcpyDefault);
+        cudaError_t ret =
+            cudaMemcpy(dest, src, num * sizeof(T), cudaMemcpyDefault);
         if (ret)
         {
             cudaDeviceReset();
@@ -238,4 +244,4 @@ void DeleteArray(const BackendType &backend_type, T *data)
 #endif
 }
 
-} // namespace rt
+} // namespace csrt

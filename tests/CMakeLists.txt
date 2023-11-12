@@ -1,2 +1,1 @@
 add_subdirectory(test_render)
-add_subdirectory(test_rt)

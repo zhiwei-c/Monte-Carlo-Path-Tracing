@@ -4,7 +4,7 @@
 #include "texture.cuh"
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 struct SamplingRecord
@@ -240,4 +240,4 @@ private:
     Data data_;
 };
 
-} // namespace rt
+} // namespace csrt

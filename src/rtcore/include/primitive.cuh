@@ -2,7 +2,7 @@
 
 #include "types.cuh"
 
-namespace rt
+namespace csrt
 {
 
 class Primitive
@@ -72,4 +72,4 @@ private:
     Primitive::Data data_;
 };
 
-} // namespace rt
+} // namespace csrt

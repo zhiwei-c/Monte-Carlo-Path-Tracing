@@ -9,6 +9,8 @@
 namespace
 {
 
+using namespace csrt;
+
 // Expands a 10-bit integer into 30 bits by inserting 2 zeros before each bit.
 uint32_t ExpandBits(uint32_t v)
 {
@@ -34,7 +36,7 @@ int GetConsecutiveHighOrderZeroBitsNum(const uint64_t n)
 
 // Calculates a 30-bit Morton code for the given 3D point located within the
 // unit cube [0,1].
-uint32_t GetMorton3D(const rt::Vec3 &v)
+uint32_t GetMorton3D(const Vec3 &v)
 {
     const float x = fminf(fmaxf(v.x * 1024.0f, 0.0f), 1023.0f),
                 y = fminf(fmaxf(v.y * 1024.0f, 0.0f), 1023.0f),
@@ -47,7 +49,7 @@ uint32_t GetMorton3D(const rt::Vec3 &v)
 
 } // namespace
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H BvhNode::BvhNode()
@@ -203,4 +205,4 @@ uint32_t BvhBuilder::FindSplit(const uint32_t first, const uint32_t last)
     return split;
 }
 
-} // namespace rt
+} // namespace csrt

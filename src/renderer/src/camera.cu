@@ -4,7 +4,7 @@
 
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Camera::Camera()
@@ -36,4 +36,4 @@ QUALIFIER_D_H Camera::Camera(const Camera::Info &info)
     view_dy_ = up_ * tanf(ToRadians(0.5f * fov_y_));
 }
 
-} // namespace rt
+} // namespace csrt

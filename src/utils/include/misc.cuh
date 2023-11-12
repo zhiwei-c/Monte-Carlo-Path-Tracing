@@ -2,25 +2,25 @@
 
 #include <string>
 
-namespace rt
+namespace csrt
 {
 
-#define SAFE_DELETE_ELEMENT(x)                                                                     \
-    {                                                                                              \
-        if (x)                                                                                     \
-        {                                                                                          \
-            delete (x);                                                                            \
-        }                                                                                          \
-        x = nullptr;                                                                               \
+#define SAFE_DELETE_ELEMENT(x)                                                 \
+    {                                                                          \
+        if (x)                                                                 \
+        {                                                                      \
+            delete (x);                                                        \
+        }                                                                      \
+        x = nullptr;                                                           \
     }
 
-#define SAFE_DELETE_ARRAY(x)                                                                       \
-    {                                                                                              \
-        if (x)                                                                                     \
-        {                                                                                          \
-            delete[] (x);                                                                          \
-        }                                                                                          \
-        x = nullptr;                                                                               \
+#define SAFE_DELETE_ARRAY(x)                                                   \
+    {                                                                          \
+        if (x)                                                                 \
+        {                                                                      \
+            delete[] (x);                                                      \
+        }                                                                      \
+        x = nullptr;                                                           \
     }
 
 inline std::string GetSuffix(const std::string &filename)
@@ -44,6 +44,9 @@ constexpr uint64_t Hash(const char *str)
     return (*str ? Hash(str + 1) * 256 : 0) + static_cast<uint64_t>(*str);
 }
 
-constexpr uint64_t operator"" _hash(const char *str, uint64_t) { return Hash(str); }
+constexpr uint64_t operator"" _hash(const char *str, uint64_t)
+{
+    return Hash(str);
+}
 
-} // namespace rt
+} // namespace csrt

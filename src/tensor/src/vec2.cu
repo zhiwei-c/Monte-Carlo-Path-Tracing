@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Vec2 &Vec2::operator+=(const Vec2 &vec)
@@ -129,4 +129,4 @@ QUALIFIER_D_H Vec2 Max(const Vec2 &v1, const Vec2 &v2)
     return {fmaxf(v1.u, v2.u), fmaxf(v1.v, v2.v)};
 }
 
-} // namespace rt
+} // namespace csrt

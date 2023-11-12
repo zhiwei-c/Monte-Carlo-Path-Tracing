@@ -3,10 +3,10 @@
 #include "rtcore.cuh"
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
-QUALIFIER_D_H void rt::Bsdf::EvaluateThinDielectric(SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::EvaluateThinDielectric(SamplingRecord *rec) const
 {
 
     bool reflect = true;
@@ -69,8 +69,8 @@ QUALIFIER_D_H void rt::Bsdf::EvaluateThinDielectric(SamplingRecord *rec) const
     }
 }
 
-QUALIFIER_D_H void rt::Bsdf::SampleThinDielectric(const Vec3 &xi,
-                                                  SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::SampleThinDielectric(const Vec3 &xi,
+                                              SamplingRecord *rec) const
 {
     // 根据GGX法线分布函数重要抽样微平面法线，生成入射光线方向
     Vec3 h_local(0);
@@ -136,4 +136,4 @@ QUALIFIER_D_H void rt::Bsdf::SampleThinDielectric(const Vec3 &xi,
     rec->valid = true;
 }
 
-} // namespace rt
+} // namespace csrt

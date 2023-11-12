@@ -3,10 +3,10 @@
 #include "rtcore.cuh"
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
-QUALIFIER_D_H void rt::Bsdf::EvaluateConductor(SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::EvaluateConductor(SamplingRecord *rec) const
 {
     // 反射光线与法线方向应该位于同侧
     const float N_dot_O = Dot(rec->wo, rec->normal);
@@ -48,8 +48,8 @@ QUALIFIER_D_H void rt::Bsdf::EvaluateConductor(SamplingRecord *rec) const
     rec->attenuation *= spec;
 }
 
-QUALIFIER_D_H void rt::Bsdf::SampleConductor(const Vec3 &xi,
-                                             SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::SampleConductor(const Vec3 &xi,
+                                         SamplingRecord *rec) const
 {
     // 根据GGX法线分布函数重要抽样微平面法线，生成入射光线方向
     Vec3 h_local(0);
@@ -62,7 +62,7 @@ QUALIFIER_D_H void rt::Bsdf::SampleConductor(const Vec3 &xi,
                 alpha_v = roughness_v.GetColor(rec->texcoord).x;
     SampleGgx(xi.x, xi.y, alpha_u, alpha_v, &h_local, &D);
     const Vec3 h_world = rec->ToWorld(h_local);
-    
+
     const float H_dot_O = Dot(rec->wo, h_world);
     rec->pdf = D / (4.0f * H_dot_O);
     if (rec->pdf < kEpsilonFloat)
@@ -93,4 +93,4 @@ QUALIFIER_D_H void rt::Bsdf::SampleConductor(const Vec3 &xi,
     rec->attenuation *= spec;
 }
 
-} // namespace rt
+} // namespace csrt

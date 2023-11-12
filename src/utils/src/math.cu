@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Vec3 RandomVec3(uint32_t *seed)
@@ -231,4 +231,4 @@ QUALIFIER_D_H Vec3 SphericalToCartesian(const float theta, const float phi,
             r * cosf(phi) * sin_theta};
 }
 
-} // namespace rt
+} // namespace csrt

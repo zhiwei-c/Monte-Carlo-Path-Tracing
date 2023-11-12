@@ -10,7 +10,7 @@
 namespace
 {
 
-using namespace rt;
+using namespace csrt;
 
 std::mutex m_mutex_patch;
 std::vector<std::vector<std::array<uint32_t, 3>>> m_patches;
@@ -143,7 +143,7 @@ void DispathRaysCpu(Camera *camera, Integrator *integrator, float *frame)
 }
 } // namespace
 
-namespace rt
+namespace csrt
 {
 
 Renderer::Renderer(const BackendType backend_type)
@@ -237,7 +237,7 @@ void Renderer::AddSceneInfo(const std::vector<uint32_t> &map_id_instance_bsdf,
     }
 }
 
-void rt::Renderer::SetAreaLightInfo(
+void Renderer::SetAreaLightInfo(
     const std::vector<uint32_t> map_id_area_light_instance,
     const std::vector<float> list_area_light_weight)
 {
@@ -424,7 +424,7 @@ void Renderer::CommitTextures()
     }
 }
 
-void rt::Renderer::CommitBsdfs()
+void Renderer::CommitBsdfs()
 {
     try
     {
@@ -569,4 +569,4 @@ void Renderer::CheckBsdf(const uint32_t id, const bool allow_invalid)
     }
 }
 
-} // namespace rt
+} // namespace csrt

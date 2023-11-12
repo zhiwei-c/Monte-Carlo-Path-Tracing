@@ -4,7 +4,7 @@
 
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Instance::Instance() : id_(kInvalidId), blas_(nullptr) {}
@@ -27,7 +27,7 @@ QUALIFIER_D_H void Instance::Intersect(Ray *ray, Hit *hit) const
     }
 }
 
-QUALIFIER_D_H Hit rt::Instance::Sample(const Vec3 &xi) const
+QUALIFIER_D_H Hit Instance::Sample(const Vec3 &xi) const
 {
     return blas_->Sample(xi);
 }
@@ -66,4 +66,4 @@ Instance::Info Instance::Info::CreateRectangle(const Mat4 &to_world,
     return info;
 }
 
-} // namespace rt
+} // namespace csrt

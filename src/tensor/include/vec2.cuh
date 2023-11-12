@@ -2,7 +2,7 @@
 
 #include "defs.cuh"
 
-namespace rt
+namespace csrt
 {
 
 struct Vec2
@@ -60,4 +60,4 @@ QUALIFIER_D_H float Dot(const Vec2 &v1, const Vec2 &v2);
 QUALIFIER_D_H Vec2 Min(const Vec2 &v1, const Vec2 &v2);
 QUALIFIER_D_H Vec2 Max(const Vec2 &v1, const Vec2 &v2);
 
-} // namespace rt
+} // namespace csrt

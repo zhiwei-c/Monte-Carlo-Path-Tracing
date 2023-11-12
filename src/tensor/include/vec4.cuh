@@ -3,7 +3,7 @@
 #include "defs.cuh"
 #include "vec3.cuh"
 
-namespace rt
+namespace csrt
 {
 
 struct Vec4
@@ -73,4 +73,4 @@ QUALIFIER_D_H float Dot(const Vec4 &v1, const Vec4 &v2);
 QUALIFIER_D_H Vec4 Min(const Vec4 &v1, const Vec4 &v2);
 QUALIFIER_D_H Vec4 Max(const Vec4 &v1, const Vec4 &v2);
 
-} // namespace rt
+} // namespace csrt

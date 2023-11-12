@@ -2,7 +2,7 @@
 
 #include "tensor.cuh"
 
-namespace rt
+namespace csrt
 {
 
 class Camera
@@ -49,4 +49,4 @@ private:
     Vec3 view_dy_;
 };
 
-} // namespace rt
+} // namespace csrt

@@ -2,7 +2,7 @@
 
 #include <exception>
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Texture::Data::Data()
@@ -190,7 +190,7 @@ QUALIFIER_D_H Vec3 Texture::GetColor(const Vec2 &texcoord) const
     return {};
 }
 
-QUALIFIER_D_H Vec2 rt::Texture::GetGradient(const Vec2 &texcoord) const
+QUALIFIER_D_H Vec2 Texture::GetGradient(const Vec2 &texcoord) const
 {
     switch (data_.type)
     {
@@ -231,4 +231,4 @@ QUALIFIER_D_H bool Texture::IsTransparent(const Vec2 &texcoord,
     return false;
 }
 
-} // namespace rt
+} // namespace csrt

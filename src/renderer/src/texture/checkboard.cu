@@ -1,6 +1,6 @@
 #include "texture.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Vec3 Texture::GetColorCheckerboard(const Vec2 &texcoord) const
@@ -30,4 +30,4 @@ QUALIFIER_D_H Vec2 Texture::GetGradientCheckerboard(const Vec2 &texcoord) const
     return {(value_u - value) * norm, (value_v - value) * norm};
 }
 
-} // namespace rt
+} // namespace csrt

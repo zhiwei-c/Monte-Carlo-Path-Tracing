@@ -2,7 +2,7 @@
 
 #include <exception>
 
-namespace rt
+namespace csrt
 {
 
 Scene::Scene(const BackendType backend_type)
@@ -108,7 +108,7 @@ void Scene::CommitPrimitives()
     }
 }
 
-void rt::Scene::CommitInstances()
+void Scene::CommitInstances()
 {
     try
     {
@@ -465,4 +465,4 @@ void Scene::SetupMeshes(Instance::Info::Meshes info,
     }
 }
 
-} // namespace rt
+} // namespace csrt

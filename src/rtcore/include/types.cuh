@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace rt
+namespace csrt
 {
 
 struct Ray
@@ -69,4 +69,4 @@ private:
 
 QUALIFIER_D_H AABB operator+(const AABB &a, const AABB &b);
 
-} // namespace rt
+} // namespace csrt

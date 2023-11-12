@@ -2,7 +2,7 @@
 
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H AABB Primitive::GetAabbTriangle() const
@@ -137,4 +137,4 @@ QUALIFIER_D_H Hit Primitive::SampleTriangle(const float xi_0,
     return Hit(id_, texcoord, position, normal);
 }
 
-} // namespace rt
+} // namespace csrt

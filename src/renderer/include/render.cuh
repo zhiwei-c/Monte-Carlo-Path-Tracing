@@ -9,7 +9,7 @@
 #include "texture.cuh"
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 class Renderer
@@ -72,4 +72,4 @@ private:
     Camera *camera_;
 };
 
-} // namespace rt
+} // namespace csrt

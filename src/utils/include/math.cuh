@@ -4,7 +4,7 @@
 
 #include "tensor.cuh"
 
-namespace rt
+namespace csrt
 {
 
 constexpr float kLowestFloat = std::numeric_limits<float>::lowest();
@@ -82,7 +82,8 @@ QUALIFIER_D_H float PdfHemisCos(const Vec3 &vec);
 QUALIFIER_D_H float PdfGgx(const float roughness, const Vec3 &vec);
 QUALIFIER_D_H float PdfGgx(const float roughness_u, const float roughness_v,
                            const Vec3 &vec);
-QUALIFIER_D_H float SmithG1Ggx(const float roughness, const Vec3 &v, const Vec3 &h);
+QUALIFIER_D_H float SmithG1Ggx(const float roughness, const Vec3 &v,
+                               const Vec3 &h);
 QUALIFIER_D_H float SmithG1Ggx(const float roughness_u, const float roughness_v,
                                const Vec3 &v, const Vec3 &h);
 
@@ -116,4 +117,4 @@ QUALIFIER_D_H void CartesianToSpherical(Vec3 vec, float *theta, float *phi,
 QUALIFIER_D_H Vec3 SphericalToCartesian(const float theta, const float phi,
                                         const float r);
 
-} // namespace rt
+} // namespace csrt

@@ -2,7 +2,7 @@
 
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H AABB Primitive::GetAabbSphere() const
@@ -81,4 +81,4 @@ QUALIFIER_D_H Hit Primitive::SampleSphere(const float xi_0,
     return Hit(id_, texcoord, position, normal);
 }
 
-} // namespace rt
+} // namespace csrt

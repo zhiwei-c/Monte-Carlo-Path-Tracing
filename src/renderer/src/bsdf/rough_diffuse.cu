@@ -4,10 +4,10 @@
 
 namespace
 {
-using namespace rt;
+using namespace csrt;
 
-void Evaluate(const float rougness, const Vec3 &albedo,
-              const bool use_fast_approx, SamplingRecord *rec)
+QUALIFIER_D_H void Evaluate(const float rougness, const Vec3 &albedo,
+                            const bool use_fast_approx, SamplingRecord *rec)
 {
     /* Conversion from Beckmann-style RMS roughness to
     Oren-Nayar-style slope-area variance. The factor
@@ -67,7 +67,7 @@ void Evaluate(const float rougness, const Vec3 &albedo,
         }
 
         float tmp = sigma_2 / (sigma_2 + 0.09f),
-              tmp2 = 4.0f * Sqr(k1DivPi) * alpha * beta,
+              tmp2 = 4.0f * k1DivPi * k1DivPi * alpha * beta,
               tmp3 = 2.0f * beta * k1DivPi;
 
         float C1 = 1.0f - 0.5f * sigma_2 / (sigma_2 + 0.33f), C2 = 0.45f * tmp,
@@ -92,10 +92,10 @@ void Evaluate(const float rougness, const Vec3 &albedo,
 
 } // namespace
 
-namespace rt
+namespace csrt
 {
 
-QUALIFIER_D_H void rt::Bsdf::EvaluateRoughDiffuse(SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::EvaluateRoughDiffuse(SamplingRecord *rec) const
 {
     // 反推余弦加权重要抽样时的概率
     rec->pdf = Dot(rec->wo, rec->normal);
@@ -114,8 +114,8 @@ QUALIFIER_D_H void rt::Bsdf::EvaluateRoughDiffuse(SamplingRecord *rec) const
     ::Evaluate(alpha, albedo, data_.rough_diffuse.use_fast_approx, rec);
 }
 
-QUALIFIER_D_H void rt::Bsdf::SampleRoughDiffuse(const Vec3 &xi,
-                                                SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::SampleRoughDiffuse(const Vec3 &xi,
+                                            SamplingRecord *rec) const
 {
     // 余弦加权重要抽样入射光线的方向
     Vec3 wi;
@@ -138,4 +138,4 @@ QUALIFIER_D_H void rt::Bsdf::SampleRoughDiffuse(const Vec3 &xi,
     ::Evaluate(alpha, albedo, data_.rough_diffuse.use_fast_approx, rec);
 }
 
-} // namespace rt
+} // namespace csrt

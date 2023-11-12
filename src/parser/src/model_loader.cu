@@ -12,6 +12,8 @@
 namespace
 {
 
+using namespace csrt;
+
 constexpr size_t kZstreamBufferSize = 32768;
 
 std::string m_filename;
@@ -379,11 +381,11 @@ void ProcessOffset(int index_shape, uint16_t version)
     }
 }
 
-rt::Instance::Info::Meshes ProcessAssimpNode(const aiScene *scene, aiNode *node,
-                                             bool face_normals,
-                                             const uint32_t index_offset)
+Instance::Info::Meshes ProcessAssimpNode(const aiScene *scene, aiNode *node,
+                                         bool face_normals,
+                                         const uint32_t index_offset)
 {
-    rt::Instance::Info::Meshes info_meshes;
+    Instance::Info::Meshes info_meshes;
     for (unsigned int i = 0; i < node->mNumMeshes; ++i)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
@@ -439,7 +441,7 @@ rt::Instance::Info::Meshes ProcessAssimpNode(const aiScene *scene, aiNode *node,
 
     for (unsigned int i = 0; i < node->mNumChildren; ++i)
     {
-        rt::Instance::Info::Meshes info_meshes_local =
+        Instance::Info::Meshes info_meshes_local =
             ProcessAssimpNode(scene, node->mChildren[i], face_normals,
                               info_meshes.indices.size());
 
@@ -468,7 +470,7 @@ rt::Instance::Info::Meshes ProcessAssimpNode(const aiScene *scene, aiNode *node,
 
 } // namespace
 
-namespace rt
+namespace csrt
 {
 
 Instance::Info::Meshes model_loader::Load(const std::string &filename,
@@ -579,4 +581,4 @@ Instance::Info::Meshes model_loader::Load(const std::string &filename,
     return ProcessAssimpNode(scene, scene->mRootNode, face_normals, 0);
 }
 
-} // namespace rt
+} // namespace csrt

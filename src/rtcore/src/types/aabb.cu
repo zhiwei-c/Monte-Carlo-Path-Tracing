@@ -2,7 +2,7 @@
 
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H AABB::AABB() : min_{kMaxFloat}, max_{kLowestFloat} {}
@@ -52,4 +52,4 @@ QUALIFIER_D_H AABB operator+(const AABB &a, const AABB &b)
     return AABB(Min(a.min(), b.min()), Max(a.max(), b.max()));
 }
 
-} // namespace rt
+} // namespace csrt

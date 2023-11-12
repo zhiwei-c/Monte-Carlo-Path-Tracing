@@ -6,7 +6,7 @@
 #include "primitive.cuh"
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 class BLAS
@@ -95,4 +95,4 @@ private:
     const BLAS *blas_;
 };
 
-} // namespace rt
+} // namespace csrt

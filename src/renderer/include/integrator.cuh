@@ -5,7 +5,7 @@
 #include "tensor.cuh"
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 class Integrator
 {
@@ -69,4 +69,4 @@ private:
     float pdf_rr_rcp_;
     Data data_;
 };
-} // namespace rt
+} // namespace csrt

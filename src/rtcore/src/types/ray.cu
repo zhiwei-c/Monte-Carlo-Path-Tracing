@@ -2,7 +2,7 @@
 
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Ray::Ray()
@@ -68,4 +68,4 @@ QUALIFIER_D_H bool Ray::Refract(const Vec3 &wi, const Vec3 &normal,
     }
 }
 
-} // namespace rt
+} // namespace csrt

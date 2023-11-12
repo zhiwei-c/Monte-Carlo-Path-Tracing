@@ -7,7 +7,7 @@
 #include "primitive.cuh"
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 class TLAS
@@ -65,4 +65,4 @@ private:
     std::vector<Instance::Info> list_info_instance_;
 };
 
-} // namespace rt
+} // namespace csrt

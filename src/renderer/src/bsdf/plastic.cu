@@ -3,10 +3,10 @@
 #include "rtcore.cuh"
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
-QUALIFIER_D_H void rt::Bsdf::EvaluatePlastic(SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::EvaluatePlastic(SamplingRecord *rec) const
 {
     // 反射光线与法线方向应该位于同侧
     const float N_dot_O = Dot(rec->wo, rec->normal);
@@ -69,8 +69,8 @@ QUALIFIER_D_H void rt::Bsdf::EvaluatePlastic(SamplingRecord *rec) const
     }
 }
 
-QUALIFIER_D_H void rt::Bsdf::SamplePlastic(const Vec3 &xi,
-                                           SamplingRecord *rec) const
+QUALIFIER_D_H void Bsdf::SamplePlastic(const Vec3 &xi,
+                                       SamplingRecord *rec) const
 {
     // 计算塑料清漆层和基底层反射的权重
     const Texture
@@ -158,4 +158,4 @@ QUALIFIER_D_H void rt::Bsdf::SamplePlastic(const Vec3 &xi,
     }
 }
 
-} // namespace rt
+} // namespace csrt

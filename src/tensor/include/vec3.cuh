@@ -3,7 +3,7 @@
 #include "defs.cuh"
 #include "vec2.cuh"
 
-namespace rt
+namespace csrt
 {
 
 struct Uvec3
@@ -81,4 +81,4 @@ QUALIFIER_D_H Vec3 Min(const Vec3 &v1, const Vec3 &v2);
 QUALIFIER_D_H Vec3 Max(const Vec3 &v1, const Vec3 &v2);
 QUALIFIER_D_H Vec3 Sqrt(const Vec3 &v);
 
-} // namespace rt
+} // namespace csrt

@@ -1,6 +1,6 @@
 #include "scene.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H TLAS::TLAS() : nodes_(nullptr), instances_(nullptr) {}
@@ -40,4 +40,4 @@ QUALIFIER_D_H Hit TLAS::Intersect(Ray *ray) const
     return hit;
 }
 
-} // namespace rt
+} // namespace csrt

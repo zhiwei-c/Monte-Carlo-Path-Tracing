@@ -2,7 +2,7 @@
 
 #include "utils.cuh"
 
-namespace rt
+namespace csrt
 {
 
 QUALIFIER_D_H Primitive::Data::Data()
@@ -89,4 +89,4 @@ QUALIFIER_D_H Hit Primitive::Sample(const float xi_0, const float xi_1) const
     }
 }
 
-} // namespace rt
+} // namespace csrt
