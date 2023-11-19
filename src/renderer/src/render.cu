@@ -72,15 +72,6 @@ QUALIFIER_D_H void DrawPixel(const uint32_t i, const uint32_t j, Camera *camera,
         const Vec3 look_dir = Normalize(
             camera->front() + x * camera->view_dx() + y * camera->view_dy());
         temp = integrator->Shade(camera->eye(), look_dir, &seed);
-#if defined(DEBUG) || defined(_DEBUG)
-        if (!isfinite(temp.x) || !isfinite(temp.y) || !isfinite(temp.z))
-        {
-            fprintf(stderr,
-                    "[warning] error when draw pixel ('%u', '%u), sample "
-                    "index '%u'.\n",
-                    i, j, s);
-        }
-#endif
         temp.x = fminf(temp.x, 1.0f);
         temp.y = fminf(temp.y, 1.0f);
         temp.z = fminf(temp.z, 1.0f);
@@ -90,11 +81,15 @@ QUALIFIER_D_H void DrawPixel(const uint32_t i, const uint32_t j, Camera *camera,
 
     for (int channel = 0; channel < 3; ++channel)
     {
-        color[channel] = fminf(color[channel], 1.0f);
-        frame[pixel_offset + channel] =
-            (color[channel] <= 0.0031308f)
-                ? (12.92f * color[channel])
-                : (1.055f * powf(color[channel], 1.0f / 2.4f) - 0.055f);
+        if (color[channel] <= 0.0031308f)
+        {
+            frame[pixel_offset + channel] = 12.92f * color[channel];
+        }
+        else
+        {
+            frame[pixel_offset + channel] =
+                1.055f * powf(color[channel], 1.0f / 2.4f) - 0.055f;
+        }
     }
 }
 
@@ -107,6 +102,50 @@ __global__ void DispathRaysCuda(Camera *camera, Integrator *integrator,
     if (i < camera->width() && j < camera->height())
         DrawPixel(i, j, camera, integrator, frame);
 }
+
+__global__ void DispathRaysCuda(Camera *camera, Integrator *integrator,
+                                const uint32_t index_frame, float *accum,
+                                float *frame)
+{
+    const uint32_t i = blockIdx.x * blockDim.x + threadIdx.x,
+                   j = blockIdx.y * blockDim.y + threadIdx.y;
+    if (i < camera->width() && j < camera->height())
+    {
+        const float u = GetVanDerCorputSequence<2>(index_frame + 1),
+                    v = GetVanDerCorputSequence<3>(index_frame + 1),
+                    x = 2.0f * (i + u) / camera->width() - 1.0f,
+                    y = 1.0f - 2.0f * (j + v) / camera->height();
+        const Vec3 look_dir = Normalize(
+            camera->front() + x * camera->view_dx() + y * camera->view_dy());
+
+        const uint32_t pixel_offset = (j * camera->width() + i) * 3,
+                       offset_dest =
+                           ((camera->height() - 1 - j) * camera->width() + i) *
+                           3;
+        uint32_t seed = Tea<4>(pixel_offset, index_frame);
+
+        Vec3 color = integrator->Shade(camera->eye(), look_dir, &seed);
+        for (int c = 0; c < 3; ++c)
+        {
+            color[c] = fminf(color[c], 1.0f);
+            accum[pixel_offset + c] =
+                (index_frame * accum[pixel_offset + c] + color[c]) /
+                (index_frame + 1);
+
+            if (accum[pixel_offset + c] <= 0.0031308f)
+            {
+                frame[offset_dest + c] = 12.92f * accum[pixel_offset + c];
+            }
+            else
+            {
+                frame[offset_dest + c] =
+                    1.055f * powf(accum[pixel_offset + c], 1.0f / 2.4f) -
+                    0.055f;
+            }
+        }
+    }
+}
+
 #endif
 
 void DispathRaysCpu(Camera *camera, Integrator *integrator, float *frame)
@@ -118,29 +157,30 @@ void DispathRaysCpu(Camera *camera, Integrator *integrator, float *frame)
 
 #if defined(DEBUG) || defined(_DEBUG)
 
-    {
-        Vec3 temp1;
-        for (int k = 0; k < 10; ++k)
-        {
-            int i = 643, j = 579;
-            uint32_t s = 31, seed = 3254056006;
-            const float u = s * camera->spp_inv(),
-                        v = GetVanDerCorputSequence<2>(s + 1),
-                        x = 2.0f * (i + u) / camera->width() - 1.0f,
-                        y = 1.0f - 2.0f * (j + v) / camera->height();
-            const Vec3 look_dir =
-                           Normalize(camera->front() + x * camera->view_dx() +
-                                     y * camera->view_dy()),
-                       eye = camera->eye();
-            temp1 = integrator->Shade(eye, look_dir, &seed);
-        }
-    }
+    // {
+    //     Vec3 temp1;
+    //     for (int k = 0; k < 10; ++k)
+    //     {
+    //         int i = 643, j = 579;
+    //         uint32_t s = 31, seed = 3254056006;
+    //         const float u = s * camera->spp_inv(),
+    //                     v = GetVanDerCorputSequence<2>(s + 1),
+    //                     x = 2.0f * (i + u) / camera->width() - 1.0f,
+    //                     y = 1.0f - 2.0f * (j + v) / camera->height();
+    //         const Vec3 look_dir =
+    //                        Normalize(camera->front() + x * camera->view_dx()
+    //                        +
+    //                                  y * camera->view_dy()),
+    //                    eye = camera->eye();
+    //         temp1 = integrator->Shade(eye, look_dir, &seed);
+    //     }
+    // }
 
     {
         std::vector<std::array<int, 2>> pixel;
 
-        for (int i = 577; i < 582; ++i)
-            pixel.push_back({643, i});
+        for (int i = 0; i < 10; ++i)
+            pixel.push_back({137, 551});
 
         std::vector<Vec3> ret;
         std::vector<std::vector<Vec3>> colors;
@@ -398,10 +438,12 @@ void Renderer::Commit()
         CommitBsdfs();
         CommitEmitters();
         CommitIntegrator();
-
+#ifdef ENABLE_CUDA
         if (backend_type_ == BackendType::kCpu)
         {
+#endif
             GeneratePatchInfo(camera_->width(), camera_->height());
+#ifdef ENABLE_CUDA
         }
         else
         {
@@ -409,6 +451,7 @@ void Renderer::Commit()
                 static_cast<unsigned int>(camera_->width() / 8 + 1),
                 static_cast<unsigned int>(camera_->height() / 8 + 1), 1};
         }
+#endif
     }
     catch (const std::exception &e)
     {
@@ -424,15 +467,16 @@ void Renderer::Draw(float *frame) const
     {
         fprintf(stderr, "[info] begin rendering ...\n");
 
+#ifdef ENABLE_CUDA
         if (backend_type_ == BackendType::kCpu)
         {
+#endif
             DispathRaysCpu(camera_, integrator_, frame);
+#ifdef ENABLE_CUDA
         }
         else
         {
             Timer timer;
-            MallocArray<float>(backend_type_,
-                               camera_->height() * camera_->width() * 3);
             DispathRaysCuda<<<m_num_blocks, m_threads_per_block>>>(
                 camera_, integrator_, frame);
             cudaError_t ret = cudaGetLastError();
@@ -452,6 +496,7 @@ void Renderer::Draw(float *frame) const
             }
             timer.PrintTimePassed("rendering");
         }
+#endif
     }
     catch (const std::exception &e)
     {
@@ -460,6 +505,31 @@ void Renderer::Draw(float *frame) const
         throw std::exception(oss.str().c_str());
     }
 }
+
+#ifdef ENABLE_VIEWER
+void Renderer::Draw(const uint32_t index_frame, float *accum,
+                    float *frame) const
+{
+    DispathRaysCuda<<<m_num_blocks, m_threads_per_block>>>(
+        camera_, integrator_, index_frame, accum, frame);
+
+    cudaError_t ret = cudaGetLastError();
+    if (ret)
+    {
+        std::ostringstream oss;
+        oss << "CUDA error : \"" << ret << "\" when draw.";
+        throw std::exception(oss.str().c_str());
+    }
+
+    ret = cudaDeviceSynchronize();
+    if (ret)
+    {
+        std::ostringstream oss;
+        oss << "CUDA error : \"" << ret << "\" when draw.";
+        throw std::exception(oss.str().c_str());
+    }
+}
+#endif
 
 void Renderer::CommitTextures()
 {

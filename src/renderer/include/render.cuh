@@ -34,6 +34,9 @@ public:
     void Commit();
 
     void Draw(float *frame) const;
+#ifdef ENABLE_VIEWER
+    void Draw(const uint32_t index_frame, float *accum, float *frame) const;
+#endif
 
 private:
     void CommitTextures();

@@ -16,5 +16,12 @@ target_link_libraries(RayTracer
         Renderer
         Parser)
 
+if(ENABLE_CUDA AND ENABLE_VIEWER)
+    find_package(FreeGLUT CONFIG REQUIRED)
+    target_link_libraries(RayTracer
+        PRIVATE
+            $<IF:$<TARGET_EXISTS:FreeGLUT::freeglut>,FreeGLUT::freeglut,FreeGLUT::freeglut_static>)
+endif()
+
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Header Files" FILES ${HEADER_LIST})
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}" PREFIX "Source Files" FILES ${SOURCE_LIST})

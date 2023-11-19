@@ -1140,6 +1140,20 @@ void element_parser::ReadEmitter(const pugi::xml_node &emitter_node)
         std::string type = emitter_node.attribute("type").as_string();
         switch (Hash(type.c_str()))
         {
+        case "point"_hash:
+        {
+            Emitter::Info info;
+            info.type = Emitter::Type::kPoint;
+            info.point.position =
+                basic_parser::ReadVec3(emitter_node, {"position"}, Vec3(0));
+            const Mat4 to_world =
+                basic_parser::ReadTransform4(emitter_node.child("transform"));
+            info.point.position = TransformPoint(to_world, info.point.position);
+            info.point.intensity =
+                basic_parser::ReadVec3(emitter_node, {"intensity"}, Vec3(1));
+            local::config.emitters.push_back(info);
+            break;
+        }
         case "spot"_hash:
         {
             Emitter::Info info;
@@ -1185,7 +1199,7 @@ void element_parser::ReadEmitter(const pugi::xml_node &emitter_node)
         {
             int resolution =
                 basic_parser::ReadInt(emitter_node, {"resolution"}, 512);
-            int width = resolution, height = resolution / 2, channel = 3;
+            int width = resolution, height = resolution / 2;
 
             Vec3 sun_direction(0);
             pugi::xml_node sun_direction_node;
