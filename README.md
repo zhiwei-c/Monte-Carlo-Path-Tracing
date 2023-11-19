@@ -42,7 +42,7 @@ A simple Monte Carlo path tracer based on assignment 7 of GAMES101 originally, a
 
 ### Rough Plastic
 
-![plastic](./resources/results/rough_plastic.png)
+![rough plastic](./resources/results/rough_plastic.png)
 
 ### Lte-Orb, Rough Glass, Without Energy Compensation
 
