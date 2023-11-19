@@ -137,6 +137,8 @@ Results from ['develop' branch](https://github.com/zhiwei-c/Monte-Carlo-Path-Tra
   ![lte-orb, rough glass, without energy compensation](./resources/results_develop/lte_orb-rough_glass-without_energy_compensation.png)
 - lte-orb, silver, without energy compensation
   ![lte-orb, silver, without energy compensation](./resources/results_develop/lte_orb-silver-without_energy_compensation.png)
+- box
+  ![box](./resources/results_develop/box.png)
 - dragon
   ![dragon](./resources/results_develop/dragon.png)
 - classroom
