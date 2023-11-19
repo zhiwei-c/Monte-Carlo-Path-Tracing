@@ -1,7 +1,7 @@
 <scene version="3.0.0">
     <default name="spp" value="256"/>
-    <default name="width" value="683"/>
-    <default name="height" value="512"/>
+    <default name="width" value="1366"/>
+    <default name="height" value="1024"/>
     <default name="max_depth" value="-1"/>
 
     <integrator type="path">

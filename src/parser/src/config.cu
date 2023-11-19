@@ -796,7 +796,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
                 }
                 else
                 {
-                    id_roughness_v =
+                    id_roughness_u =
                         ReadTexture(bsdf_node, {"alpha_u", "alphaU"}, 0.1f);
                     id_roughness_v =
                         ReadTexture(bsdf_node, {"alpha_v", "alphaV"}, 0.1f);

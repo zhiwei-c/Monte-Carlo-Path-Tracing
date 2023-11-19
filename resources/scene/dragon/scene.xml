@@ -1,0 +1,187 @@
+<scene version="3.0.0">
+	<default name="integrator" value="path" />
+	<default name="spp" value="256" />
+	<default name="resy" value="720" />
+	<default name="resx" value="1280" />
+	<default name="max_depth" value="17" />
+	<integrator type="$integrator">
+		<integer name="max_depth" value="$max_depth" />
+	</integrator>
+	<sensor type="perspective">
+		<float name="fov" value="35" />
+		<transform name="to_world">
+			<matrix value="-0.678116 -0.167853 -0.715531 58.206 -4.39487e-008 0.973571 -0.228385 24.9284 0.734955 -0.154871 -0.660194 52.9501 0 0 0 1" />
+		</transform>
+		<sampler type="independent">
+			<integer name="sample_count" value="$spp" />
+		</sampler>
+		<film type="hdrfilm">
+			<integer name="width" value="$resx" />
+			<integer name="height" value="$resy" />
+			<string name="file_format" value="openexr" />
+			<string name="pixel_format" value="rgb" />
+			<rfilter type="tent" />
+		</film>
+	</sensor>
+	<bsdf type="twosided" id="GroundInnerBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.456263, 0.456263, 0.456263" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="GroundOuterBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.456263, 0.456263, 0.456263" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="ClothBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.456263, 0.456263, 0.456263" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="DragonBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.79311, 0.79311, 0.79311" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="BladeBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.79311, 0.79311, 0.79311" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="SwordBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.79311, 0.79311, 0.79311" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="DecoBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.79311, 0.79311, 0.79311" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="DiamondBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.79311, 0.79311, 0.79311" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Deco2BSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.79311, 0.79311, 0.79311" />
+		</bsdf>
+	</bsdf>
+	<shape type="obj" id="GroundOuter_0001">
+		<string name="filename" value="models/Mesh011.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="GroundOuterBSDF" />
+	</shape>
+	<shape type="obj" id="Cloth">
+		<string name="filename" value="models/Mesh010.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="ClothBSDF" />
+	</shape>
+	<shape type="obj" id="GroundOuter_0002">
+		<string name="filename" value="models/Mesh005.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="GroundOuterBSDF" />
+	</shape>
+	<shape type="obj" id="GroundOuter_0003">
+		<string name="filename" value="models/Mesh006.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="GroundOuterBSDF" />
+	</shape>
+	<shape type="obj" id="GroundInner">
+		<string name="filename" value="models/Mesh012.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="GroundInnerBSDF" />
+	</shape>
+	<shape type="obj" id="GroundOuter_0004">
+		<string name="filename" value="models/Mesh007.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="GroundOuterBSDF" />
+	</shape>
+	<shape type="obj" id="Dragon_0001">
+		<string name="filename" value="models/Mesh008.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="DragonBSDF" />
+	</shape>
+	<shape type="obj" id="Dragon_0002">
+		<string name="filename" value="models/Mesh013.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="DragonBSDF" />
+	</shape>
+	<shape type="obj" id="Dragon_0003">
+		<string name="filename" value="models/Mesh014.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="DragonBSDF" />
+	</shape>
+	<shape type="obj" id="Dragon_0004">
+		<string name="filename" value="models/Mesh015.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="DragonBSDF" />
+	</shape>
+	<shape type="obj" id="Blade">
+		<string name="filename" value="models/Mesh004.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="BladeBSDF" />
+	</shape>
+	<shape type="obj" id="Sword">
+		<string name="filename" value="models/Mesh009.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="SwordBSDF" />
+	</shape>
+	<shape type="obj" id="Deco">
+		<string name="filename" value="models/Mesh003.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="DecoBSDF" />
+	</shape>
+	<shape type="obj" id="Diamond">
+		<string name="filename" value="models/Mesh002.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="DiamondBSDF" />
+	</shape>
+	<shape type="obj" id="Deco2_0001">
+		<string name="filename" value="models/Mesh001.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="Deco2BSDF" />
+	</shape>
+	<shape type="obj" id="Deco2_0002">
+		<string name="filename" value="models/Mesh000.obj" />
+		<transform name="to_world">
+			<matrix value="1 0 0 0 0 1 0 0 0 0 1 0 0 0 0 1" />
+		</transform>
+		<ref id="Deco2BSDF" />
+	</shape>
+    <emitter type="directional">
+        <vector name="direction" value="0.1886, -0.6923, -0.6965"/>
+        <float name="irradiance" value="10.0"/>
+    </emitter>
+</scene>
