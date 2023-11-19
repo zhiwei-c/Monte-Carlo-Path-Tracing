@@ -8,14 +8,14 @@ A RayTracer, accelerated by C++ multithreading or CUDA.
 
 ## 1 CPU vs. CUDA
 
-- CPU : AMD Ryzen 7 6800H with Radeon Graphics 
+- CPU : AMD Ryzen 7 6800H with Radeon Graphics
 - GPU : NVIDIA GeForce RTX 3060 Laptop GPU
 - Config : [cornell-box](resources/scene/cornell-box/scene_v0.6.xml)
 
 |     | CPU | CUDA |
 | --- | ---        | ---         |
 | 耗时 |  1 min 49 sec 330 ms     | 55 sec 58 ms        |
-| 绘制结果 | ![result_cpu](resources/rendering_results/cornellbox_cpu_1min49sec330ms.png) | ![result_cuda](resources/rendering_results/cornellbox_cuda_55sec58ms.png) | 
+| 绘制结果 | ![result_cpu](resources/rendering_results/cornellbox_cpu_1min49sec330ms.png) | ![result_cuda](resources/rendering_results/cornellbox_cuda_55sec58ms.png) |
 
 ## 2 当前项目（Main）实现的功能
 
@@ -85,10 +85,10 @@ if enable real-time viewer:
 
 ### 4.2 CMake Option
 
-- `ENABLE_CUDA` : Specifies whether or not enable GPU-accelerated computing. 
-    - compile as C++ project and donnot need CUDA SDK if disable.
-- `ENABLE_VIEWER` : Specifies whether or not enable real-time viewer. 
-    - no effect if disable GPU-accelerated computing.
+- `ENABLE_CUDA` : Specifies whether or not enable GPU-accelerated computing.
+  - compile as C++ project and donnot need CUDA SDK if disable.
+- `ENABLE_VIEWER` : Specifies whether or not enable real-time viewer.
+  - no effect if disable GPU-accelerated computing.
 
 ### 4.3 Usage
 
@@ -102,7 +102,7 @@ Program Option:
 - `--bvh`: bvh type for ray tracing, available: [linear, normal], default: 'linear'.
 - `--input`: read config from mitsuba format xml file, load default config if empty, default: empty.
 - `--output`: output path for rendering result, only PNG format, default: 'result.png'.
-    - press 's' key to save when real-time previewing.
+  - press 's' key to save when real-time previewing.
 
 ## 5 References
 
@@ -110,3 +110,36 @@ Program Option:
 - 《[GAMES101: 现代计算机图形学入门](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》
 - 《[GAMES202: 高质量实时渲染](https://sites.cs.ucsb.edu/~lingqi/teaching/games202.html)》
 - 《[Accelerated Ray Tracing in One Weekend in CUDA](https://developer.nvidia.com/blog/accelerated-ray-tracing-cuda)》
+
+## 6 Gallery
+
+Results from ['develop' branch](https://github.com/zhiwei-c/Monte-Carlo-Path-Tracing/tree/develop).
+
+- conductor
+  ![conductor](./resources/results_develop/conductor.png)
+- rough conductor, without energy compensation
+  ![rough conductor, without energy compensation](./resources/results_develop/rough_conductor-without_energy_compensation.png)
+- isotropic rough conductor, without energy compensation
+  ![isotropic rough conductor, without energy compensation](./resources/results_develop/rough_conductor_isotropic-without_energy_compensation.png)
+- dielectric
+  ![dielectric](./resources/results_develop/dielectric.png)
+- rough dielectric, without energy compensation
+  ![rough dielectric, without energy compensation](./resources/results_develop/rough_dielectric-without_energy_compensation.png)
+- isotropic rough dielectric, without energy compensation
+  ![isotropic rough dielectric, without energy compensation](./resources/results_develop/rough_dielectric-isotropic-without_energy_compensation.png)
+- thin dielectric
+  ![thin dielectric](./resources/results_develop/thin_dielectric.png)
+- plastic
+  ![plastic](./resources/results_develop/plastic.png)
+- rough plastic
+  ![rough plastic](./resources/results_develop/rough_plastic.png)
+- lte-orb, rough glass, without energy compensation
+  ![lte-orb, rough glass, without energy compensation](./resources/results_develop/lte_orb-rough_glass-without_energy_compensation.png)
+- lte-orb, silver, without energy compensation
+  ![lte-orb, silver, without energy compensation](./resources/results_develop/lte_orb-silver-without_energy_compensation.png)
+- dragon
+  ![dragon](./resources/results_develop/dragon.png)
+- classroom
+  ![classroom](./resources/results_develop/classroom.png)
+- dining room
+  ![dining room](./resources/results_develop/dining-room.png)

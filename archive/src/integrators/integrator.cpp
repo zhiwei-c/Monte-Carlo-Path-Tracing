@@ -296,8 +296,8 @@ void ShadePatch(const std::vector<std::vector<std::array<int, 3>>> &patches, con
 
 void Test(const Integrator *integrator, const Camera &camera)
 {
-    const int &x = 666,
-              &y = 840,
+    const int &x = 277,
+              &y = 51,
               pixel_offset = (x + y * camera.width) * 3;
     dvec3 color = dvec3(0),
           look_dir = dvec3(0);
