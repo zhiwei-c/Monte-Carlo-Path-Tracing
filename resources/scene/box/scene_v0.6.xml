@@ -29,13 +29,13 @@
 			<string name="material" value="Ag" />
 		</bsdf>
 	</bsdf>
-	<bsdf type="twosided" id="Happy" >
+	<bsdf type="twosided" id="Bunny0" >
 		<bsdf type="roughconductor" >
 			<float name="alpha" value="0.1" />
 			<string name="material" value="Al" />
 		</bsdf>
 	</bsdf>
-	<bsdf type="twosided" id="Bunny" >
+	<bsdf type="twosided" id="Bunny1" >
 		<bsdf type="roughdielectric" >
 			<float name="alpha" value="0.1" />
 			<material value="bk7" />
@@ -116,21 +116,23 @@
 		</emitter>
 	</shape>
 	<shape type="ply" >
-		<string name="filename" value="models/happy_vrip_2.ply" />
+		<string name="filename" value="models/bun_zipper_1.ply" />
 		<transform name="toWorld" >
-			<scale value="6.0 6.0 6.0"/>
-			<translate value="0.0327015072 -0.299091011 0.0402149931"/>
-			<translate value="-0.5 0 0"/>
+			<scale value="4.0 4.0 4.0"/>
+			<translate value="0.0672739968 -0.133556396 0.00636819750"/>
+			<rotate y="1" angle="30"/>
+            <translate value="-0.5 0 0"/>
 		</transform>
-		<ref id="Happy" />
+		<ref id="Bunny0" />
 	</shape>
 	<shape type="ply" >
 		<string name="filename" value="models/bun_zipper_1.ply" />
 		<transform name="toWorld" >
 			<scale value="4.0 4.0 4.0"/>
 			<translate value="0.0672739968 -0.133556396 0.00636819750"/>
-			<translate value="0.5 0 0"/>
+			<rotate y="1" angle="-30"/>
+            <translate value="0.5 0 0"/>
 		</transform>
-		<ref id="Bunny" />
+		<ref id="Bunny1" />
 	</shape>
 </scene>

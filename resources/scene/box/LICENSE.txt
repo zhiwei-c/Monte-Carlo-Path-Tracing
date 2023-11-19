@@ -7,13 +7,3 @@ The Mitsuba version of 'Stanford Bunny', downloaded from http://graphics.stanfor
 The original file may be obtained here: http://graphics.stanford.edu/data/3Dscanrep/
 
 You are welcome to use the data and models for research purposes. You are also welcome to mirror or redistribute them for free. Finally, you may publish images made using these models, or the images on this web site, in a scholarly article or book - as long as credit is given to the Stanford Computer Graphics Laboratory. However, such models or images are not to be used for commercial purposes, nor should they appear in a product for sale (with the exception of scholarly journals or books), without permission from the Stanford Computer Graphics Laboratory. 
-
-## Happy Buddha
-
-The Mitsuba version of 'Happy Buddha', downloaded from http://graphics.stanford.edu/data/3Dscanrep/
-
-The original file may be obtained here: http://graphics.stanford.edu/data/3Dscanrep/
-
-You are welcome to use the data and models for research purposes. You are also welcome to mirror or redistribute them for free. Finally, you may publish images made using these models, or the images on this web site, in a scholarly article or book - as long as credit is given to the Stanford Computer Graphics Laboratory. However, such models or images are not to be used for commercial purposes, nor should they appear in a product for sale (with the exception of scholarly journals or books), without permission from the Stanford Computer Graphics Laboratory. 
-
-Please remember that the buddha is a religious symbol revered by hundreds of millions of people. Keep your renderings and other uses of these particular models in good taste. Don't animate or morph them, don't apply Boolean operators to them, and don't simulate nasty things happening to them (like breaking, exploding, melting, etc.).
