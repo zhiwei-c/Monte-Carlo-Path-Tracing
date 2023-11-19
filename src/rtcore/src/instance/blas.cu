@@ -40,10 +40,11 @@ QUALIFIER_D_H void BLAS::Intersect(Ray *ray, Hit *hit) const
     }
 }
 
-QUALIFIER_D_H Hit BLAS::Sample(const Vec3 &xi) const
+QUALIFIER_D_H Hit BLAS::Sample(const float xi_0, const float xi_1,
+                               const float xi_2) const
 {
     const BvhNode *node = nodes_;
-    float thresh = node->area * xi.x;
+    float thresh = node->area * xi_0;
     while (!node->leaf)
     {
         if (thresh < nodes_[node->id_left].area)
@@ -57,7 +58,7 @@ QUALIFIER_D_H Hit BLAS::Sample(const Vec3 &xi) const
         }
     }
 
-    return primitives_[node->id_object].Sample(xi.y, xi.z);
+    return primitives_[node->id_object].Sample(xi_1, xi_2);
 }
 
 } // namespace csrt

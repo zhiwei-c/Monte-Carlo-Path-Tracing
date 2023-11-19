@@ -100,6 +100,34 @@ void image_io::Read(const std::string &filename, const float gamma,
         *channel = 4;
         break;
     }
+    case "HDR"_hash:
+    case "hdr"_hash:
+    {
+        raw_data = stbi_loadf(filename.c_str(), width, height, channel, 0);
+        if (raw_data == nullptr)
+        {
+            fprintf(stderr, "[error] load image '%s' failed.",
+                    filename.c_str());
+            exit(1);
+        }
+        int num_component = *width * *height * *channel;
+        if (gamma == -1.0f)
+        {
+            for (int i = 0; i < num_component; ++i)
+            {
+                raw_data[i] =
+                    raw_data[i] <= 0.04045f
+                        ? raw_data[i] / 12.92f
+                        : std::pow((raw_data[i] + 0.055f) / 1.055f, 2.4f);
+            }
+        }
+        else if (gamma != 0.0f)
+        {
+            for (int i = 0; i < num_component; ++i)
+                raw_data[i] = std::pow(raw_data[i], gamma);
+        }
+        break;
+    }
     default:
     {
         stbi_uc *raw_data_uc =
@@ -112,48 +140,23 @@ void image_io::Read(const std::string &filename, const float gamma,
         }
         int num_component = *width * *height * *channel;
         raw_data = new float[num_component];
-        if (suffix != "HDR" && suffix != "hdr")
+        for (int i = 0; i < num_component; ++i)
+            raw_data[i] = static_cast<int>(raw_data_uc[i]) / 255.0f;
+        if (gamma == 0.0f || gamma == -1.0f)
         {
             for (int i = 0; i < num_component; ++i)
-                raw_data[i] = static_cast<int>(raw_data_uc[i]) / 255.0f;
-            if (gamma == 0.0f || gamma == -1.0f)
             {
-                for (int i = 0; i < num_component; ++i)
-                {
-                    raw_data[i] =
-                        raw_data[i] <= 0.04045f
-                            ? raw_data[i] / 12.92f
-                            : std::pow((raw_data[i] + 0.055f) / 1.055f, 2.4f);
-                }
-            }
-            else
-            {
-                for (int i = 0; i < num_component; ++i)
-                    raw_data[i] = std::pow(raw_data[i], gamma);
+                raw_data[i] =
+                    raw_data[i] <= 0.04045f
+                        ? raw_data[i] / 12.92f
+                        : std::pow((raw_data[i] + 0.055f) / 1.055f, 2.4f);
             }
         }
         else
         {
             for (int i = 0; i < num_component; ++i)
-                raw_data[i] = static_cast<int>(raw_data_uc[i]);
-
-            if (gamma == -1.0f)
-            {
-                for (int i = 0; i < num_component; ++i)
-                {
-                    raw_data[i] =
-                        raw_data[i] <= 0.04045f
-                            ? raw_data[i] / 12.92f
-                            : std::pow((raw_data[i] + 0.055f) / 1.055f, 2.4f);
-                }
-            }
-            else if (gamma != 0.0f)
-            {
-                for (int i = 0; i < num_component; ++i)
-                    raw_data[i] = std::pow(raw_data[i], gamma);
-            }
+                raw_data[i] = std::pow(raw_data[i], gamma);
         }
-
         stbi_image_free(raw_data_uc);
         break;
     }

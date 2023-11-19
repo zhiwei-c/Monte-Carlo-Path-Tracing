@@ -60,9 +60,9 @@ void GeneratePatchInfo(const uint32_t width, const uint32_t height)
 QUALIFIER_D_H void DrawPixel(const uint32_t i, const uint32_t j, Camera *camera,
                              Integrator *integrator, float *frame)
 {
-    const uint32_t pixel_index = j * camera->width() + i;
-    uint32_t seed = Tea<4>(pixel_index, 0);
-    Vec3 color;
+    const uint32_t pixel_offset = (j * camera->width() + i) * 3;
+    uint32_t seed = Tea<4>(pixel_offset, 0);
+    Vec3 color, temp;
     for (uint32_t s = 0; s < camera->spp(); ++s)
     {
         const float u = s * camera->spp_inv(),
@@ -71,13 +71,27 @@ QUALIFIER_D_H void DrawPixel(const uint32_t i, const uint32_t j, Camera *camera,
                     y = 1.0f - 2.0f * (j + v) / camera->height();
         const Vec3 look_dir = Normalize(
             camera->front() + x * camera->view_dx() + y * camera->view_dy());
-        color += integrator->Shade(camera->eye(), look_dir, &seed);
+        temp = integrator->Shade(camera->eye(), look_dir, &seed);
+#if defined(DEBUG) || defined(_DEBUG)
+        if (!isfinite(temp.x) || !isfinite(temp.y) || !isfinite(temp.z))
+        {
+            fprintf(stderr,
+                    "[warning] error when draw pixel ('%u', '%u), sample "
+                    "index '%u'.\n",
+                    i, j, s);
+        }
+#endif
+        temp.x = fminf(temp.x, 1.0f);
+        temp.y = fminf(temp.y, 1.0f);
+        temp.z = fminf(temp.z, 1.0f);
+        color += temp;
     }
     color *= camera->spp_inv();
+
     for (int channel = 0; channel < 3; ++channel)
     {
         color[channel] = fminf(color[channel], 1.0f);
-        frame[pixel_index * 3 + channel] =
+        frame[pixel_offset + channel] =
             (color[channel] <= 0.0031308f)
                 ? (12.92f * color[channel])
                 : (1.055f * powf(color[channel], 1.0f / 2.4f) - 0.055f);
@@ -103,7 +117,71 @@ void DispathRaysCpu(Camera *camera, Integrator *integrator, float *frame)
     const double size_patch_rcp = 1.0 / size_patch;
 
 #if defined(DEBUG) || defined(_DEBUG)
-    DrawPixel(939, 579, camera, integrator, frame);
+
+    {
+        Vec3 temp1;
+        for (int k = 0; k < 10; ++k)
+        {
+            int i = 643, j = 579;
+            uint32_t s = 31, seed = 3254056006;
+            const float u = s * camera->spp_inv(),
+                        v = GetVanDerCorputSequence<2>(s + 1),
+                        x = 2.0f * (i + u) / camera->width() - 1.0f,
+                        y = 1.0f - 2.0f * (j + v) / camera->height();
+            const Vec3 look_dir =
+                           Normalize(camera->front() + x * camera->view_dx() +
+                                     y * camera->view_dy()),
+                       eye = camera->eye();
+            temp1 = integrator->Shade(eye, look_dir, &seed);
+        }
+    }
+
+    {
+        std::vector<std::array<int, 2>> pixel;
+
+        for (int i = 577; i < 582; ++i)
+            pixel.push_back({643, i});
+
+        std::vector<Vec3> ret;
+        std::vector<std::vector<Vec3>> colors;
+        std::vector<std::vector<uint32_t>> seeds;
+        int cnt = 0;
+        for (auto [i, j] : pixel)
+        {
+            const uint32_t pixel_offset = (j * camera->width() + i) * 3;
+            uint32_t seed = Tea<4>(pixel_offset, 0);
+            Vec3 color;
+            colors.push_back(std::vector<Vec3>());
+            seeds.push_back(std::vector<uint32_t>());
+            for (uint32_t s = 0; s < camera->spp(); ++s)
+            {
+                seeds[cnt].push_back(seed);
+                const float u = s * camera->spp_inv(),
+                            v = GetVanDerCorputSequence<2>(s + 1),
+                            x = 2.0f * (i + u) / camera->width() - 1.0f,
+                            y = 1.0f - 2.0f * (j + v) / camera->height();
+                const Vec3 look_dir = Normalize(camera->front() +
+                                                x * camera->view_dx() +
+                                                y * camera->view_dy()),
+                           eye = camera->eye();
+                Vec3 temp = integrator->Shade(eye, look_dir, &seed);
+                colors[cnt].push_back(temp);
+                color += temp;
+            }
+            cnt++;
+            color *= camera->spp_inv();
+            for (int channel = 0; channel < 3; ++channel)
+            {
+                color[channel] = fminf(color[channel], 1.0f);
+                color[channel] =
+                    (color[channel] <= 0.0031308f)
+                        ? (12.92f * color[channel])
+                        : (1.055f * powf(color[channel], 1.0f / 2.4f) - 0.055f);
+            }
+            ret.push_back(color);
+        }
+    }
+
 #endif
 
     auto DispatchRay = [&]()
@@ -147,35 +225,34 @@ namespace csrt
 {
 
 Renderer::Renderer(const BackendType backend_type)
-    : backend_type_(backend_type), list_texture_(nullptr), list_pixel_(nullptr),
-      list_bsdf_(nullptr), map_instance_bsdf_(nullptr), num_area_light_(0),
-      map_id_area_light_instance_(nullptr),
-      map_id_instance_area_light_(nullptr), cdf_area_light_(nullptr),
-      instances_(nullptr), list_pdf_area_instance_(nullptr), tlas_(nullptr),
-      integrator_(nullptr), camera_(nullptr)
+    : backend_type_(backend_type), num_instance_(0), num_area_light_(0),
+      id_sun_(kInvalidId), id_envmap_(kInvalidId), pixels_(nullptr),
+      textures_(nullptr), bsdfs_(nullptr), instances_(nullptr),
+      emitters_(nullptr), data_env_map_(nullptr), tlas_(nullptr),
+      integrator_(nullptr), camera_(nullptr), cdf_area_light_(nullptr),
+      list_pdf_area_instance_(nullptr), map_instance_bsdf_(nullptr),
+      map_instance_area_light_(nullptr), map_area_light_instance_(nullptr)
 {
 }
 
 Renderer::~Renderer()
 {
-    // release texture
-    DeleteArray(backend_type_, list_texture_);
-    DeleteArray(backend_type_, list_pixel_);
-
-    // release BSDF
-    DeleteArray(backend_type_, list_bsdf_);
-    DeleteArray(backend_type_, map_instance_bsdf_);
-
-    DeleteArray(backend_type_, map_id_area_light_instance_);
-    DeleteArray(backend_type_, map_id_instance_area_light_);
-    DeleteArray(backend_type_, cdf_area_light_);
+    DeleteArray(backend_type_, textures_);
+    DeleteArray(backend_type_, pixels_);
     DeleteElement(backend_type_, camera_);
     DeleteElement(backend_type_, integrator_);
+
+    DeleteArray(backend_type_, bsdfs_);
+    DeleteArray(backend_type_, map_instance_bsdf_);
+
+    DeleteArray(backend_type_, map_area_light_instance_);
+    DeleteArray(backend_type_, map_instance_area_light_);
+    DeleteArray(backend_type_, cdf_area_light_);
+    DeleteArray(backend_type_, data_env_map_);
 }
 
 void Renderer::AddTexture(const Texture::Info &info)
 {
-
     switch (info.type)
     {
     case Texture::Type::kConstant:
@@ -192,17 +269,17 @@ void Renderer::AddTexture(const Texture::Info &info)
     list_texture_info_.push_back(info);
 }
 
-void Renderer::AddBsdf(const Bsdf::Info &info)
+void Renderer::AddBsdf(const BSDF::Info &info)
 {
     switch (info.type)
     {
-    case Bsdf::Type::kAreaLight:
-    case Bsdf::Type::kDiffuse:
-    case Bsdf::Type::kRoughDiffuse:
-    case Bsdf::Type::kConductor:
-    case Bsdf::Type::kDielectric:
-    case Bsdf::Type::kThinDielectric:
-    case Bsdf::Type::kPlastic:
+    case BSDF::Type::kAreaLight:
+    case BSDF::Type::kDiffuse:
+    case BSDF::Type::kRoughDiffuse:
+    case BSDF::Type::kConductor:
+    case BSDF::Type::kDielectric:
+    case BSDF::Type::kThinDielectric:
+    case BSDF::Type::kPlastic:
         break;
     default:
         throw std::exception("unknow BSDF type.");
@@ -212,22 +289,22 @@ void Renderer::AddBsdf(const Bsdf::Info &info)
     list_bsdf_info_.push_back(info);
 }
 
-void Renderer::AddSceneInfo(const std::vector<uint32_t> &map_id_instance_bsdf,
-                            Instance *instances, float *list_pdf_area_instance,
+void Renderer::AddSceneInfo(Instance *instances, float *list_pdf_area_instance,
+                            const std::vector<uint32_t> &map_instance_bsdf,
                             TLAS *tlas)
 {
     try
     {
-        num_instance_ = map_id_instance_bsdf.size();
-        tlas_ = tlas;
         instances_ = instances;
         list_pdf_area_instance_ = list_pdf_area_instance;
+        tlas_ = tlas;
 
+        num_instance_ = map_instance_bsdf.size();
         for (uint32_t i = 0; i < num_instance_; ++i)
-            CheckBsdf(map_id_instance_bsdf[i], true);
+            CheckBsdf(map_instance_bsdf[i], true);
         DeleteArray(backend_type_, map_instance_bsdf_);
         map_instance_bsdf_ =
-            MallocArray<uint32_t>(backend_type_, map_id_instance_bsdf);
+            MallocArray<uint32_t>(backend_type_, map_instance_bsdf);
     }
     catch (const std::exception &e)
     {
@@ -237,21 +314,40 @@ void Renderer::AddSceneInfo(const std::vector<uint32_t> &map_id_instance_bsdf,
     }
 }
 
+void Renderer::AddEmitter(const Emitter::Info &info)
+{
+    switch (info.type)
+    {
+    case Emitter::Type::kPoint:
+    case Emitter::Type::kSpot:
+    case Emitter::Type::kDirectional:
+    case Emitter::Type::kSun:
+    case Emitter::Type::kEnvMap:
+    case Emitter::Type::kConstant:
+        break;
+    default:
+        throw std::exception("unknow Emitter type.");
+        break;
+    }
+
+    list_emitter_info_.push_back(info);
+}
+
 void Renderer::SetAreaLightInfo(
     const std::vector<uint32_t> map_id_area_light_instance,
     const std::vector<float> list_area_light_weight)
 {
     try
     {
-        DeleteArray(backend_type_, map_id_area_light_instance_);
-        map_id_area_light_instance_ =
+        DeleteArray(backend_type_, map_area_light_instance_);
+        map_area_light_instance_ =
             MallocArray<uint32_t>(backend_type_, map_id_area_light_instance);
 
-        DeleteArray(backend_type_, map_id_instance_area_light_);
-        map_id_instance_area_light_ =
+        DeleteArray(backend_type_, map_instance_area_light_);
+        map_instance_area_light_ =
             MallocArray<uint32_t>(backend_type_, num_instance_);
         for (uint32_t i = 0; i < num_instance_; ++i)
-            map_id_instance_area_light_[i] = kInvalidId;
+            map_instance_area_light_[i] = kInvalidId;
 
         DeleteArray(backend_type_, cdf_area_light_);
         num_area_light_ = static_cast<uint32_t>(list_area_light_weight.size());
@@ -262,7 +358,7 @@ void Renderer::SetAreaLightInfo(
         {
             cdf_area_light_[i + 1] =
                 list_area_light_weight[i] + cdf_area_light_[i];
-            map_id_instance_area_light_[map_id_area_light_instance[i]] = i;
+            map_instance_area_light_[map_id_area_light_instance[i]] = i;
         }
     }
     catch (const std::exception &e)
@@ -300,6 +396,7 @@ void Renderer::Commit()
     {
         CommitTextures();
         CommitBsdfs();
+        CommitEmitters();
         CommitIntegrator();
 
         if (backend_type_ == BackendType::kCpu)
@@ -368,7 +465,7 @@ void Renderer::CommitTextures()
 {
     std::vector<float> pixel_buffer;
     std::vector<uint64_t> offsets;
-    uint64_t offset = 0;
+    uint64_t num_pixel = 0;
     for (const Texture::Info &info : list_texture_info_)
     {
         if (info.type == Texture::Type::kBitmap1 ||
@@ -377,18 +474,19 @@ void Renderer::CommitTextures()
         {
             pixel_buffer.insert(pixel_buffer.end(), info.bitmap.data.begin(),
                                 info.bitmap.data.end());
-            offsets.push_back(offset);
-            offset += info.bitmap.data.size();
+            offsets.push_back(num_pixel);
+            num_pixel += info.bitmap.data.size();
         }
     }
     try
     {
-        DeleteArray(backend_type_, list_pixel_);
-        list_pixel_ = MallocArray(backend_type_, pixel_buffer);
+        DeleteArray(backend_type_, pixels_);
+        pixels_ = MallocArray(backend_type_, pixel_buffer);
 
-        DeleteArray(backend_type_, list_texture_);
+        DeleteArray(backend_type_, textures_);
         const uint64_t num_texture = list_texture_info_.size();
-        list_texture_ = MallocArray<Texture>(backend_type_, num_texture);
+        textures_ = MallocArray<Texture>(backend_type_, num_texture);
+        uint64_t offset_data = 0;
         for (uint64_t i = 0, j = 0; i < num_texture; ++i)
         {
             Texture::Data data;
@@ -407,19 +505,20 @@ void Renderer::CommitTextures()
                 data.bitmap.width = list_texture_info_[i].bitmap.width;
                 data.bitmap.height = list_texture_info_[i].bitmap.height;
                 data.bitmap.to_uv = list_texture_info_[i].bitmap.to_uv;
-                data.bitmap.data = list_pixel_;
-                data.bitmap.offset = offsets[j++];
+                data.bitmap.data = pixels_;
+                offset_data = offsets[j++];
+                break;
             default:
                 throw std::exception("unknow texture type.");
                 break;
             }
-            list_texture_[i] = Texture(i, data);
+            textures_[i] = Texture(i, data, offset_data);
         }
     }
     catch (const std::exception &e)
     {
         std::ostringstream oss;
-        oss << "error when commit textures to renderer.";
+        oss << "error when commit textures to renderer.\n\t" << e.what();
         throw std::exception(oss.str().c_str());
     }
 }
@@ -428,78 +527,133 @@ void Renderer::CommitBsdfs()
 {
     try
     {
-        DeleteArray(backend_type_, list_bsdf_);
+        DeleteArray(backend_type_, bsdfs_);
         const uint64_t num_bsdf = list_bsdf_info_.size();
-        list_bsdf_ = MallocArray<Bsdf>(backend_type_, num_bsdf);
+        bsdfs_ = MallocArray<BSDF>(backend_type_, num_bsdf);
         for (uint64_t i = 0; i < num_bsdf; ++i)
         {
-            Bsdf::Data data;
-            const Bsdf::Info &info = list_bsdf_info_[i];
-            data.type = info.type;
-            data.twosided = info.twosided;
-            CheckTexture(info.id_opacity, true),
-                data.id_opacity = info.id_opacity;
-            CheckTexture(info.id_bump_map, true),
-                data.id_bump_map = info.id_bump_map;
-            data.texture_buffer = list_texture_;
-            switch (data.type)
+            const BSDF::Info &info = list_bsdf_info_[i];
+            CheckTexture(info.id_opacity, true);
+            CheckTexture(info.id_bump_map, true);
+            switch (info.type)
             {
-            case Bsdf::Type::kAreaLight:
+            case BSDF::Type::kAreaLight:
                 CheckTexture(info.area_light.id_radiance, false);
-                data.area_light.id_radiance = info.area_light.id_radiance;
                 break;
-            case Bsdf::Type::kDiffuse:
+            case BSDF::Type::kDiffuse:
                 CheckTexture(info.diffuse.id_diffuse_reflectance, false);
-                data.diffuse = info.diffuse;
                 break;
-            case Bsdf::Type::kRoughDiffuse:
+            case BSDF::Type::kRoughDiffuse:
                 CheckTexture(info.rough_diffuse.id_diffuse_reflectance, false);
                 CheckTexture(info.rough_diffuse.id_roughness, false);
-                data.rough_diffuse = info.rough_diffuse;
                 break;
-            case Bsdf::Type::kConductor:
+            case BSDF::Type::kConductor:
                 CheckTexture(info.conductor.id_roughness_u, false);
                 CheckTexture(info.conductor.id_roughness_v, false);
                 CheckTexture(info.conductor.id_specular_reflectance, false);
-                data.conductor = info.conductor;
                 break;
-            case Bsdf::Type::kThinDielectric:
-            case Bsdf::Type::kDielectric:
-                data.twosided = true;
+            case BSDF::Type::kThinDielectric:
+            case BSDF::Type::kDielectric:
                 CheckTexture(info.dielectric.id_roughness_u, false);
                 CheckTexture(info.dielectric.id_roughness_v, false);
                 CheckTexture(info.dielectric.id_specular_reflectance, false);
                 CheckTexture(info.dielectric.id_specular_transmittance, false);
-                data.dielectric.id_roughness_u = info.dielectric.id_roughness_u;
-                data.dielectric.id_roughness_v = info.dielectric.id_roughness_v;
-                data.dielectric.id_specular_reflectance =
-                    info.dielectric.id_specular_reflectance;
-                data.dielectric.id_specular_transmittance =
-                    info.dielectric.id_specular_transmittance;
-                data.dielectric.eta = info.dielectric.eta;
-                data.dielectric.eta_inv = 1.0f / info.dielectric.eta;
-                data.dielectric.reflectivity =
-                    (Sqr(info.dielectric.eta - 1.0f) /
-                     Sqr(info.dielectric.eta + 1.0f));
                 break;
-            case Bsdf::Type::kPlastic:
+            case BSDF::Type::kPlastic:
                 CheckTexture(info.plastic.id_roughness, false);
                 CheckTexture(info.plastic.id_diffuse_reflectance, false);
                 CheckTexture(info.plastic.id_specular_reflectance, false);
-                data.plastic.reflectivity = (Sqr(info.plastic.eta - 1.0f) /
-                                             Sqr(info.plastic.eta + 1.0f));
-                data.plastic.id_roughness = info.plastic.id_roughness;
-                data.plastic.id_diffuse_reflectance =
-                    info.plastic.id_diffuse_reflectance;
-                data.plastic.id_specular_reflectance =
-                    info.plastic.id_specular_reflectance;
-                data.plastic.F_avg = Bsdf::AverageFresnel(info.plastic.eta);
                 break;
             default:
                 throw std::exception("unknow BSDF type.");
                 break;
             }
-            list_bsdf_[i] = Bsdf(i, data);
+            bsdfs_[i] = BSDF(i, info, textures_);
+        }
+    }
+    catch (const std::exception &e)
+    {
+        std::ostringstream oss;
+        oss << "error when commit BSDFs to renderer." << e.what();
+        throw std::exception(oss.str().c_str());
+    }
+}
+
+void Renderer::CommitEmitters()
+{
+    try
+    {
+        id_sun_ = kInvalidId;
+        id_envmap_ = kInvalidId;
+        DeleteArray(backend_type_, emitters_);
+        const uint64_t num_emitter = list_emitter_info_.size();
+        emitters_ = MallocArray<Emitter>(backend_type_, num_emitter);
+        for (uint64_t i = 0; i < num_emitter; ++i)
+        {
+            const Emitter::Info &info = list_emitter_info_[i];
+            switch (info.type)
+            {
+            case Emitter::Type::kPoint:
+            case Emitter::Type::kSpot:
+            case Emitter::Type::kDirectional:
+                break;
+            case Emitter::Type::kSun:
+                CheckTexture(info.sun.id_texture, false);
+                id_sun_ = i;
+                break;
+            case Emitter::Type::kEnvMap:
+                CheckTexture(info.envmap.id_radiance, false);
+            case Emitter::Type::kConstant:
+                id_envmap_ = i;
+                break;
+            default:
+                throw std::exception("unknow emitter type.");
+                break;
+            }
+            emitters_[i] = Emitter(i, info, tlas_, textures_);
+
+            if (info.type == Emitter::Type::kEnvMap)
+            {
+                Texture::Info info_radiance =
+                    list_texture_info_[info.envmap.id_radiance];
+                if (info_radiance.type != Texture::Type::kBitmap1 &&
+                    info_radiance.type != Texture::Type::kBitmap3 &&
+                    info_radiance.type != Texture::Type::kBitmap4)
+                {
+                    std::ostringstream oss;
+                    oss << "radiance texture '" << info.envmap.id_radiance
+                        << "' for emitter '" << i << "' is not a bitmap.";
+                    throw std::exception(oss.str().c_str());
+                }
+
+                std::vector<float> cdf_cols, cdf_rows, weight_rows;
+                float normalization;
+
+                Emitter::CreateEnvMapCdfPdf(
+                    info_radiance.bitmap.width, info_radiance.bitmap.height,
+                    textures_[info.envmap.id_radiance], &cdf_cols, &cdf_rows,
+                    &weight_rows, &normalization);
+
+                DeleteArray(backend_type_, data_env_map_);
+                const uint64_t num_data =
+                    cdf_cols.size() + cdf_rows.size() + weight_rows.size();
+                data_env_map_ = MallocArray<float>(backend_type_, num_data);
+
+                for (uint64_t j = 0; j < cdf_rows.size(); ++j)
+                    data_env_map_[j] = cdf_rows[j];
+
+                uint64_t offset = cdf_rows.size();
+                for (uint64_t j = 0; j < weight_rows.size(); ++j)
+                    data_env_map_[j + offset] = weight_rows[j];
+
+                offset += weight_rows.size();
+                for (uint64_t j = 0; j < cdf_cols.size(); ++j)
+                    data_env_map_[j + offset] = cdf_cols[j];
+
+                emitters_[i].InitEnvMap(info_radiance.bitmap.width,
+                                        info_radiance.bitmap.height,
+                                        normalization, data_env_map_);
+            }
         }
     }
     catch (const std::exception &e)
@@ -518,19 +672,28 @@ void Renderer::CommitIntegrator()
         integrator_ = MallocElement<Integrator>(backend_type_);
 
         Integrator::Data data_integrator;
+
         data_integrator.pdf_rr = info_integrator_.pdf_rr;
         data_integrator.depth_rr = info_integrator_.depth_rr;
         data_integrator.depth_max = info_integrator_.depth_max;
+
         data_integrator.num_area_light = num_area_light_;
-        data_integrator.map_id_area_light_instance =
-            map_id_area_light_instance_;
-        data_integrator.map_id_instance_area_light =
-            map_id_instance_area_light_;
-        data_integrator.cdf_area_light = cdf_area_light_;
+        data_integrator.num_emitter =
+            static_cast<uint32_t>(list_emitter_info_.size());
+        data_integrator.id_sun = id_sun_;
+        data_integrator.id_envmap = id_envmap_;
+
+        data_integrator.bsdfs = bsdfs_;
+
         data_integrator.instances = instances_;
         data_integrator.list_pdf_area_instance = list_pdf_area_instance_;
+
+        data_integrator.emitters = emitters_;
+        data_integrator.map_id_area_light_instance = map_area_light_instance_;
+        data_integrator.map_id_instance_area_light = map_instance_area_light_;
+        data_integrator.cdf_area_light = cdf_area_light_;
+
         data_integrator.tlas = tlas_;
-        data_integrator.bsdfs = list_bsdf_;
         data_integrator.map_instance_bsdf = map_instance_bsdf_;
 
         *integrator_ = Integrator(data_integrator);

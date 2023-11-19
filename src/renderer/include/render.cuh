@@ -4,6 +4,7 @@
 
 #include "bsdf.cuh"
 #include "camera.cuh"
+#include "emitter.cuh"
 #include "integrator.cuh"
 #include "rtcore.cuh"
 #include "texture.cuh"
@@ -19,10 +20,11 @@ public:
     ~Renderer();
 
     void AddTexture(const Texture::Info &info);
-    void AddBsdf(const Bsdf::Info &info);
-    void AddSceneInfo(const std::vector<uint32_t> &map_id_instance_bsdf,
-                      Instance *instances, float *list_pdf_area_instance,
+    void AddBsdf(const BSDF::Info &info);
+    void AddSceneInfo(Instance *instances, float *list_pdf_area_instance,
+                      const std::vector<uint32_t> &map_instance_bsdf,
                       TLAS *tlas);
+    void AddEmitter(const Emitter::Info &info);
     void
     SetAreaLightInfo(const std::vector<uint32_t> map_id_area_light_instance,
                      const std::vector<float> list_area_light_weight);
@@ -36,6 +38,7 @@ public:
 private:
     void CommitTextures();
     void CommitBsdfs();
+    void CommitEmitters();
     void CommitIntegrator();
 
     void CheckTexture(const uint32_t id, const bool allow_invalid);
@@ -43,33 +46,36 @@ private:
 
     BackendType backend_type_;
 
-    std::vector<Texture::Info> list_texture_info_;
-    Texture *list_texture_;
-    float *list_pixel_;
-
-    std::vector<Bsdf::Info> list_bsdf_info_;
-    Bsdf *list_bsdf_;
-
+    uint32_t num_instance_;
     uint32_t num_area_light_;
-    // 从面光源ID到相应实例ID的映射
-    uint32_t *map_id_area_light_instance_;
-    // 从实例ID到相应面光源ID的映射
-    uint32_t *map_id_instance_area_light_;
+    uint32_t id_sun_;
+    uint32_t id_envmap_;
+
+    float *pixels_;
+    Texture *textures_;
+    BSDF *bsdfs_;
+    Instance *instances_;
+    Emitter *emitters_;
+    float* data_env_map_;
+    TLAS *tlas_;
+    Integrator *integrator_;
+    Camera *camera_;
     // 面光源抽样权重的累积分布函数
     float *cdf_area_light_;
-
-    uint32_t num_instance_;
-    TLAS *tlas_;
-    Instance *instances_;
-    // 从实例ID到相应BSDF ID的映射
-    uint32_t *map_instance_bsdf_;
     // 场景中所有实例按面积均匀抽样时的概率（面积的倒数）
     float *list_pdf_area_instance_;
+    // 从实例ID到相应BSDF ID的映射
+    uint32_t *map_instance_bsdf_;
+    // 从实例ID到相应面光源ID的映射
+    uint32_t *map_instance_area_light_;
+    // 从面光源ID到相应实例ID的映射
+    uint32_t *map_area_light_instance_;
 
     Integrator::Info info_integrator_;
-    Integrator *integrator_;
 
-    Camera *camera_;
+    std::vector<Texture::Info> list_texture_info_;
+    std::vector<BSDF::Info> list_bsdf_info_;
+    std::vector<Emitter::Info> list_emitter_info_;
 };
 
 } // namespace csrt

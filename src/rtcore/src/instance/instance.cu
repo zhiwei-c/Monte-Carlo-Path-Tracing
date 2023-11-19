@@ -27,43 +27,10 @@ QUALIFIER_D_H void Instance::Intersect(Ray *ray, Hit *hit) const
     }
 }
 
-QUALIFIER_D_H Hit Instance::Sample(const Vec3 &xi) const
+QUALIFIER_D_H Hit Instance::Sample(const float xi_0, const float xi_1,
+                                   const float xi_2) const
 {
-    return blas_->Sample(xi);
-}
-
-Instance::Info Instance::Info::CreateCube(const Mat4 &to_world,
-                                          const uint32_t id_bsdf)
-{
-    Instance::Info info;
-    info.type = Instance::Type::kCube;
-    info.cube.to_world = to_world;
-    info.id_bsdf = id_bsdf;
-    return info;
-}
-
-Instance::Info Instance::Info::CreateSphere(const float &radius,
-                                            const Vec3 &center,
-                                            const Mat4 &to_world,
-                                            const uint32_t id_bsdf)
-{
-    Instance::Info info;
-    info.type = Instance::Type::kSphere;
-    info.sphere.radius = radius;
-    info.sphere.center = center;
-    info.sphere.to_world = to_world;
-    info.id_bsdf = id_bsdf;
-    return info;
-}
-
-Instance::Info Instance::Info::CreateRectangle(const Mat4 &to_world,
-                                               const uint32_t id_bsdf)
-{
-    Instance::Info info;
-    info.type = Instance::Type::kRectangle;
-    info.rectangle.to_world = to_world;
-    info.id_bsdf = id_bsdf;
-    return info;
+    return blas_->Sample(xi_0, xi_1, xi_2);
 }
 
 } // namespace csrt

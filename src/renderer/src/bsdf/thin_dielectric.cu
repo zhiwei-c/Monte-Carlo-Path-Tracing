@@ -6,7 +6,7 @@
 namespace csrt
 {
 
-QUALIFIER_D_H void Bsdf::EvaluateThinDielectric(SamplingRecord *rec) const
+QUALIFIER_D_H void BSDF::EvaluateThinDielectric(BSDF::SampleRec *rec) const
 {
 
     bool reflect = true;
@@ -28,12 +28,10 @@ QUALIFIER_D_H void Bsdf::EvaluateThinDielectric(SamplingRecord *rec) const
     // 反推根据GGX法线分布函数重要抽样微平面法线的概率
     const Vec3 h_world = Normalize(-rec->wi + wo),
                h_local = rec->ToLocal(h_world);
-    const Texture &roughness_u =
-                      data_.texture_buffer[data_.dielectric.id_roughness_u],
-                  &roughness_v =
-                      data_.texture_buffer[data_.dielectric.id_roughness_v];
-    const float alpha_u = roughness_u.GetColor(rec->texcoord).x,
-                alpha_v = roughness_v.GetColor(rec->texcoord).x,
+    const float alpha_u =
+                    data_.dielectric.roughness_u->GetColor(rec->texcoord).x,
+                alpha_v =
+                    data_.dielectric.roughness_v->GetColor(rec->texcoord).x,
                 D = PdfGgx(alpha_u, alpha_v, h_local),
                 H_dot_I = Dot(-rec->wi, h_world),
                 H_dot_O = Dot(rec->wo, h_world);
@@ -43,7 +41,7 @@ QUALIFIER_D_H void Bsdf::EvaluateThinDielectric(SamplingRecord *rec) const
 
     rec->pdf = reflect ? (F * D) / (4.0f * H_dot_O)
                        : ((1.0f - F) * D) / (4.0f * H_dot_O);
-    if (rec->pdf < kEpsilonFloat)
+    if (rec->pdf < kEpsilon)
         return;
     else
         rec->valid = true;
@@ -54,39 +52,36 @@ QUALIFIER_D_H void Bsdf::EvaluateThinDielectric(SamplingRecord *rec) const
     if (reflect)
     {
         rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
-        const Texture &specular_reflectance =
-            data_.texture_buffer[data_.dielectric.id_specular_reflectance];
-        const Vec3 spec = specular_reflectance.GetColor(rec->texcoord);
+        const Vec3 spec =
+            data_.dielectric.specular_reflectance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
     else
     {
         rec->attenuation = ((1.0f - F) * D * G) / (4.0f * N_dot_O);
-        const Texture &specular_transmittance =
-            data_.texture_buffer[data_.dielectric.id_specular_transmittance];
-        const Vec3 spec = specular_transmittance.GetColor(rec->texcoord);
+        const Vec3 spec =
+            data_.dielectric.specular_transmittance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
 }
 
-QUALIFIER_D_H void Bsdf::SampleThinDielectric(const Vec3 &xi,
-                                              SamplingRecord *rec) const
+QUALIFIER_D_H void BSDF::SampleThinDielectric(uint32_t *seed,
+                                              BSDF::SampleRec *rec) const
 {
     // 根据GGX法线分布函数重要抽样微平面法线，生成入射光线方向
     Vec3 h_local(0);
     float D = 0;
-    const Texture &roughness_u =
-                      data_.texture_buffer[data_.dielectric.id_roughness_u],
-                  &roughness_v =
-                      data_.texture_buffer[data_.dielectric.id_roughness_v];
-    const float alpha_u = roughness_u.GetColor(rec->texcoord).x,
-                alpha_v = roughness_v.GetColor(rec->texcoord).x;
-    SampleGgx(xi.x, xi.y, alpha_u, alpha_v, &h_local, &D);
+    const float alpha_u =
+                    data_.dielectric.roughness_u->GetColor(rec->texcoord).x,
+                alpha_v =
+                    data_.dielectric.roughness_v->GetColor(rec->texcoord).x;
+    SampleGgx(RandomFloat(seed), RandomFloat(seed), alpha_u, alpha_v, &h_local,
+              &D);
     const Vec3 h_world = rec->ToWorld(h_local);
 
     const float H_dot_O = Dot(rec->wo, h_world);
     rec->pdf = D / (4.0f * H_dot_O);
-    if (rec->pdf < kEpsilonFloat)
+    if (rec->pdf < kEpsilon)
         return;
 
     rec->wi = -Ray::Reflect(-rec->wo, h_world);
@@ -104,30 +99,28 @@ QUALIFIER_D_H void Bsdf::SampleThinDielectric(const Vec3 &xi,
     if (F < 1.0f)
         F *= 2.0f / (1.0f + F);
 
-    if (xi.z < F)
+    if (RandomFloat(seed) < F)
     {
         rec->pdf *= F;
-        if (rec->pdf < kEpsilonFloat)
+        if (rec->pdf < kEpsilon)
             return;
 
         rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
 
-        const Texture &specular_reflectance =
-            data_.texture_buffer[data_.dielectric.id_specular_reflectance];
-        const Vec3 spec = specular_reflectance.GetColor(rec->texcoord);
+        const Vec3 spec =
+            data_.dielectric.specular_reflectance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
     else
     {
         rec->pdf *= 1.0f - F;
-        if (rec->pdf < kEpsilonFloat)
+        if (rec->pdf < kEpsilon)
             return;
 
         rec->attenuation = ((1.0f - F) * D * G) / (4.0f * N_dot_O);
 
-        const Texture &specular_transmittance =
-            data_.texture_buffer[data_.dielectric.id_specular_transmittance];
-        const Vec3 spec = specular_transmittance.GetColor(rec->texcoord);
+        const Vec3 spec =
+            data_.dielectric.specular_transmittance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
 
         rec->wi = rec->wo;

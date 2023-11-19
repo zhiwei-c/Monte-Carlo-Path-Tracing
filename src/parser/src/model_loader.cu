@@ -414,9 +414,9 @@ Instance::Info::Meshes ProcessAssimpNode(const aiScene *scene, aiNode *node,
         {
             for (unsigned int j = 0; j < mesh->mNumVertices; ++j)
             {
-                info_meshes.positions.push_back({mesh->mNormals[j].x,
-                                                 mesh->mNormals[j].y,
-                                                 mesh->mNormals[j].z});
+                info_meshes.normals.push_back({mesh->mNormals[j].x,
+                                               mesh->mNormals[j].y,
+                                               mesh->mNormals[j].z});
             }
         }
         if (mesh->mTangents)

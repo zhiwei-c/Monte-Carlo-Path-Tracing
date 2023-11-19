@@ -14,11 +14,12 @@ endif()
 
 add_library(Utils ${FILE_LIST} ${STB_LIST})
 
+find_package(tinyexr CONFIG REQUIRED)
 target_link_libraries(Utils
     PUBLIC
-        Tensor
-    PRIVATE
-        unofficial::tinyexr::tinyexr)
+    Tensor
+PRIVATE
+    unofficial::tinyexr::tinyexr)
 
 target_include_directories(Utils
     INTERFACE
@@ -29,3 +30,4 @@ target_include_directories(Utils
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include" PREFIX "Header Files" FILES ${HEADER_PRIVATE_LIST})
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" PREFIX "Source Files" FILES ${SOURCE_LIST})
+source_group(TREE "${PROJECT_SOURCE_DIR}/extern" PREFIX "Extern Files" FILES ${STB_LIST})

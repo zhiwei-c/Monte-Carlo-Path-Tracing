@@ -6,17 +6,18 @@ namespace csrt
 {
 
 Scene::Scene(const BackendType backend_type)
-    : backend_type_(backend_type), tlas_(nullptr), instances_(nullptr),
-      list_pdf_area_(nullptr), num_primitive_(0), num_node_(0),
-      primitive_buffer_(nullptr), node_buffer_(nullptr), blas_buffer_(nullptr)
+    : backend_type_(backend_type), num_primitive_(0), num_node_(0),
+      tlas_(nullptr), instances_(nullptr), list_blas_(nullptr),
+      list_pdf_area_(nullptr), primitives_(nullptr), nodes_(nullptr)
 {
 }
 
 Scene::~Scene()
 {
-    DeleteArray(backend_type_, primitive_buffer_);
-    DeleteArray(backend_type_, node_buffer_);
-    DeleteArray(backend_type_, blas_buffer_);
+    DeleteArray(backend_type_, nodes_);
+    DeleteArray(backend_type_, primitives_);
+    DeleteArray(backend_type_, list_pdf_area_);
+    DeleteArray(backend_type_, list_blas_);
     DeleteArray(backend_type_, instances_);
     DeleteElement(backend_type_, tlas_);
 }
@@ -55,9 +56,10 @@ void Scene::Commit()
         list_offset_primitive_ = {};
         list_offset_node_ = {};
 
-        DeleteArray(backend_type_, primitive_buffer_);
-        DeleteArray(backend_type_, node_buffer_);
-        DeleteArray(backend_type_, blas_buffer_);
+        DeleteArray(backend_type_, nodes_);
+        DeleteArray(backend_type_, primitives_);
+        DeleteArray(backend_type_, list_pdf_area_);
+        DeleteArray(backend_type_, list_blas_);
         DeleteArray(backend_type_, instances_);
         DeleteElement(backend_type_, tlas_);
 
@@ -83,16 +85,16 @@ void Scene::CommitPrimitives()
             switch (list_info_instance_[i].type)
             {
             case Instance::Type::kCube:
-                CommitCube(i, list_info_instance_[i].cube);
+                CommitCube(i);
                 break;
             case Instance::Type::kSphere:
-                CommitSphere(i, list_info_instance_[i].sphere);
+                CommitSphere(i);
                 break;
             case Instance::Type::kRectangle:
-                CommitRectangle(i, list_info_instance_[i].rectangle);
+                CommitRectangle(i);
                 break;
             case Instance::Type::kMeshes:
-                CommitMeshes(i, list_info_instance_[i].meshes);
+                CommitMeshes(i);
                 break;
             default:
                 throw std::exception("unknow instance type.");
@@ -115,56 +117,48 @@ void Scene::CommitInstances()
         //
         // 生成顶层加速结构的节点
         //
-
         const uint32_t num_instance =
             static_cast<uint32_t>(list_info_instance_.size());
         std::vector<AABB> aabbs(num_instance);
         std::vector<float> areas(num_instance);
         for (uint32_t i = 0; i < num_instance; ++i)
         {
-            aabbs[i] = node_buffer_[list_offset_node_[i]].aabb;
-            areas[i] = node_buffer_[list_offset_node_[i]].area;
+            const uint64_t index = list_offset_node_[i];
+            aabbs[i] = nodes_[index].aabb;
+            areas[i] = nodes_[index].area;
         }
 
-        DeleteArray(backend_type_, list_pdf_area_);
         list_pdf_area_ = MallocArray(backend_type_, areas);
         for (uint32_t i = 0; i < num_instance; ++i)
             list_pdf_area_[i] = 1.0f / list_pdf_area_[i];
 
-        std::vector<BvhNode> nodes = BvhBuilder::Build(aabbs, areas);
-        const uint64_t num_node_local = nodes.size();
-        BvhNode *node_buffer =
+        std::vector<BvhNode> list_node = BvhBuilder::Build(aabbs, areas);
+        const uint64_t num_node_local = list_node.size();
+        BvhNode *nodes =
             MallocArray<BvhNode>(backend_type_, num_node_ + num_node_local);
         for (uint64_t i = 0; i < num_node_local; ++i)
-            node_buffer[i] = nodes[i];
+            nodes[i] = list_node[i];
         for (uint64_t i = 0; i < num_node_; ++i)
-            node_buffer[num_node_local + i] = node_buffer_[i];
-        DeleteArray(backend_type_, node_buffer_);
-        node_buffer_ = node_buffer;
-
+            nodes[num_node_local + i] = nodes_[i];
+        DeleteArray(backend_type_, nodes_);
+        nodes_ = nodes;
         for (uint32_t i = 0; i < num_instance; ++i)
             list_offset_node_[i] += num_node_local;
-        list_offset_node_.push_back(0);
-
-        num_node_ += num_node_local;
 
         //
         // 生成底层加速结构和实例
         //
-
-        blas_buffer_ = MallocArray<BLAS>(backend_type_, num_instance);
         instances_ = MallocArray<Instance>(backend_type_, num_instance);
+        list_blas_ = MallocArray<BLAS>(backend_type_, num_instance);
         for (uint32_t i = 0; i < num_instance; ++i)
         {
-            blas_buffer_[i] =
-                BLAS(list_offset_node_[i], node_buffer_,
-                     list_offset_primitive_[i], primitive_buffer_);
-            instances_[i] = Instance(i, blas_buffer_);
+            list_blas_[i] = BLAS(list_offset_node_[i], nodes_,
+                                 list_offset_primitive_[i], primitives_);
+            instances_[i] = Instance(i, list_blas_);
         }
 
         tlas_ = MallocElement<TLAS>(backend_type_);
-        *tlas_ =
-            TLAS(list_offset_node_[num_instance], node_buffer_, instances_);
+        *tlas_ = TLAS(instances_, nodes_);
     }
     catch (const std::exception &e)
     {
@@ -174,9 +168,9 @@ void Scene::CommitInstances()
     }
 }
 
-void Scene::CommitCube(const uint32_t id, const Instance::Info::Cube &info)
+void Scene::CommitCube(const uint32_t id)
 {
-    Instance::Info::Meshes info_meshes;
+    Instance::Info::Meshes &info_meshes = list_info_instance_[id].meshes;
     info_meshes.texcoords = {{0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1},
                              {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
                              {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1},
@@ -196,10 +190,9 @@ void Scene::CommitCube(const uint32_t id, const Instance::Info::Cube &info)
                            {7, 4, 6},    {8, 9, 10},   {11, 8, 10},
                            {12, 13, 14}, {15, 12, 14}, {16, 17, 18},
                            {19, 16, 18}, {20, 21, 22}, {23, 20, 22}};
-    info_meshes.to_world = info.to_world;
     try
     {
-        CommitMeshes(id, info_meshes);
+        CommitMeshes(id);
     }
     catch (const std::exception &e)
     {
@@ -209,45 +202,48 @@ void Scene::CommitCube(const uint32_t id, const Instance::Info::Cube &info)
     }
 }
 
-void Scene::CommitSphere(const uint32_t id, const Instance::Info::Sphere &info)
+void Scene::CommitSphere(const uint32_t id)
 {
     try
     {
+        const Instance::Info::Sphere &info_sphere =
+            list_info_instance_[id].sphere;
+        const Mat4 to_world = list_info_instance_[id].to_world;
+
         Primitive::Data data_primitive;
         data_primitive.type = Primitive::Type::kSphere;
-        data_primitive.sphere.radius = info.radius;
-        data_primitive.sphere.center = info.center;
-        data_primitive.sphere.to_world = info.to_world;
-        data_primitive.sphere.normal_to_world =
-            info.to_world.Transpose().Inverse();
-        data_primitive.sphere.to_local = info.to_world.Inverse();
+        data_primitive.sphere.radius = info_sphere.radius;
+        data_primitive.sphere.center = info_sphere.center;
+        data_primitive.sphere.to_world = to_world;
+        data_primitive.sphere.normal_to_world = to_world.Transpose().Inverse();
+        data_primitive.sphere.to_local = to_world.Inverse();
 
-        Primitive *primitive_buffer =
+        Primitive *primitives =
             MallocArray<Primitive>(backend_type_, num_primitive_ + 1);
-        CopyArray(backend_type_, primitive_buffer, primitive_buffer_,
-                  num_primitive_);
-        DeleteArray(backend_type_, primitive_buffer_);
-        primitive_buffer[num_primitive_] = Primitive(0, data_primitive);
-        std::vector<AABB> aabbs = {primitive_buffer[num_primitive_].aabb()};
-        primitive_buffer_ = primitive_buffer;
+        CopyArray(backend_type_, primitives, primitives_, num_primitive_);
+        DeleteArray(backend_type_, primitives_);
+        primitives[num_primitive_] = Primitive(0, data_primitive);
+        std::vector<AABB> aabbs = {primitives[num_primitive_].aabb()};
+        primitives_ = primitives;
         list_offset_primitive_.push_back(num_primitive_);
         ++num_primitive_;
 
-        const float radius_world =
-            Length(TransformPoint(info.to_world, info.center) -
-                   TransformPoint(info.to_world,
-                                  info.center + Vec3{info.radius, 0.0f, 0.0f}));
+        const Vec3 center_world = TransformPoint(to_world, info_sphere.center),
+                   boundary_local = info_sphere.center +
+                                    Vec3{info_sphere.radius, 0.0f, 0.0f},
+                   boundary_world = TransformPoint(to_world, boundary_local);
+        const float radius_world = Length(center_world - boundary_world);
         std::vector<float> areas = {4.0f * kPi * Sqr(radius_world)};
 
-        std::vector<BvhNode> nodes = BvhBuilder::Build(aabbs, areas);
-        const uint64_t num_node_local = nodes.size();
-        BvhNode *node_buffer =
+        std::vector<BvhNode> list_node = BvhBuilder::Build(aabbs, areas);
+        const uint64_t num_node_local = list_node.size();
+        BvhNode *nodes =
             MallocArray<BvhNode>(backend_type_, num_node_ + num_node_local);
-        CopyArray(backend_type_, node_buffer, node_buffer_, num_node_);
-        DeleteArray(backend_type_, node_buffer_);
+        CopyArray(backend_type_, nodes, nodes_, num_node_);
+        DeleteArray(backend_type_, nodes_);
         for (uint64_t i = 0; i < num_node_local; ++i)
-            node_buffer[num_node_ + i] = nodes[i];
-        node_buffer_ = node_buffer;
+            nodes[num_node_ + i] = list_node[i];
+        nodes_ = nodes;
         list_offset_node_.push_back(num_node_);
         num_node_ += num_node_local;
     }
@@ -259,18 +255,16 @@ void Scene::CommitSphere(const uint32_t id, const Instance::Info::Sphere &info)
     }
 }
 
-void Scene::CommitRectangle(const uint32_t id,
-                            const Instance::Info::Rectangle &info)
+void Scene::CommitRectangle(const uint32_t id)
 {
-    Instance::Info::Meshes info_meshes;
+    Instance::Info::Meshes &info_meshes = list_info_instance_[id].meshes;
     info_meshes.texcoords = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
     info_meshes.positions = {{-1, -1, 0}, {1, -1, 0}, {1, 1, 0}, {-1, 1, 0}};
     info_meshes.normals = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
     info_meshes.indices = {{0, 1, 2}, {2, 3, 0}};
-    info_meshes.to_world = info.to_world;
     try
     {
-        CommitMeshes(id, info_meshes);
+        CommitMeshes(id);
     }
     catch (const std::exception &e)
     {
@@ -280,76 +274,77 @@ void Scene::CommitRectangle(const uint32_t id,
     }
 }
 
-void Scene::CommitMeshes(const uint32_t id, Instance::Info::Meshes info)
+void Scene::CommitMeshes(const uint32_t id)
 {
-    if (info.indices.empty())
+    Instance::Info::Meshes &info_meshes = list_info_instance_[id].meshes;
+    const Mat4 to_world = list_info_instance_[id].to_world;
+
+    if (info_meshes.indices.empty())
     {
         throw std::exception(
             "cannot find vertex index info when adding instance to scene.");
     }
 
-    if (info.positions.empty())
+    if (info_meshes.positions.empty())
     {
         throw std::exception("cannot find vertex position info when adding "
                              "instance to scene.");
     }
 
-    for (Vec3 &position : info.positions)
-        position = TransformPoint(info.to_world, position);
+    for (Vec3 &position : info_meshes.positions)
+        position = TransformPoint(to_world, position);
 
-    if (!info.normals.empty())
+    if (!info_meshes.normals.empty())
     {
-        const Mat4 normal_to_world = info.to_world.Transpose().Inverse();
-        for (Vec3 &normal : info.normals)
+        const Mat4 normal_to_world = to_world.Transpose().Inverse();
+        for (Vec3 &normal : info_meshes.normals)
             normal = TransformVector(normal_to_world, normal);
     }
 
-    if (!info.tangents.empty())
+    if (!info_meshes.tangents.empty())
     {
-        for (Vec3 &tangent : info.tangents)
-            tangent = TransformVector(info.to_world, tangent);
+        for (Vec3 &tangent : info_meshes.tangents)
+            tangent = TransformVector(to_world, tangent);
     }
 
-    if (!info.bitangents.empty())
+    if (!info_meshes.bitangents.empty())
     {
-        for (Vec3 &bitangent : info.bitangents)
-            bitangent = TransformVector(info.to_world, bitangent);
+        for (Vec3 &bitangent : info_meshes.bitangents)
+            bitangent = TransformVector(to_world, bitangent);
     }
 
     try
     {
-        std::vector<Primitive::Data> data_primitves;
+        std::vector<Primitive::Data> list_data_primitve;
         std::vector<float> areas;
-        SetupMeshes(info, &data_primitves, &areas);
+        SetupMeshes(info_meshes, &list_data_primitve, &areas);
         const uint32_t num_primitive_local =
-            static_cast<uint32_t>(data_primitves.size());
+            static_cast<uint32_t>(list_data_primitve.size());
 
-        Primitive *primitive_buffer = MallocArray<Primitive>(
+        Primitive *primitives = MallocArray<Primitive>(
             backend_type_, num_primitive_ + num_primitive_local);
-        CopyArray(backend_type_, primitive_buffer, primitive_buffer_,
-                  num_primitive_);
-        DeleteArray(backend_type_, primitive_buffer_);
-        primitive_buffer_ = primitive_buffer;
-
+        CopyArray(backend_type_, primitives, primitives_, num_primitive_);
+        DeleteArray(backend_type_, primitives_);
         std::vector<AABB> aabbs(num_primitive_local);
         for (uint32_t i = 0; i < num_primitive_local; ++i)
         {
-            primitive_buffer_[num_primitive_ + i] =
-                Primitive(i, data_primitves[i]);
-            aabbs[i] = primitive_buffer_[num_primitive_ + i].aabb();
+            primitives[num_primitive_ + i] =
+                Primitive(i, list_data_primitve[i]);
+            aabbs[i] = primitives[num_primitive_ + i].aabb();
         }
+        primitives_ = primitives;
         list_offset_primitive_.push_back(num_primitive_);
         num_primitive_ += num_primitive_local;
 
-        std::vector<BvhNode> nodes = BvhBuilder::Build(aabbs, areas);
-        const uint64_t num_node_local = nodes.size();
-        BvhNode *node_buffer =
+        std::vector<BvhNode> list_node = BvhBuilder::Build(aabbs, areas);
+        const uint64_t num_node_local = list_node.size();
+        BvhNode *nodes =
             MallocArray<BvhNode>(backend_type_, num_node_ + num_node_local);
-        CopyArray(backend_type_, node_buffer, node_buffer_, num_node_);
-        DeleteArray(backend_type_, node_buffer_);
+        CopyArray(backend_type_, nodes, nodes_, num_node_);
+        DeleteArray(backend_type_, nodes_);
         for (uint64_t i = 0; i < num_node_local; ++i)
-            node_buffer[num_node_ + i] = nodes[i];
-        node_buffer_ = node_buffer;
+            nodes[num_node_ + i] = list_node[i];
+        nodes_ = nodes;
         list_offset_node_.push_back(num_node_);
         num_node_ += num_node_local;
     }
@@ -361,42 +356,44 @@ void Scene::CommitMeshes(const uint32_t id, Instance::Info::Meshes info)
     }
 }
 
-void Scene::SetupMeshes(Instance::Info::Meshes info,
-                        std::vector<Primitive::Data> *data_primitves,
+void Scene::SetupMeshes(Instance::Info::Meshes info_meshes,
+                        std::vector<Primitive::Data> *list_data_primitve,
                         std::vector<float> *areas)
 {
     try
     {
         const uint32_t num_primitive_local =
-            static_cast<uint32_t>(info.indices.size());
-        *data_primitves = std::vector<Primitive::Data>(num_primitive_local);
+            static_cast<uint32_t>(info_meshes.indices.size());
+        *list_data_primitve = std::vector<Primitive::Data>(num_primitive_local);
         *areas = std::vector<float>(num_primitive_local);
         for (uint32_t i = 0; i < num_primitive_local; ++i)
         {
-            (*data_primitves)[i].type = Primitive::Type::kTriangle;
-            const Uvec3 index = info.indices[i];
-            Primitive::Data::Triangle &triangle = (*data_primitves)[i].triangle;
+            (*list_data_primitve)[i].type = Primitive::Type::kTriangle;
+            const Uvec3 indices = info_meshes.indices[i];
+            Primitive::Data::Triangle &triangle =
+                (*list_data_primitve)[i].triangle;
 
-            if (info.texcoords.empty())
+            if (info_meshes.texcoords.empty())
             {
-                triangle.texcoords[0] = {0, 0}, triangle.texcoords[1] = {1, 0},
+                triangle.texcoords[0] = {0, 0};
+                triangle.texcoords[1] = {1, 0};
                 triangle.texcoords[2] = {1, 1};
             }
             else
             {
                 for (int j = 0; j < 3; ++j)
-                    triangle.texcoords[j] = info.texcoords[index[j]];
+                    triangle.texcoords[j] = info_meshes.texcoords[indices[j]];
             }
 
             for (int j = 0; j < 3; ++j)
-                triangle.positions[j] = info.positions[index[j]];
+                triangle.positions[j] = info_meshes.positions[indices[j]];
 
-            triangle.v0v1 = triangle.positions[1] - triangle.positions[0],
+            triangle.v0v1 = triangle.positions[1] - triangle.positions[0];
             triangle.v0v2 = triangle.positions[2] - triangle.positions[0];
             const Vec3 normal_geom = Cross(triangle.v0v1, triangle.v0v2);
             (*areas)[i] = Length(normal_geom);
 
-            if (info.normals.empty())
+            if (info_meshes.normals.empty())
             {
                 const Vec3 normal = Normalize(normal_geom);
                 for (int j = 0; j < 3; ++j)
@@ -405,44 +402,35 @@ void Scene::SetupMeshes(Instance::Info::Meshes info,
             else
             {
                 for (int j = 0; j < 3; ++j)
-                    triangle.normals[j] = info.normals[index[j]];
+                    triangle.normals[j] = info_meshes.normals[indices[j]];
             }
 
-            if (info.tangents.empty() && info.bitangents.empty())
+            if (info_meshes.tangents.empty() && info_meshes.bitangents.empty())
             {
                 const Vec2 uv_delta_01 =
                                triangle.texcoords[1] - triangle.texcoords[0],
                            uv_delta_02 =
                                triangle.texcoords[2] - triangle.texcoords[0];
-                const float r = 1.0f / (uv_delta_02.x * uv_delta_01.y -
+                const float r = 1.0f / (uv_delta_01.y * uv_delta_02.x -
                                         uv_delta_01.x * uv_delta_02.y);
-                const Vec3 tangent = Normalize((uv_delta_01.v * triangle.v0v2 -
-                                                uv_delta_02.v * triangle.v0v1) *
-                                               r),
-                           bitangent =
-                               Normalize((uv_delta_02.u * triangle.v0v1 -
-                                          uv_delta_01.u * triangle.v0v2) *
-                                         r);
+                const Vec3 tangent = Normalize((uv_delta_01.y * triangle.v0v2 -
+                                                uv_delta_02.y * triangle.v0v1) *
+                                               r);
                 for (int j = 0; j < 3; ++j)
                 {
-                    triangle.tangents[j] = tangent;
-                    triangle.bitangents[j] = bitangent;
-                }
-            }
-            else if (info.tangents.empty())
-            {
-                for (int j = 0; j < 3; ++j)
-                {
-                    triangle.bitangents[j] = info.bitangents[index[j]];
+                    triangle.bitangents[j] =
+                        Normalize(Cross(triangle.normals[j], tangent));
                     triangle.tangents[j] = Normalize(
                         Cross(triangle.bitangents[j], triangle.normals[j]));
                 }
             }
-            else if (info.bitangents.empty())
+            else if (info_meshes.tangents.empty())
             {
                 for (int j = 0; j < 3; ++j)
                 {
-                    triangle.tangents[j] = info.tangents[index[j]];
+                    triangle.bitangents[j] = info_meshes.bitangents[indices[j]];
+                    triangle.tangents[j] = Normalize(
+                        Cross(triangle.bitangents[j], triangle.normals[j]));
                     triangle.bitangents[j] = Normalize(
                         Cross(triangle.normals[j], triangle.tangents[j]));
                 }
@@ -451,8 +439,11 @@ void Scene::SetupMeshes(Instance::Info::Meshes info,
             {
                 for (int j = 0; j < 3; ++j)
                 {
-                    triangle.tangents[j] = info.tangents[index[j]];
-                    triangle.bitangents[j] = info.bitangents[index[j]];
+                    triangle.tangents[j] = info_meshes.tangents[indices[j]];
+                    triangle.bitangents[j] = Normalize(
+                        Cross(triangle.normals[j], triangle.tangents[j]));
+                    triangle.tangents[j] = Normalize(
+                        Cross(triangle.bitangents[j], triangle.normals[j]));
                 }
             }
         }

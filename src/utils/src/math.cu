@@ -17,7 +17,7 @@ QUALIFIER_D_H float MisWeight(float pdf1, float pdf2)
     return pdf1 / (pdf1 + pdf2);
 }
 
-QUALIFIER_D_H Vec2 SampleDiskUnifrom(const float xi_0, const float xi_1)
+QUALIFIER_D_H Vec2 SampleDiskUniform(const float xi_0, const float xi_1)
 {
     const float r1 = 2.0f * xi_0 - 1.0f, r2 = 2.0f * xi_1 - 1.0f;
 
@@ -46,7 +46,14 @@ QUALIFIER_D_H Vec3 SampleConeUniform(const float cos_cutoff, const float xi_0,
                                      const float xi_1)
 {
     const float cos_theta = 1.0f - (1.0f - cos_cutoff) * xi_0,
-                phi = k2Pi * xi_1;
+                phi = 2.0f * kPi * xi_1;
+    const float sin_theta = sqrt(fmaxf(0.0f, 1.0f - cos_theta * cos_theta));
+    return Vec3{sin_theta * cosf(phi), sin_theta * sinf(phi), cos_theta};
+}
+
+QUALIFIER_D_H Vec3 SampleSphereUniform(const float xi_0, const float xi_1)
+{
+    const float cos_theta = 1.0f - 2.0f * xi_0, phi = k2Pi * xi_1;
     const float sin_theta = sqrtf(1.0f - Sqr(cos_theta));
     return {sin_theta * cosf(phi), sin_theta * sinf(phi), cos_theta};
 }
@@ -229,6 +236,23 @@ QUALIFIER_D_H Vec3 SphericalToCartesian(const float theta, const float phi,
     const float sin_theta = sinf(theta);
     return {r * sinf(phi) * sin_theta, r * cosf(theta),
             r * cosf(phi) * sin_theta};
+}
+
+QUALIFIER_D_H Vec3 LocalToWorld(const Vec3 &local, const Vec3 &up)
+{
+    Vec3 C;
+    if (sqrt(Sqr(up.x) + Sqr(up.z)) > kEpsilonFloat)
+    {
+        float len_inv = 1.0f / sqrt(Sqr(up.x) + Sqr(up.z));
+        C = {up.z * len_inv, 0, -up.x * len_inv};
+    }
+    else
+    {
+        float len_inv = 1.0f / sqrt(Sqr(up.y) + Sqr(up.z));
+        C = {0, up.z * len_inv, -up.y * len_inv};
+    }
+    Vec3 B = Normalize(Cross(C, up));
+    return Normalize(local.x * B + local.y * C + local.z * up);
 }
 
 } // namespace csrt

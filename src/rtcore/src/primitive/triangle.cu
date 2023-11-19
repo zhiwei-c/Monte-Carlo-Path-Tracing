@@ -111,15 +111,14 @@ QUALIFIER_D_H void Primitive::IntersectTriangle(Ray *ray, Hit *hit) const
 
     const bool inside = det_inv < 0;
     const Vec2 texcoord = Lerp(data_.triangle.texcoords, u, v, w);
-    const Vec3 position = Lerp(data_.triangle.positions, u, v, w);
+    const Vec3 position = Lerp(data_.triangle.positions, u, v, w),
+               tangent = Normalize(Lerp(data_.triangle.tangents, u, v, w));
     Vec3 normal = Normalize(Lerp(data_.triangle.normals, u, v, w)),
-         tangent = Normalize(Lerp(data_.triangle.tangents, u, v, w)),
          bitangent = Normalize(Lerp(data_.triangle.bitangents, u, v, w));
 
     if (inside)
     {
         normal = -normal;
-        tangent = -tangent;
         bitangent = -bitangent;
     }
 

@@ -50,17 +50,20 @@ QUALIFIER_D_H void Primitive::IntersectSphere(Ray *ray, Hit *hit) const
     const bool flip_bitangent = theta_prime > kPi;
     if (flip_bitangent)
         theta_prime = theta - epsilon_jitter;
-    Vec3 bitangent =
-        Normalize(TransformPoint(data_.sphere.to_world,
-                                 SphericalToCartesian(theta_prime, phi, 1)) -
-                  position);
+    const Vec3 position_prime = TransformPoint(
+        data_.sphere.to_world, SphericalToCartesian(theta_prime, phi, 1));
+    Vec3 bitangent = Normalize(position_prime - position);
     if (flip_bitangent)
         bitangent = -bitangent;
 
     const Vec3 tangent = Normalize(Cross(bitangent, normal));
+    bitangent = Normalize(Cross(normal, tangent));
 
     if (inside)
+    {
         normal = -normal;
+        bitangent = -bitangent;
+    }
 
     *hit = Hit(id_, inside, texcoord, position, normal, tangent, bitangent);
 }

@@ -5,113 +5,109 @@
 namespace csrt
 {
 
-QUALIFIER_D_H Bsdf::Data::Data()
-    : type(Bsdf::Type::kNone), twosided(false), id_opacity(kInvalidId),
-      id_bump_map(kInvalidId), texture_buffer(nullptr), area_light{}, diffuse{},
-      rough_diffuse{}, conductor{}, dielectric{}, plastic{}
+QUALIFIER_D_H BSDF::Data::Data()
+    : type(BSDF::Type::kNone), twosided(false), opacity(nullptr),
+      bump_map(nullptr), area_light{}, diffuse{}, rough_diffuse{}, conductor{},
+      dielectric{}, plastic{}
 {
 }
 
-QUALIFIER_D_H Bsdf::Data::Data(const Bsdf::Data &info)
-    : type(info.type), twosided(info.twosided), id_opacity(info.id_opacity),
-      id_bump_map(info.id_bump_map), texture_buffer(info.texture_buffer)
+QUALIFIER_D_H BSDF::Data::Data(const BSDF::Data &info)
+    : type(info.type), twosided(info.twosided), opacity(info.opacity),
+      bump_map(info.bump_map)
 {
     switch (info.type)
     {
-    case Bsdf::Type::kAreaLight:
+    case BSDF::Type::kAreaLight:
         area_light = info.area_light;
         break;
-    case Bsdf::Type::kDiffuse:
+    case BSDF::Type::kDiffuse:
         diffuse = info.diffuse;
         break;
-    case Bsdf::Type::kRoughDiffuse:
+    case BSDF::Type::kRoughDiffuse:
         rough_diffuse = info.rough_diffuse;
         break;
-    case Bsdf::Type::kConductor:
+    case BSDF::Type::kConductor:
         conductor = info.conductor;
         break;
-    case Bsdf::Type::kDielectric:
-    case Bsdf::Type::kThinDielectric:
+    case BSDF::Type::kDielectric:
+    case BSDF::Type::kThinDielectric:
         dielectric = info.dielectric;
         break;
-    case Bsdf::Type::kPlastic:
+    case BSDF::Type::kPlastic:
         plastic = info.plastic;
         break;
     }
 }
 
-QUALIFIER_D_H void Bsdf::Data::operator=(const Bsdf::Data &info)
+QUALIFIER_D_H void BSDF::Data::operator=(const BSDF::Data &info)
 {
     type = info.type;
     twosided = info.twosided;
-    id_opacity = info.id_opacity;
-    id_bump_map = info.id_bump_map;
-    texture_buffer = info.texture_buffer;
+    opacity = info.opacity;
+    bump_map = info.bump_map;
     switch (info.type)
     {
-    case Bsdf::Type::kAreaLight:
+    case BSDF::Type::kAreaLight:
         area_light = info.area_light;
         break;
-    case Bsdf::Type::kDiffuse:
+    case BSDF::Type::kDiffuse:
         diffuse = info.diffuse;
         break;
-    case Bsdf::Type::kRoughDiffuse:
+    case BSDF::Type::kRoughDiffuse:
         rough_diffuse = info.rough_diffuse;
         break;
-    case Bsdf::Type::kConductor:
+    case BSDF::Type::kConductor:
         conductor = info.conductor;
         break;
-    case Bsdf::Type::kDielectric:
-    case Bsdf::Type::kThinDielectric:
+    case BSDF::Type::kDielectric:
+    case BSDF::Type::kThinDielectric:
         dielectric = info.dielectric;
         break;
-    case Bsdf::Type::kPlastic:
+    case BSDF::Type::kPlastic:
         plastic = info.plastic;
         break;
     }
 }
 
-Bsdf::Info::Info()
-    : type(Bsdf::Type::kNone), twosided(false), id_opacity(kInvalidId),
+QUALIFIER_D_H BSDF::Info::Info()
+    : type(BSDF::Type::kNone), twosided(false), id_opacity(kInvalidId),
       id_bump_map(kInvalidId), area_light{}, diffuse{}, rough_diffuse{},
       conductor{}, dielectric{}, plastic{}
 {
 }
 
-Bsdf::Info::Info(const Bsdf::Info &info)
+QUALIFIER_D_H BSDF::Info::Info(const BSDF::Info &info)
     : type(info.type), twosided(info.twosided), id_opacity(info.id_opacity),
       id_bump_map(info.id_bump_map)
 {
     switch (info.type)
     {
-    case Bsdf::Type::kNone:
+    case BSDF::Type::kNone:
         break;
-    case Bsdf::Type::kAreaLight:
+    case BSDF::Type::kAreaLight:
         area_light = info.area_light;
         break;
-    case Bsdf::Type::kDiffuse:
+    case BSDF::Type::kDiffuse:
         diffuse = info.diffuse;
         break;
-    case Bsdf::Type::kRoughDiffuse:
+    case BSDF::Type::kRoughDiffuse:
         rough_diffuse = info.rough_diffuse;
         break;
-    case Bsdf::Type::kConductor:
+    case BSDF::Type::kConductor:
         conductor = info.conductor;
         break;
-    case Bsdf::Type::kDielectric:
-    case Bsdf::Type::kThinDielectric:
+    case BSDF::Type::kDielectric:
+    case BSDF::Type::kThinDielectric:
         dielectric = info.dielectric;
         break;
-    case Bsdf::Type::kPlastic:
+    case BSDF::Type::kPlastic:
         plastic = info.plastic;
-        break;
-    default:
-        throw std::exception("unknow instance type.");
         break;
     }
 }
 
-void Bsdf::Info::operator=(const Bsdf::Info &info)
+QUALIFIER_D_H void BSDF::Info::operator=(const BSDF::Info &info)
 {
     type = info.type;
     twosided = info.twosided;
@@ -119,206 +115,164 @@ void Bsdf::Info::operator=(const Bsdf::Info &info)
     id_bump_map = info.id_bump_map;
     switch (info.type)
     {
-    case Bsdf::Type::kNone:
+    case BSDF::Type::kNone:
         break;
-    case Bsdf::Type::kAreaLight:
+    case BSDF::Type::kAreaLight:
         area_light = info.area_light;
         break;
-    case Bsdf::Type::kDiffuse:
+    case BSDF::Type::kDiffuse:
         diffuse = info.diffuse;
         break;
-    case Bsdf::Type::kRoughDiffuse:
+    case BSDF::Type::kRoughDiffuse:
         rough_diffuse = info.rough_diffuse;
         break;
-    case Bsdf::Type::kConductor:
+    case BSDF::Type::kConductor:
         conductor = info.conductor;
         break;
-    case Bsdf::Type::kDielectric:
-    case Bsdf::Type::kThinDielectric:
+    case BSDF::Type::kDielectric:
+    case BSDF::Type::kThinDielectric:
         dielectric = info.dielectric;
         break;
-    case Bsdf::Type::kPlastic:
+    case BSDF::Type::kPlastic:
         plastic = info.plastic;
-        break;
-    default:
-        throw std::exception("unknow instance type.");
         break;
     }
 }
 
-Bsdf::Info Bsdf::Info::CreateAreaLight(const uint32_t id_radiance,
-                                       const float weight, const bool twosided,
-                                       const uint32_t id_opacity,
-                                       const uint32_t id_bump_map)
+QUALIFIER_D_H Vec3 BSDF::SampleRec::ToLocal(const Vec3 &v) const
 {
-    Bsdf::Info info;
-    info.type = Bsdf::Type::kAreaLight;
-    info.area_light.id_radiance = id_radiance;
-    info.area_light.weight = weight;
-    info.twosided = twosided;
-    info.id_opacity = id_opacity;
-    info.id_bump_map = id_bump_map;
-    return info;
+    return Normalize({Dot(v, tangent), Dot(v, bitangent), Dot(v, normal)});
 }
 
-Bsdf::Info Bsdf::Info::CreateDiffuse(const uint32_t id_diffuse_reflectance,
-                                     const bool twosided,
-                                     const uint32_t id_opacity,
-                                     const uint32_t id_bump_map)
+QUALIFIER_D_H Vec3 BSDF::SampleRec::ToWorld(const Vec3 &v) const
 {
-    Bsdf::Info info;
-    info.type = Bsdf::Type::kDiffuse;
-    info.diffuse.id_diffuse_reflectance = id_diffuse_reflectance;
-    info.twosided = twosided;
-    info.id_opacity = id_opacity;
-    info.id_bump_map = id_bump_map;
-    return info;
+    return Normalize(v.x * tangent + v.y * bitangent + v.z * normal);
 }
 
-Bsdf::Info Bsdf::Info::CreateRoughDiffuse(const bool use_fast_approx,
-                                          const uint32_t id_diffuse_reflectance,
-                                          const uint32_t id_roughness,
-                                          const bool twosided,
-                                          const uint32_t id_opacity,
-                                          const uint32_t id_bump_map)
+QUALIFIER_D_H BSDF::BSDF() : id_(kInvalidId), data_{} {}
+
+QUALIFIER_D_H BSDF::BSDF(const uint32_t id, const BSDF::Info &info,
+                         Texture *texture_buffer)
+    : id_(id)
 {
-    Bsdf::Info info;
-    info.type = Bsdf::Type::kRoughDiffuse;
-    info.rough_diffuse.use_fast_approx = use_fast_approx;
-    info.rough_diffuse.id_diffuse_reflectance = id_diffuse_reflectance;
-    info.rough_diffuse.id_roughness = id_roughness;
-    info.twosided = twosided;
-    info.id_opacity = id_opacity;
-    info.id_bump_map = id_bump_map;
-    return info;
+    data_.type = info.type;
+    data_.twosided = info.twosided;
+    data_.opacity = info.id_opacity == kInvalidId
+                        ? nullptr
+                        : texture_buffer + info.id_opacity;
+    data_.bump_map = info.id_bump_map == kInvalidId
+                         ? nullptr
+                         : texture_buffer + info.id_bump_map;
+    switch (info.type)
+    {
+    case BSDF::Type::kAreaLight:
+        data_.area_light.radiance =
+            texture_buffer + info.area_light.id_radiance;
+        break;
+    case BSDF::Type::kDiffuse:
+        data_.diffuse.diffuse_reflectance =
+            texture_buffer + info.diffuse.id_diffuse_reflectance;
+        break;
+    case BSDF::Type::kRoughDiffuse:
+        data_.rough_diffuse.diffuse_reflectance =
+            texture_buffer + info.rough_diffuse.id_diffuse_reflectance;
+        data_.rough_diffuse.roughness =
+            texture_buffer + info.rough_diffuse.id_roughness;
+        break;
+    case BSDF::Type::kConductor:
+        data_.conductor.roughness_u =
+            texture_buffer + info.conductor.id_roughness_u;
+        data_.conductor.roughness_v =
+            texture_buffer + info.conductor.id_roughness_v;
+        data_.conductor.specular_reflectance =
+            texture_buffer + info.conductor.id_specular_reflectance;
+        data_.conductor.reflectivity = info.conductor.reflectivity;
+        data_.conductor.edgetint = info.conductor.edgetint;
+        break;
+    case BSDF::Type::kThinDielectric:
+    case BSDF::Type::kDielectric:
+        data_.twosided = true;
+        data_.dielectric.roughness_u =
+            texture_buffer + info.dielectric.id_roughness_u;
+        data_.dielectric.roughness_v =
+            texture_buffer + info.dielectric.id_roughness_v;
+        data_.dielectric.specular_reflectance =
+            texture_buffer + info.dielectric.id_specular_reflectance;
+        data_.dielectric.specular_transmittance =
+            texture_buffer + info.dielectric.id_specular_transmittance;
+        data_.dielectric.eta = info.dielectric.eta;
+        data_.dielectric.eta_inv = 1.0f / info.dielectric.eta;
+        data_.dielectric.reflectivity =
+            (Sqr(info.dielectric.eta - 1.0f) / Sqr(info.dielectric.eta + 1.0f));
+        break;
+    case BSDF::Type::kPlastic:
+        data_.plastic.roughness = texture_buffer + info.plastic.id_roughness;
+        data_.plastic.diffuse_reflectance =
+            texture_buffer + info.plastic.id_diffuse_reflectance;
+        data_.plastic.specular_reflectance =
+            texture_buffer + info.plastic.id_specular_reflectance;
+        data_.plastic.reflectivity =
+            (Sqr(info.plastic.eta - 1.0f) / Sqr(info.plastic.eta + 1.0f));
+        data_.plastic.F_avg = BSDF::AverageFresnel(info.plastic.eta);
+        break;
+    }
 }
 
-Bsdf::Info Bsdf::Info::CreateConductor(
-    const uint32_t id_roughness_u, const uint32_t id_roughness_v,
-    const uint32_t id_specular_reflectance, const Vec3 &eta, const Vec3 &k,
-    const bool twosided, const uint32_t id_opacity, const uint32_t id_bump_map)
-{
-    Bsdf::Info info;
-    info.type = Bsdf::Type::kConductor;
-    info.conductor.id_roughness_u = id_roughness_u;
-    info.conductor.id_roughness_v = id_roughness_v;
-    info.conductor.id_specular_reflectance = id_specular_reflectance;
-    info.conductor.reflectivity =
-        (Sqr(eta - 1.0f) + Sqr(k)) / (Sqr(eta + 1.0f) + Sqr(k));
-    const Vec3 temp1 = 1.0f + Sqrt(info.conductor.reflectivity),
-               temp2 = 1.0f - Sqrt(info.conductor.reflectivity),
-               temp3 = ((1.0f - info.conductor.reflectivity) /
-                        (1.0 + info.conductor.reflectivity));
-    info.conductor.edgetint = (temp1 - eta * temp2) / (temp1 - temp3 * temp2);
-    info.twosided = twosided;
-    info.id_opacity = id_opacity;
-    info.id_bump_map = id_bump_map;
-    return info;
-}
-
-Bsdf::Info Bsdf::Info::CreateDielectric(
-    bool is_thin, const uint32_t id_roughness_u, const uint32_t id_roughness_v,
-    const uint32_t id_specular_reflectance,
-    const uint32_t id_specular_transmittance, const float eta,
-    const bool twosided, const uint32_t id_opacity, const uint32_t id_bump_map)
-{
-    Bsdf::Info info;
-    info.type = is_thin ? Bsdf::Type::kThinDielectric : Bsdf::Type::kDielectric;
-    info.dielectric.id_roughness_u = id_roughness_u;
-    info.dielectric.id_roughness_v = id_roughness_v;
-    info.dielectric.id_specular_reflectance = id_specular_reflectance;
-    info.dielectric.id_specular_transmittance = id_specular_transmittance;
-    info.dielectric.eta = eta;
-    info.twosided = twosided;
-    info.id_opacity = id_opacity;
-    info.id_bump_map = id_bump_map;
-    return info;
-}
-
-Bsdf::Info Bsdf::Info::CreatePlastic(const float eta,
-                                     const uint32_t id_roughness,
-                                     const uint32_t id_diffuse_reflectance,
-                                     const uint32_t id_specular_reflectance,
-                                     const bool twosided,
-                                     const uint32_t id_opacity,
-                                     const uint32_t id_bump_map)
-{
-    Bsdf::Info info;
-    info.type = Bsdf::Type::kPlastic;
-    info.plastic.eta = eta;
-    info.plastic.id_roughness = id_roughness;
-    info.plastic.id_diffuse_reflectance = id_diffuse_reflectance;
-    info.plastic.id_specular_reflectance = id_specular_reflectance;
-    info.twosided = twosided;
-    info.id_opacity = id_opacity;
-    info.id_bump_map = id_bump_map;
-    return info;
-}
-
-QUALIFIER_D_H Bsdf::Bsdf() : id_(kInvalidId), data_{} {}
-
-QUALIFIER_D_H Bsdf::Bsdf(const uint32_t id, const Bsdf::Data &data)
-    : id_(id), data_(data)
-{
-}
-
-QUALIFIER_D_H void Bsdf::Evaluate(SamplingRecord *rec) const
+QUALIFIER_D_H void BSDF::Evaluate(BSDF::SampleRec *rec) const
 {
     switch (data_.type)
     {
-    case Bsdf::Type::kDiffuse:
+    case BSDF::Type::kDiffuse:
         EvaluateDiffuse(rec);
         break;
-    case Bsdf::Type::kRoughDiffuse:
+    case BSDF::Type::kRoughDiffuse:
         EvaluateRoughDiffuse(rec);
         break;
-    case Bsdf::Type::kConductor:
+    case BSDF::Type::kConductor:
         EvaluateConductor(rec);
         break;
-    case Bsdf::Type::kDielectric:
+    case BSDF::Type::kDielectric:
         EvaluateDielectric(rec);
         break;
-    case Bsdf::Type::kThinDielectric:
+    case BSDF::Type::kThinDielectric:
         EvaluateThinDielectric(rec);
         break;
-    case Bsdf::Type::kPlastic:
+    case BSDF::Type::kPlastic:
         EvaluatePlastic(rec);
         break;
     }
 }
 
-QUALIFIER_D_H void Bsdf::Sample(const Vec3 &xi, SamplingRecord *rec) const
+QUALIFIER_D_H void BSDF::Sample(uint32_t *seed, BSDF::SampleRec *rec) const
 {
     switch (data_.type)
     {
-    case Bsdf::Type::kDiffuse:
-        SampleDiffuse(xi, rec);
+    case BSDF::Type::kDiffuse:
+        SampleDiffuse(seed, rec);
         break;
-    case Bsdf::Type::kRoughDiffuse:
-        SampleRoughDiffuse(xi, rec);
+    case BSDF::Type::kRoughDiffuse:
+        SampleRoughDiffuse(seed, rec);
         break;
-    case Bsdf::Type::kConductor:
-        SampleConductor(xi, rec);
+    case BSDF::Type::kConductor:
+        SampleConductor(seed, rec);
         break;
-    case Bsdf::Type::kDielectric:
-        SampleDielectric(xi, rec);
+    case BSDF::Type::kDielectric:
+        SampleDielectric(seed, rec);
         break;
-    case Bsdf::Type::kThinDielectric:
-        SampleThinDielectric(xi, rec);
+    case BSDF::Type::kThinDielectric:
+        SampleThinDielectric(seed, rec);
         break;
-    case Bsdf::Type::kPlastic:
-        SamplePlastic(xi, rec);
+    case BSDF::Type::kPlastic:
+        SamplePlastic(seed, rec);
         break;
     }
 }
 
-QUALIFIER_D_H Vec3 Bsdf::GetRadiance(const Vec2 &texcoord) const
+QUALIFIER_D_H Vec3 BSDF::GetRadiance(const Vec2 &texcoord) const
 {
-    if (data_.type == Bsdf::Type::kAreaLight)
+    if (data_.type == BSDF::Type::kAreaLight)
     {
-        const Texture &radiance =
-            data_.texture_buffer[data_.area_light.id_radiance];
-        return radiance.GetColor(texcoord);
+        return data_.area_light.radiance->GetColor(texcoord);
     }
     else
     {
@@ -326,21 +280,18 @@ QUALIFIER_D_H Vec3 Bsdf::GetRadiance(const Vec2 &texcoord) const
     }
 }
 
-QUALIFIER_D_H bool Bsdf::IsEmitter() const
+QUALIFIER_D_H bool BSDF::IsEmitter() const
 {
-    return data_.type == Bsdf::Type::kAreaLight;
+    return data_.type == BSDF::Type::kAreaLight;
 }
 
-QUALIFIER_D_H bool Bsdf::IsTransparent(const Vec2 &texcoord,
-                                       const float xi) const
+QUALIFIER_D_H bool BSDF::IsTransparent(const Vec2 &texcoord,
+                                       uint32_t *seed) const
 {
-    if (data_.id_opacity == kInvalidId)
-        return false;
-    const Texture &opacity = data_.texture_buffer[data_.id_opacity];
-    return opacity.IsTransparent(texcoord, xi);
+    return data_.opacity && data_.opacity->IsTransparent(texcoord, seed);
 }
 
-float Bsdf::AverageFresnel(const float eta)
+QUALIFIER_D_H float BSDF::AverageFresnel(const float eta)
 {
     if (eta < 1.0)
     {

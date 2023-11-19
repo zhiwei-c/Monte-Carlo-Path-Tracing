@@ -11,8 +11,9 @@ struct Config
     Camera::Info camera;
     Integrator::Info integrator;
     std::vector<Texture::Info> textures;
-    std::vector<Bsdf::Info> bsdfs;
+    std::vector<BSDF::Info> bsdfs;
     std::vector<Instance::Info> instances;
+    std::vector<Emitter::Info> emitters;
 };
 
 Config LoadConfig(const std::string &filename);

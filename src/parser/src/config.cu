@@ -9,6 +9,7 @@
 
 #include "ior_lut.cuh"
 #include "model_loader.cuh"
+#include "sun_sky.cuh"
 
 namespace
 {
@@ -32,9 +33,9 @@ namespace basic_parser
     bool ReadBoolean(const pugi::xml_node &parent_node,
                      const std::vector<std::string> &valid_names,
                      const bool defalut_value);
-    // int ReadInt(const pugi::xml_node &parent_node,
-    //             const std::vector<std::string> &valid_names,
-    //             const int defalut_value);
+    int ReadInt(const pugi::xml_node &parent_node,
+                const std::vector<std::string> &valid_names,
+                const int defalut_value);
     float ReadFloat(const pugi::xml_node &parent_node,
                     const std::vector<std::string> &valid_names,
                     const float defalut_value);
@@ -68,6 +69,8 @@ namespace element_parser
                           Vec3 *k);
 
     uint64_t ReadShape(const pugi::xml_node &shape_node);
+
+    void ReadEmitter(const pugi::xml_node &emitter_node);
 } // namespace element_parser
 
 bool basic_parser::GetChildNodeByName(
@@ -98,14 +101,14 @@ bool basic_parser::ReadBoolean(const pugi::xml_node &parent_node,
     return target_node.attribute("value").as_bool(defalut_value);
 }
 
-// int basic_parser::ReadInt(const pugi::xml_node &parent_node,
-//                           const std::vector<std::string> &valid_names,
-//                           const int defalut_value)
-// {
-//     pugi::xml_node target_node;
-//     GetChildNodeByName(parent_node, valid_names, &target_node);
-//     return target_node.attribute("value").as_int(defalut_value);
-// }
+int basic_parser::ReadInt(const pugi::xml_node &parent_node,
+                          const std::vector<std::string> &valid_names,
+                          const int defalut_value)
+{
+    pugi::xml_node target_node;
+    GetChildNodeByName(parent_node, valid_names, &target_node);
+    return target_node.attribute("value").as_int(defalut_value);
+}
 
 float basic_parser::ReadFloat(const pugi::xml_node &parent_node,
                               const std::vector<std::string> &valid_names,
@@ -651,15 +654,11 @@ uint64_t element_parser::ReadBitmap(const std::string &filename,
 {
     int width = 0, height = 0, channel = 1;
     std::vector<float> data = {};
-    // image_io::Read(filename, gamma, &width, &height, &channel, &data,
-    // width_max);
+    image_io::Read(filename, gamma, width_max, &width, &height, &channel,
+                   &data);
 
     for (float &item : data)
         item *= scale;
-
-    // const uint64_t offset = local::config.pixels.size();
-    // local::config.pixels.insert(local::config.pixels.end(), data.begin(),
-    //                             data.end());
 
     const uint64_t index = local::config.textures.size();
     local::map_texture[id] = index;
@@ -743,7 +742,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
     if (id.empty())
         id = "bsdf_" + std::to_string(id_bsdf);
 
-    Bsdf::Info info;
+    BSDF::Info info;
     info.twosided = twosided;
     info.id_opacity = id_opacity;
     info.id_bump_map = id_bumpmap;
@@ -757,7 +756,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
         {
             uint64_t id_reflectance =
                 ReadTexture(bsdf_node, {"reflectance"}, 0.5f);
-            info.type = Bsdf::Type::kDiffuse;
+            info.type = BSDF::Type::kDiffuse;
             info.diffuse.id_diffuse_reflectance = id_reflectance;
             break;
         }
@@ -768,7 +767,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
             uint64_t id_reflectance =
                 ReadTexture(bsdf_node, {"reflectance"}, 0.5f);
             uint64_t id_roughness = ReadTexture(bsdf_node, {"alpha"}, 0.2f);
-            info.type = Bsdf::Type::kRoughDiffuse;
+            info.type = BSDF::Type::kRoughDiffuse;
             info.rough_diffuse.use_fast_approx = use_fast_aaprox;
             info.rough_diffuse.id_diffuse_reflectance = id_reflectance;
             info.rough_diffuse.id_roughness = id_roughness;
@@ -815,8 +814,8 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
             const uint64_t id_specular_transmittance = ReadTexture(
                 bsdf_node, {"specularTransmittance", "specular_transmittance"},
                 1.0f);
-            info.type = is_thin_dielectric ? Bsdf::Type::kThinDielectric
-                                           : Bsdf::Type::kDielectric;
+            info.type = is_thin_dielectric ? BSDF::Type::kThinDielectric
+                                           : BSDF::Type::kDielectric;
             info.dielectric.eta = int_ior / ext_ior;
             info.dielectric.id_roughness_u = id_roughness_u;
             info.dielectric.id_roughness_v = id_roughness_v;
@@ -839,7 +838,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
                 }
                 else
                 {
-                    id_roughness_v =
+                    id_roughness_u =
                         ReadTexture(bsdf_node, {"alpha_u", "alphaU"}, 0.1f);
                     id_roughness_v =
                         ReadTexture(bsdf_node, {"alpha_v", "alphaV"}, 0.1f);
@@ -865,7 +864,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
             const Vec3 edgetint =
                 (temp1 - eta * temp2) / (temp1 - temp3 * temp2);
 
-            info.type = Bsdf::Type::kConductor;
+            info.type = BSDF::Type::kConductor;
             info.conductor.id_roughness_u = id_roughness_u;
             info.conductor.id_roughness_v = id_roughness_v;
             info.conductor.id_specular_reflectance = id_specular_reflectance;
@@ -892,7 +891,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
                 bsdf_node, {"specularReflectance", "specular_reflectance"},
                 1.0f);
 
-            info.type = Bsdf::Type::kPlastic;
+            info.type = BSDF::Type::kPlastic;
             info.plastic.eta = int_ior / ext_ior;
             info.plastic.id_roughness = id_roughness;
             info.plastic.id_diffuse_reflectance = id_diffuse_reflectance;
@@ -907,7 +906,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
                     type.c_str());
             const uint64_t id_reflectance =
                 ReadTexture(bsdf_node, std::vector<std::string>{}, 0.5f);
-            info.type = Bsdf::Type::kDiffuse;
+            info.type = BSDF::Type::kDiffuse;
             info.diffuse.id_diffuse_reflectance = id_reflectance;
             break;
         }
@@ -987,29 +986,7 @@ uint64_t element_parser::ReadShape(const pugi::xml_node &shape_node)
     if (id.empty())
         id = "shape_" + std::to_string(index);
 
-    std::string type = shape_node.attribute("type").value();
-    Mat4 to_world = basic_parser::ReadTransform4(shape_node.child("transform"));
-
-    bool flip_normals = false, face_normals = false;
-    for (pugi::xml_node node : shape_node.children("boolean"))
-    {
-        switch (Hash(node.attribute("name").value()))
-        {
-        case "flip_normals"_hash:
-        case "flipNormals"_hash:
-            flip_normals = node.attribute("value").as_bool(false);
-            break;
-        case "face_normals"_hash:
-        case "faceNormals"_hash:
-            face_normals = node.attribute("value").as_bool(false);
-            break;
-        default:
-            break;
-        }
-    }
-
     uint32_t id_bsdf;
-    bool flip_texcoords = false;
     if (shape_node.child("emitter"))
     {
         pugi::xml_node emitter_node = shape_node.child("emitter");
@@ -1026,13 +1003,21 @@ uint64_t element_parser::ReadShape(const pugi::xml_node &shape_node)
         const std::string texture_id =
             "texture_" + std::to_string(index_texture);
         local::map_texture[texture_id] = index_texture;
-        local::config.textures.push_back(
-            Texture::Info::CreateConstant(radiance));
+        Texture::Info info_texture;
+        info_texture.type = Texture::Type::kConstant;
+        info_texture.constant.color = radiance;
+        local::config.textures.push_back(info_texture);
 
         size_t id_radiance = local::map_texture[texture_id];
         id_bsdf = local::config.bsdfs.size();
-        local::config.bsdfs.push_back(Bsdf::Info::CreateAreaLight(
-            id_radiance, 1, false, kInvalidId, kInvalidId));
+        BSDF::Info info_bsdf;
+        info_bsdf.type = BSDF::Type::kAreaLight;
+        info_bsdf.area_light.id_radiance = id_radiance;
+        info_bsdf.area_light.weight = 1;
+        info_bsdf.twosided = false;
+        info_bsdf.id_opacity = kInvalidId;
+        info_bsdf.id_bump_map = kInvalidId;
+        local::config.bsdfs.push_back(info_bsdf);
         local::map_bsdf[id] = id_bsdf;
     }
     else if (shape_node.child("bsdf"))
@@ -1056,32 +1041,48 @@ uint64_t element_parser::ReadShape(const pugi::xml_node &shape_node)
         }
         if (!found)
         {
-            id_bsdf =
-                ReadBsdf(pugi::xml_node(), "", kInvalidId, kInvalidId, false);
+            fprintf(stderr,
+                    "[warning] cannot fing bsdf for shape '%s', use deault "
+                    "instead.\n",
+                    id.c_str());
+            BSDF::Info info;
+            info.type = BSDF::Type::kDiffuse;
+            info.twosided = false;
+            info.id_opacity = kInvalidId;
+            info.id_bump_map = kInvalidId;
+            info.diffuse.id_diffuse_reflectance =
+                ReadTexture(pugi::xml_node(), std::vector<std::string>{}, 0.5f);
+            local::config.bsdfs.push_back(info);
+            id_bsdf = local::config.bsdfs.size();
         }
     }
 
-    int index_shape = shape_node.child("integer").attribute("value").as_int(0);
+    Instance::Info info;
+    info.id_bsdf = id_bsdf;
+    info.flip_normals = basic_parser::ReadBoolean(
+        shape_node, {"flip_normals", "flipNormals"}, false);
+    info.to_world = basic_parser::ReadTransform4(shape_node.child("transform"));
+
+    std::string type = shape_node.attribute("type").value();
     switch (Hash(type.c_str()))
     {
     case "cube"_hash:
     {
-        local::config.instances.push_back(
-            Instance::Info::CreateCube(to_world, id_bsdf));
+        info.type = Instance::Type::kCube;
         break;
     }
     case "rectangle"_hash:
     {
-        local::config.instances.push_back(
-            Instance::Info::CreateRectangle(to_world, id_bsdf));
+        info.type = Instance::Type::kRectangle;
         break;
     }
     case "sphere"_hash:
     {
-        local::config.instances.push_back(Instance::Info::CreateSphere(
-            shape_node.child("float").attribute("value").as_float(1.0),
-            basic_parser::ReadVec3(shape_node, {"center"}, Vec3(0)), to_world,
-            id_bsdf));
+        info.type = Instance::Type::kSphere;
+        info.sphere.radius =
+            shape_node.child("float").attribute("value").as_float(1.0);
+        info.sphere.center =
+            basic_parser::ReadVec3(shape_node, {"center"}, Vec3(0));
         break;
     }
     // case "disk"_hash:
@@ -1090,28 +1091,34 @@ uint64_t element_parser::ReadShape(const pugi::xml_node &shape_node)
     //     break;
     // }
     case "obj"_hash:
-    {
-        flip_texcoords = basic_parser::ReadBoolean(
-            shape_node, {"flip_tex_coords", "flipTexCoords"}, true);
-    }
+    case "serialized"_hash:
     case "gltf"_hash:
     case "ply"_hash:
-    case "serialized"_hash:
     {
-        Instance::Info info;
         info.type = Instance::Type::kMeshes;
-        info.id_bsdf = id_bsdf;
-
         std::string filename =
             local::current_directory +
             shape_node.child("string").attribute("value").as_string();
-        info.meshes =
-            (type == "serialized")
-                ? model_loader::Load(filename, index_shape, flip_texcoords,
-                                     face_normals)
-                : model_loader::Load(filename, flip_texcoords, face_normals);
-        info.meshes.to_world = to_world;
-        local::config.instances.push_back(info);
+        bool face_normals = basic_parser::ReadBoolean(
+            shape_node, {"face_normals", "faceNormals"}, false);
+        if (type == "obj")
+        {
+            bool flip_texcoords = basic_parser::ReadBoolean(
+                shape_node, {"flip_tex_coords", "flipTexCoords"}, true);
+            info.meshes =
+                model_loader::Load(filename, flip_texcoords, face_normals);
+        }
+        else if (type == "serialized")
+        {
+            int index_shape =
+                shape_node.child("integer").attribute("value").as_int(0);
+            info.meshes =
+                model_loader::Load(filename, index_shape, false, face_normals);
+        }
+        else
+        {
+            info.meshes = model_loader::Load(filename, false, face_normals);
+        }
         break;
     }
     default:
@@ -1121,8 +1128,213 @@ uint64_t element_parser::ReadShape(const pugi::xml_node &shape_node)
         break;
     }
     }
+    local::config.instances.push_back(info);
 
     return 0;
+}
+
+void element_parser::ReadEmitter(const pugi::xml_node &emitter_node)
+{
+    try
+    {
+        std::string type = emitter_node.attribute("type").as_string();
+        switch (Hash(type.c_str()))
+        {
+        case "spot"_hash:
+        {
+            Emitter::Info info;
+            info.type = Emitter::Type::kSpot;
+            info.spot.intensity =
+                basic_parser::ReadVec3(emitter_node, {"intensity"}, Vec3(1));
+            info.spot.to_world =
+                basic_parser::ReadTransform4(emitter_node.child("transform"));
+            info.spot.cutoff_angle = basic_parser::ReadFloat(
+                emitter_node, {"cutoff_angle", "cutoffAngle"}, 20);
+            info.spot.beam_width = basic_parser::ReadFloat(
+                emitter_node, {"beamWidth", "beam_width"},
+                info.spot.cutoff_angle * 0.75f);
+            info.spot.cutoff_angle = ToRadians(info.spot.cutoff_angle),
+            info.spot.beam_width = ToRadians(info.spot.beam_width);
+            info.spot.id_texture = kInvalidId;
+            if (emitter_node.child("texture"))
+            {
+                info.spot.id_texture =
+                    ReadTexture(emitter_node.child("texture"), 1.0f, 1.0f);
+            }
+            local::config.emitters.push_back(info);
+            break;
+        }
+        case "directional"_hash:
+        {
+            Emitter::Info info;
+            info.type = Emitter::Type::kDirectional;
+            const Mat4 to_world =
+                basic_parser::ReadTransform4(emitter_node.child("transform"));
+            const Vec3 dir_local = basic_parser::ReadVec3(
+                emitter_node, {"direction"}, Vec3{0, 0, 1});
+            info.directional.direction =
+                TransformVector(to_world.Transpose().Inverse(), dir_local);
+            info.directional.radiance = basic_parser::ReadVec3(
+                emitter_node, {"radiance", "irradiance"}, Vec3(1));
+            local::config.emitters.push_back(info);
+            break;
+        }
+        case "sun"_hash:
+        case "sky"_hash:
+        case "sunsky"_hash:
+        {
+            int resolution =
+                basic_parser::ReadInt(emitter_node, {"resolution"}, 512);
+            int width = resolution, height = resolution / 2, channel = 3;
+
+            Vec3 sun_direction(0);
+            pugi::xml_node sun_direction_node;
+            if (basic_parser::GetChildNodeByName(emitter_node, {"sunDirection"},
+                                                 &sun_direction_node))
+            {
+                sun_direction = {sun_direction_node.attribute("x").as_float(),
+                                 sun_direction_node.attribute("y").as_float(),
+                                 sun_direction_node.attribute("z").as_float()};
+            }
+            else
+            {
+                LocationDate location_date;
+                location_date.year =
+                    basic_parser::ReadInt(emitter_node, {"year"}, 2010);
+                location_date.month =
+                    basic_parser::ReadInt(emitter_node, {"month"}, 7);
+                location_date.day =
+                    basic_parser::ReadInt(emitter_node, {"day"}, 10);
+                location_date.hour =
+                    basic_parser::ReadFloat(emitter_node, {"hour"}, 15);
+                location_date.minute =
+                    basic_parser::ReadFloat(emitter_node, {"minute"}, 0);
+                location_date.second =
+                    basic_parser::ReadFloat(emitter_node, {"second"}, 0);
+                location_date.latitude = basic_parser::ReadFloat(
+                    emitter_node, {"latitude"}, 35.6894);
+                location_date.longitude = basic_parser::ReadFloat(
+                    emitter_node, {"longitude"}, 139.6917);
+                location_date.timezone =
+                    basic_parser::ReadFloat(emitter_node, {"timezone"}, 9);
+                sun_direction = GetSunDirection(location_date);
+            }
+
+            float turbidity =
+                basic_parser::ReadFloat(emitter_node, {"turbidity"}, 3);
+            turbidity = fminf(fmaxf(turbidity, 10.0f), 1.0f);
+
+            if (type == "sun" || type == "sunsky")
+            {
+                double sun_scale =
+                    basic_parser::ReadFloat(emitter_node, {"sunScale"}, 1);
+                double sun_radius_scale = basic_parser::ReadFloat(
+                    emitter_node, {"sunRadiusScale"}, 1);
+
+                Vec3 sun_radiance;
+                std::vector<float> data;
+                CreateSunTexture(sun_direction, turbidity, sun_scale,
+                                 sun_radius_scale, width, height, &sun_radiance,
+                                 &data);
+
+                const uint64_t id_texture = local::config.textures.size();
+                local::map_texture["sun_texture"] = id_texture;
+                Texture::Info info_texture;
+                info_texture.type = Texture::Type::kBitmap3;
+                info_texture.bitmap.data = data;
+                info_texture.bitmap.width = width;
+                info_texture.bitmap.height = height;
+                info_texture.bitmap.to_uv = {};
+                local::config.textures.push_back(info_texture);
+
+                Emitter::Info info_emitter;
+                info_emitter.type = Emitter::Type::kSun;
+                info_emitter.sun.direction = -sun_direction;
+                info_emitter.sun.radiance = sun_radiance;
+                info_emitter.sun.cos_cutoff_angle =
+                    cosf(ToRadians(kSunAppRadius * 0.5f) * sun_radius_scale);
+                info_emitter.sun.id_texture = id_texture;
+
+                local::config.emitters.push_back(info_emitter);
+            }
+
+            if (type == "sky" || type == "sunsky")
+            {
+                Vec3 albedo = basic_parser::ReadVec3(emitter_node, {"albedo"},
+                                                     Vec3(0.15f));
+
+                float stretch =
+                    basic_parser::ReadFloat(emitter_node, {"stretch"}, 1);
+                stretch = std::min(std::max(turbidity, 2.0f), 1.0f);
+
+                float sky_scale =
+                    basic_parser::ReadFloat(emitter_node, {"skyScale"}, 1);
+                float extend =
+                    basic_parser::ReadBoolean(emitter_node, {"extend"}, true);
+
+                std::vector<float> data;
+                CreateSkyTexture(sun_direction, albedo, turbidity, stretch,
+                                 sky_scale, extend, width, height, &data);
+
+                const uint64_t id_texture = local::config.textures.size();
+                local::map_texture["sky_texture"] = id_texture;
+                Texture::Info info_texture;
+                info_texture.type = Texture::Type::kBitmap3;
+                info_texture.bitmap.data = data;
+                info_texture.bitmap.width = width;
+                info_texture.bitmap.height = height;
+                info_texture.bitmap.to_uv = {};
+                local::config.textures.push_back(info_texture);
+
+                Emitter::Info info;
+                info.type = Emitter::Type::kEnvMap;
+                info.envmap.id_radiance = id_texture;
+                info.envmap.to_world = {};
+                local::config.emitters.push_back(info);
+            }
+            break;
+        }
+        case "envmap"_hash:
+        {
+            const std::string filename =
+                emitter_node.child("string").attribute("value").as_string();
+            const float gamma =
+                basic_parser::ReadFloat(emitter_node, {"gamma"}, 0.0f);
+            const float scale =
+                basic_parser::ReadFloat(emitter_node, {"scale"}, 1.0f);
+            int width_target = static_cast<int>(
+                local::config.camera.width * 360 / local::config.camera.fov_x);
+            Emitter::Info info;
+            info.type = Emitter::Type::kEnvMap;
+            info.envmap.id_radiance =
+                ReadBitmap(local::current_directory + filename, filename, gamma,
+                           scale, &width_target);
+            info.envmap.to_world =
+                basic_parser::ReadTransform4(emitter_node.child("transform"));
+            local::config.emitters.push_back(info);
+            break;
+        }
+        case "constant"_hash:
+        {
+            Emitter::Info info;
+            info.type = Emitter::Type::kConstant;
+            info.constant.radiance =
+                basic_parser::ReadVec3(emitter_node, {"radiance"}, Vec3(1));
+            local::config.emitters.push_back(info);
+            break;
+        }
+        default:
+        {
+            fprintf(stderr, "[warning] unsupport emitter '%s', ignore it.\n",
+                    type.c_str());
+            break;
+        }
+        }
+    }
+    catch (const std::exception &e)
+    {
+        throw e;
+    }
 }
 
 } // namespace
@@ -1198,6 +1410,12 @@ Config LoadConfig(const std::string &filename)
         //
         for (pugi::xml_node shape_node : scene_node.children("shape"))
             element_parser::ReadShape(shape_node);
+
+        //
+        // 解析除了面光源之外的其它光源
+        //
+        for (pugi::xml_node emitter_node : scene_node.children("emitter"))
+            element_parser::ReadEmitter(emitter_node);
     }
     catch (const std::exception &e)
     {

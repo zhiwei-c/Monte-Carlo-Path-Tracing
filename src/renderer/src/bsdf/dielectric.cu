@@ -6,7 +6,7 @@
 namespace csrt
 {
 
-QUALIFIER_D_H void Bsdf::EvaluateDielectric(SamplingRecord *rec) const
+QUALIFIER_D_H void BSDF::EvaluateDielectric(BSDF::SampleRec *rec) const
 {
     float eta = data_.dielectric.eta;
     // 相对折射率的倒数，即入射侧介质和透射侧介质的绝对折射率之比
@@ -26,12 +26,10 @@ QUALIFIER_D_H void Bsdf::EvaluateDielectric(SamplingRecord *rec) const
                h_local = rec->ToLocal(h_world);
 
     // 反推根据GGX法线分布函数重要抽样微平面法线的概率
-    const Texture &roughness_u =
-                      data_.texture_buffer[data_.dielectric.id_roughness_u],
-                  &roughness_v =
-                      data_.texture_buffer[data_.dielectric.id_roughness_v];
-    const float alpha_u = roughness_u.GetColor(rec->texcoord).x,
-                alpha_v = roughness_v.GetColor(rec->texcoord).x,
+    const float alpha_u =
+                    data_.dielectric.roughness_u->GetColor(rec->texcoord).x,
+                alpha_v =
+                    data_.dielectric.roughness_v->GetColor(rec->texcoord).x,
                 D = PdfGgx(alpha_u, alpha_v, h_local),
                 H_dot_I = Dot(-rec->wi, h_world),
                 H_dot_O = Dot(rec->wo, h_world),
@@ -39,7 +37,7 @@ QUALIFIER_D_H void Bsdf::EvaluateDielectric(SamplingRecord *rec) const
     rec->pdf = relfect ? (F * D) / (4.0f * H_dot_O)
                        : (((1.0f - F) * D) *
                           abs(H_dot_O / Sqr(eta_inv * H_dot_I + H_dot_O)));
-    if (rec->pdf < kEpsilonFloat)
+    if (rec->pdf < kEpsilon)
         return;
     else
         rec->valid = true;
@@ -56,9 +54,8 @@ QUALIFIER_D_H void Bsdf::EvaluateDielectric(SamplingRecord *rec) const
         // rec->attenuation += EvaluateMultipleScatter(N_dot_I, N_dot_O,
         // roughness);
 
-        const Texture &specular_reflectance =
-            data_.texture_buffer[data_.dielectric.id_specular_reflectance];
-        const Vec3 spec = specular_reflectance.GetColor(rec->texcoord);
+        const Vec3 spec =
+            data_.dielectric.specular_reflectance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
     else
@@ -78,28 +75,28 @@ QUALIFIER_D_H void Bsdf::EvaluateDielectric(SamplingRecord *rec) const
         //     对辐射亮度进行积分需要进行相应的处理
         rec->attenuation *= Sqr(eta);
 
-        const Texture &specular_transmittance =
-            data_.texture_buffer[data_.dielectric.id_specular_transmittance];
-        const Vec3 spec = specular_transmittance.GetColor(rec->texcoord);
+        const Vec3 spec =
+            data_.dielectric.specular_transmittance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
 }
 
-QUALIFIER_D_H void Bsdf::SampleDielectric(const Vec3 &xi,
-                                          SamplingRecord *rec) const
+QUALIFIER_D_H void BSDF::SampleDielectric(uint32_t *seed,
+                                          BSDF::SampleRec *rec) const
 {
     const float scale = 1.2f - 0.2f * sqrt(abs(Dot(-rec->wo, rec->normal)));
-    const Texture &roughness_u =
-                      data_.texture_buffer[data_.dielectric.id_roughness_u],
-                  &roughness_v =
-                      data_.texture_buffer[data_.dielectric.id_roughness_v];
-    const float alpha_u = roughness_u.GetColor(rec->texcoord).x * scale,
-                alpha_v = roughness_v.GetColor(rec->texcoord).x * scale;
+    const float alpha_u =
+                    data_.dielectric.roughness_u->GetColor(rec->texcoord).x *
+                    scale,
+                alpha_v =
+                    data_.dielectric.roughness_v->GetColor(rec->texcoord).x *
+                    scale;
 
     // 根据GGX法线分布函数重要抽样微平面法线
     Vec3 h_local(0);
     float D = 0;
-    SampleGgx(xi.x, xi.y, alpha_u, alpha_v, &h_local, &D);
+    SampleGgx(RandomFloat(seed), RandomFloat(seed), alpha_u, alpha_v, &h_local,
+              &D);
     const Vec3 h_world = rec->ToWorld(h_local);
     float H_dot_O = Dot(rec->wo, h_world);
     if (H_dot_O < kEpsilonFloat)
@@ -119,7 +116,7 @@ QUALIFIER_D_H void Bsdf::SampleDielectric(const Vec3 &xi,
     const bool full_reflect = !Ray::Refract(-rec->wo, h_world, eta, &wt);
     float F = FresnelSchlick(H_dot_O, data_.dielectric.reflectivity);
     const Vec3 wo_local = rec->ToLocal(rec->wo);
-    if (full_reflect || xi.z < F)
+    if (full_reflect || RandomFloat(seed) < F)
     { // 抽样反射光线
         rec->wi = -Ray::Reflect(-rec->wo, h_world);
         const float N_dot_I = Dot(-rec->wi, rec->normal);
@@ -127,7 +124,7 @@ QUALIFIER_D_H void Bsdf::SampleDielectric(const Vec3 &xi,
             return;
 
         rec->pdf = F * D / (4.0f * H_dot_O);
-        if (rec->pdf < kEpsilonFloat)
+        if (rec->pdf < kEpsilon)
             return;
 
         const Vec3 wi_local = rec->ToLocal(-rec->wi);
@@ -136,9 +133,8 @@ QUALIFIER_D_H void Bsdf::SampleDielectric(const Vec3 &xi,
                     N_dot_O = wo_local.z;
         rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
 
-        const Texture &specular_reflectance =
-            data_.texture_buffer[data_.dielectric.id_specular_reflectance];
-        const Vec3 spec = specular_reflectance.GetColor(rec->texcoord);
+        const Vec3 spec =
+            data_.dielectric.specular_reflectance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
     else
@@ -159,7 +155,7 @@ QUALIFIER_D_H void Bsdf::SampleDielectric(const Vec3 &xi,
         F = FresnelSchlick(H_dot_I, data_.dielectric.reflectivity);
         rec->pdf =
             ((1.0f - F) * D) * abs(H_dot_O / Sqr(eta_inv * H_dot_I + H_dot_O));
-        if (rec->pdf < kEpsilonFloat)
+        if (rec->pdf < kEpsilon)
             return;
 
         const float G = SmithG1Ggx(alpha_u, alpha_v, wi_local, h_local) *
@@ -173,9 +169,8 @@ QUALIFIER_D_H void Bsdf::SampleDielectric(const Vec3 &xi,
         //     对辐射亮度进行积分需要进行相应的处理
         rec->attenuation *= Sqr(eta);
 
-        const Texture &specular_transmittance =
-            data_.texture_buffer[data_.dielectric.id_specular_transmittance];
-        const Vec3 spec = specular_transmittance.GetColor(rec->texcoord);
+        const Vec3 spec =
+            data_.dielectric.specular_transmittance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
     rec->valid = true;

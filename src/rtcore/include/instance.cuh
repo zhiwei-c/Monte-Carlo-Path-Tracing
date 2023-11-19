@@ -18,7 +18,8 @@ public:
                        const Primitive *primitive_buffer);
 
     QUALIFIER_D_H void Intersect(Ray *ray, Hit *hit) const;
-    QUALIFIER_D_H Hit Sample(const Vec3 &xi) const;
+    QUALIFIER_D_H Hit Sample(const float xi_0, const float xi_1,
+                             const float xi_2) const;
 
 private:
     const BvhNode *nodes_;
@@ -39,21 +40,10 @@ public:
 
     struct Info
     {
-        struct Cube
-        {
-            Mat4 to_world = {};
-        };
-
         struct Sphere
         {
             float radius = 1.0f;
             Vec3 center = {};
-            Mat4 to_world = {};
-        };
-
-        struct Rectangle
-        {
-            Mat4 to_world = {};
         };
 
         struct Meshes
@@ -64,31 +54,22 @@ public:
             std::vector<Vec3> tangents = {};
             std::vector<Vec3> bitangents = {};
             std::vector<Uvec3> indices = {};
-            Mat4 to_world = {};
         };
 
         Instance::Type type = Instance::Type::kNone;
         uint32_t id_bsdf = kInvalidId;
-        Cube cube = {};
+        bool flip_normals = false;
+        Mat4 to_world = {};
         Sphere sphere = {};
-        Rectangle rectangle = {};
         Meshes meshes = {};
-
-        static Instance::Info CreateCube(const Mat4 &to_world,
-                                         const uint32_t id_bsdf);
-        static Instance::Info CreateSphere(const float &radius,
-                                           const Vec3 &center,
-                                           const Mat4 &to_world,
-                                           const uint32_t id_bsdf);
-        static Instance::Info CreateRectangle(const Mat4 &to_world,
-                                              const uint32_t id_bsdf);
     };
 
     QUALIFIER_D_H Instance();
     QUALIFIER_D_H Instance(const uint32_t id, const BLAS *blas_buffer);
 
     QUALIFIER_D_H void Intersect(Ray *ray, Hit *hit) const;
-    QUALIFIER_D_H Hit Sample(const Vec3 &xi) const;
+    QUALIFIER_D_H Hit Sample(const float xi_0, const float xi_1,
+                             const float xi_2) const;
 
 private:
     uint32_t id_;

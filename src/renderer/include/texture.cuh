@@ -38,7 +38,6 @@ public:
             int width = 0;
             int height = 0;
             float *data = nullptr;
-            uint64_t offset = 0;
             Mat4 to_uv = {};
         };
 
@@ -76,24 +75,16 @@ public:
         ~Info() {}
         Info(const Info &info);
         void operator=(const Info &info);
-
-        static Texture::Info CreateConstant(const Vec3 &color);
-        static Texture::Info CreateCheckerboard(const Vec3 &color0,
-                                                const Vec3 &color1,
-                                                const Mat4 &to_uv);
-        static Texture::Info CreateBitmap(const int width, const int height,
-                                          const int channel,
-                                          const std::vector<float> &data,
-                                          const Mat4 &to_uv);
     };
 
     QUALIFIER_D_H Texture();
-    QUALIFIER_D_H Texture(const uint32_t id, const Texture::Data &data);
+    QUALIFIER_D_H Texture(const uint32_t id, const Texture::Data &data,
+                          const uint64_t offset_data);
 
     QUALIFIER_D_H Vec3 GetColor(const Vec2 &texcoord) const;
     QUALIFIER_D_H Vec2 GetGradient(const Vec2 &texcoord) const;
     QUALIFIER_D_H bool IsTransparent(const Vec2 &texcoord,
-                                     const float xi) const;
+                                     uint32_t *seed) const;
 
 private:
     QUALIFIER_D_H Vec3 GetColorCheckerboard(const Vec2 &texcoord) const;
@@ -107,7 +98,7 @@ private:
     QUALIFIER_D_H Vec2 GetGradientBitmap(const Vec2 &texcoord) const;
 
     QUALIFIER_D_H bool IsTransparentBitmap4(const Vec2 &texcoord,
-                                            const float xi) const;
+                                            uint32_t *seed) const;
 
     uint64_t id_;
     Data data_;
@@ -116,7 +107,7 @@ private:
 template <int channel>
 QUALIFIER_D_H inline Vec3 Texture::GetColorBitmap(const Vec2 &texcoord) const
 {
-    const Vec3 uv = TransformPoint(data_.checkerboard.to_uv, {texcoord, 0.0f});
+    const Vec3 uv = TransformPoint(data_.bitmap.to_uv, {texcoord, 0.0f});
     float x = uv.x * data_.bitmap.width, y = uv.y * data_.bitmap.height;
     while (x < 0)
         x += data_.bitmap.width;
@@ -133,23 +124,22 @@ QUALIFIER_D_H inline Vec3 Texture::GetColorBitmap(const Vec2 &texcoord) const
     const uint32_t x_1 = (t_x > 0.0f) ? x_0 + 1 : x_0,
                    y_1 = (t_y > 0.0f) ? y_0 + 1 : y_0;
 
-    uint32_t offset =
-        data_.bitmap.offset + (x_0 + data_.bitmap.width * y_0) * channel;
+    uint32_t offset = (x_0 + data_.bitmap.width * y_0) * channel;
     const Vec3 color_00 = {data_.bitmap.data[offset],
                            data_.bitmap.data[offset + 1],
                            data_.bitmap.data[offset + 2]};
 
-    offset = data_.bitmap.offset + (x_0 + data_.bitmap.width * y_1) * channel;
+    offset = (x_0 + data_.bitmap.width * y_1) * channel;
     const Vec3 color_01 = {data_.bitmap.data[offset],
                            data_.bitmap.data[offset + 1],
                            data_.bitmap.data[offset + 2]};
 
-    offset = data_.bitmap.offset + (x_1 + data_.bitmap.width * y_0) * channel;
+    offset = (x_1 + data_.bitmap.width * y_0) * channel;
     const Vec3 color_10 = {data_.bitmap.data[offset],
                            data_.bitmap.data[offset + 1],
                            data_.bitmap.data[offset + 2]};
 
-    offset = data_.bitmap.offset + (x_1 + data_.bitmap.width * y_1) * channel;
+    offset = (x_1 + data_.bitmap.width * y_1) * channel;
     const Vec3 color_11 = {data_.bitmap.data[offset],
                            data_.bitmap.data[offset + 1],
                            data_.bitmap.data[offset + 2]};

@@ -103,68 +103,18 @@ void Texture::Info::operator=(const Texture::Info &info)
     }
 }
 
-Texture::Info Texture::Info::CreateConstant(const Vec3 &color)
-{
-    Texture::Info info;
-    info.type = Texture::Type::kConstant;
-    info.constant.color = color;
-    return info;
-}
-
-Texture::Info Texture::Info::CreateCheckerboard(const Vec3 &color0,
-                                                const Vec3 &color1,
-                                                const Mat4 &to_uv)
-{
-    Texture::Info info;
-    info.type = Texture::Type::kCheckerboard;
-    info.checkerboard.color0 = color0;
-    info.checkerboard.color1 = color1;
-    info.checkerboard.to_uv = to_uv;
-    return info;
-}
-
-Texture::Info Texture::Info::CreateBitmap(const int width, const int height,
-                                          const int channel,
-                                          const std::vector<float> &data,
-                                          const Mat4 &to_uv)
-{
-    Texture::Info info;
-    switch (channel)
-    {
-    case 1:
-    {
-        info.type = Texture::Type::kBitmap1;
-        break;
-    }
-    case 3:
-    {
-        info.type = Texture::Type::kBitmap3;
-        break;
-    }
-    case 4:
-    {
-        info.type = Texture::Type::kBitmap4;
-        break;
-    }
-    default:
-    {
-        std::ostringstream oss;
-        oss << "unsupport bitmap channel '" << channel << "'.";
-        throw std::exception(oss.str().c_str());
-        break;
-    }
-    }
-    info.bitmap.width = width;
-    info.bitmap.height = height;
-    info.bitmap.data = data;
-    return info;
-}
-
 QUALIFIER_D_H Texture::Texture() : id_(kInvalidId), data_{} {}
 
-QUALIFIER_D_H Texture::Texture(const uint32_t id, const Texture::Data &data)
+QUALIFIER_D_H Texture::Texture(const uint32_t id, const Texture::Data &data,
+                               const uint64_t offset_data)
     : id_(id), data_(data)
 {
+    if (data_.type == Texture::Type::kBitmap1 ||
+        data_.type == Texture::Type::kBitmap3 ||
+        data_.type == Texture::Type::kBitmap4)
+    {
+        data_.bitmap.data = data_.bitmap.data + offset_data;
+    }
 }
 
 QUALIFIER_D_H Vec3 Texture::GetColor(const Vec2 &texcoord) const
@@ -214,18 +164,18 @@ QUALIFIER_D_H Vec2 Texture::GetGradient(const Vec2 &texcoord) const
 }
 
 QUALIFIER_D_H bool Texture::IsTransparent(const Vec2 &texcoord,
-                                          const float xi) const
+                                          uint32_t *seed) const
 {
     switch (data_.type)
     {
     case Texture::Type::kConstant:
-        return data_.constant.color.x > xi;
+        return data_.constant.color.x < RandomFloat(seed);
         break;
     case Texture::Type::kBitmap1:
-        return GetColorBitmap1(texcoord) > xi;
+        return GetColorBitmap1(texcoord) < RandomFloat(seed);
         break;
     case Texture::Type::kBitmap4:
-        return IsTransparentBitmap4(texcoord, xi);
+        return IsTransparentBitmap4(texcoord, seed);
         break;
     }
     return false;

@@ -3,12 +3,18 @@ file(GLOB_RECURSE HEADER_PRIVATE_LIST CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_
 file(GLOB_RECURSE SOURCE_LIST CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.*")
 set(FILE_LIST ${HEADER_PUBLIC_LIST} ${HEADER_PRIVATE_LIST} ${SOURCE_LIST})
 
+set(SKY_LIST
+    "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/ArHosekSkyModel.c"
+    "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/ArHosekSkyModel.h"
+    "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/ArHosekSkyModelData_CIEXYZ.h"
+    "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/ArHosekSkyModelData_RGB.h"
+    "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/ArHosekSkyModelData_Spectral.h")
+
 if(NOT ENABLE_CUDA)
     set_source_files_properties(${FILE_LIST} PROPERTIES LANGUAGE CXX)
 endif()
 
-
-add_library(Parser ${FILE_LIST})
+add_library(Parser ${FILE_LIST} ${SKY_LIST})
 
 find_package(assimp CONFIG REQUIRED)
 find_package(pugixml CONFIG REQUIRED)
@@ -28,7 +34,9 @@ target_include_directories(Parser
     INTERFACE
         "${PROJECT_SOURCE_DIR}/include"
     PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/include")
+        "${CMAKE_CURRENT_SOURCE_DIR}/include"
+        "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel")
 
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/include" PREFIX "Header Files" FILES ${HEADER_PRIVATE_LIST})
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src" PREFIX "Source Files" FILES ${SOURCE_LIST})
+source_group(TREE "${PROJECT_SOURCE_DIR}/extern" PREFIX "Extern Files" FILES ${SKY_LIST})

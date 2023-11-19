@@ -3,11 +3,10 @@
 namespace csrt
 {
 
-QUALIFIER_D_H TLAS::TLAS() : nodes_(nullptr), instances_(nullptr) {}
+QUALIFIER_D_H TLAS::TLAS() : instances_(nullptr), nodes_(nullptr) {}
 
-QUALIFIER_D_H TLAS::TLAS(const uint64_t offset_node, const BvhNode *node_buffer,
-                         const Instance *instances)
-    : nodes_(node_buffer + offset_node), instances_(instances)
+QUALIFIER_D_H TLAS::TLAS(const Instance *instances, const BvhNode *nodes)
+    : instances_(instances), nodes_(nodes)
 {
 }
 

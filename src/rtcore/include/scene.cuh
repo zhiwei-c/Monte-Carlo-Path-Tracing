@@ -14,8 +14,7 @@ class TLAS
 {
 public:
     QUALIFIER_D_H TLAS();
-    QUALIFIER_D_H TLAS(const uint64_t offset_node, const BvhNode *node_buffer,
-                       const Instance *instances);
+    QUALIFIER_D_H TLAS(const Instance *instances, const BvhNode *node_buffer);
 
     QUALIFIER_D_H Hit Intersect(Ray *ray) const;
 
@@ -41,28 +40,27 @@ private:
     void CommitPrimitives();
     void CommitInstances();
 
-    void CommitCube(const uint32_t id, const Instance::Info::Cube &info);
-    void CommitSphere(const uint32_t id, const Instance::Info::Sphere &info);
-    void CommitRectangle(const uint32_t id,
-                         const Instance::Info::Rectangle &info);
-    void CommitMeshes(const uint32_t id, Instance::Info::Meshes info);
+    void CommitCube(const uint32_t id);
+    void CommitSphere(const uint32_t id);
+    void CommitRectangle(const uint32_t id);
+    void CommitMeshes(const uint32_t id);
 
-    void SetupMeshes(Instance::Info::Meshes info,
-                     std::vector<Primitive::Data> *data_primitves,
+    void SetupMeshes(Instance::Info::Meshes info_meshes,
+                     std::vector<Primitive::Data> *list_data_primitve,
                      std::vector<float> *areas);
 
     BackendType backend_type_;
     TLAS *tlas_;
     Instance *instances_;
+    BLAS *list_blas_;
     float *list_pdf_area_;
-    BLAS *blas_buffer_;
+    Primitive *primitives_;
+    BvhNode *nodes_;
     uint64_t num_primitive_;
-    Primitive *primitive_buffer_;
-    std::vector<uint64_t> list_offset_primitive_;
     uint64_t num_node_;
-    BvhNode *node_buffer_;
-    std::vector<uint64_t> list_offset_node_;
     std::vector<Instance::Info> list_info_instance_;
+    std::vector<uint64_t> list_offset_primitive_;
+    std::vector<uint64_t> list_offset_node_;
 };
 
 } // namespace csrt
