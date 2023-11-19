@@ -379,9 +379,12 @@ QUALIFIER_DEVICE void Primitive::IntersectTriangle(const Ray &ray, Bsdf **bsdf_b
     }
 
     const Vec3 position = Lerp(geom_.triangle.positions, alpha, beta, gamma);
-    Vec3 normal = Lerp(geom_.triangle.normals, alpha, beta, gamma),
-         tangent = Lerp(geom_.triangle.tangents, alpha, beta, gamma),
-         bitangent = Lerp(geom_.triangle.bitangents, alpha, beta, gamma);
+    Vec3 normal = Normalize(Lerp(geom_.triangle.normals, alpha, beta, gamma)),
+         tangent = Normalize(Lerp(geom_.triangle.tangents, alpha, beta, gamma)),
+         bitangent = Normalize(Lerp(geom_.triangle.bitangents, alpha, beta, gamma));
+    bitangent = Normalize(Cross(normal, tangent));
+    tangent = Normalize(Cross(bitangent, normal));
+
     if (bsdf != nullptr)
     {
         normal = (*bsdf)->ApplyBumpMapping(normal, tangent, bitangent, texcoord, texture_buffer,

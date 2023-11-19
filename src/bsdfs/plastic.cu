@@ -13,7 +13,7 @@ QUALIFIER_DEVICE void Plastic::Evaluate(Texture **texture_buffer, const float *p
     // 计算塑料清漆层和基底层反射的权重
     const Vec3 kd = texture_buffer[id_diffuse_reflectance_]->GetColor(rec->texcoord, pixel_buffer),
                ks = texture_buffer[id_specular_reflectance_]->GetColor(rec->texcoord, pixel_buffer);
-    float weight_spec = (kd.x + kd.y + kd.z) / ((kd.x + kd.y + kd.z) + (ks.x + ks.y + ks.z));
+    float weight_spec = (ks.x + ks.y + ks.z) / ((kd.x + kd.y + kd.z) + (ks.x + ks.y + ks.z));
     const float N_dot_I = Dot(-rec->wi, rec->normal),
                 kr_i = FresnelSchlick(N_dot_I, reflectivity_);
     float pdf_spec = kr_i * weight_spec,
@@ -67,7 +67,7 @@ QUALIFIER_DEVICE void Plastic::Sample(Texture **texture_buffer, const float *pix
     // 计算塑料清漆层和基底层反射的权重
     const Vec3 kd = texture_buffer[id_diffuse_reflectance_]->GetColor(rec->texcoord, pixel_buffer),
                ks = texture_buffer[id_specular_reflectance_]->GetColor(rec->texcoord, pixel_buffer);
-    float weight_spec = (kd.x + kd.y + kd.z) / ((kd.x + kd.y + kd.z) + (ks.x + ks.y + ks.z));
+    float weight_spec = (ks.x + ks.y + ks.z) / ((kd.x + kd.y + kd.z) + (ks.x + ks.y + ks.z));
     const float N_dot_O = Dot(rec->wo, rec->normal),
                 kr_o = FresnelSchlick(N_dot_O, reflectivity_);
     float kr_i = kr_o,
