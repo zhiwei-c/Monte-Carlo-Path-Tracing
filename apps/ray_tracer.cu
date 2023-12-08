@@ -131,7 +131,10 @@ void Reshape(int x, int y)
 
 RayTracer::RayTracer(const csrt::Config &config)
     : backend_type_(config.backend_type), width_(config.camera.width),
-      height_(config.camera.height), accum_(nullptr)
+      height_(config.camera.height)
+#ifdef ENABLE_VIEWER
+    , accum_(nullptr)
+#endif
 {
     try
     {
