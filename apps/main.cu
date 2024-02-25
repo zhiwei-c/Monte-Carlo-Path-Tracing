@@ -1,7 +1,7 @@
 #include <cstdio>
 #include <iostream>
 
-#include "ray_tracer.cuh"
+#include "csrt/ray_tracer.cuh"
 
 struct Param
 {
@@ -58,10 +58,10 @@ int main(int argc, char **argv)
         confg.camera.spp = 1;
     }
 
-    RayTracer *ray_tracer = nullptr;
+    csrt::RayTracer *ray_tracer = nullptr;
     try
     {
-        ray_tracer = new RayTracer(confg);
+        ray_tracer = new csrt::RayTracer(confg);
     }
     catch (const std::exception &e)
     {
