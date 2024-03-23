@@ -1,14 +1,14 @@
-#include "csrt/renderer/bsdf.cuh"
+#include "csrt/renderer/bsdfs/rough_diffuse.cuh"
 
+#include "csrt/renderer/bsdfs/bsdf.cuh"
 #include "csrt/utils.cuh"
-
 
 namespace
 {
 using namespace csrt;
 
 QUALIFIER_D_H void Evaluate(const float rougness, const Vec3 &albedo,
-                            const bool use_fast_approx, BSDF::SampleRec *rec)
+                            const bool use_fast_approx, BsdfSampleRec *rec)
 {
     /* Conversion from Beckmann-style RMS roughness to
     Oren-Nayar-style slope-area variance. The factor
@@ -96,7 +96,8 @@ QUALIFIER_D_H void Evaluate(const float rougness, const Vec3 &albedo,
 namespace csrt
 {
 
-QUALIFIER_D_H void BSDF::EvaluateRoughDiffuse(BSDF::SampleRec *rec) const
+QUALIFIER_D_H void EvaluateRoughDiffuse(const RoughDiffuseData &data,
+                                        BsdfSampleRec *rec)
 {
     // 反推余弦加权重要抽样时的概率
     rec->pdf = Dot(rec->wo, rec->normal);
@@ -104,17 +105,13 @@ QUALIFIER_D_H void BSDF::EvaluateRoughDiffuse(BSDF::SampleRec *rec) const
         return;
     rec->valid = true;
 
-    const float alpha =
-        data_.rough_diffuse.roughness->GetColor(rec->texcoord).x;
-
-    const Vec3 albedo =
-        data_.diffuse.diffuse_reflectance->GetColor(rec->texcoord);
-
-    ::Evaluate(alpha, albedo, data_.rough_diffuse.use_fast_approx, rec);
+    const float alpha = data.roughness->GetColor(rec->texcoord).x;
+    const Vec3 albedo = data.diffuse_reflectance->GetColor(rec->texcoord);
+    ::Evaluate(alpha, albedo, data.use_fast_approx, rec);
 }
 
-QUALIFIER_D_H void BSDF::SampleRoughDiffuse(uint32_t *seed,
-                                            BSDF::SampleRec *rec) const
+QUALIFIER_D_H void SampleRoughDiffuse(const RoughDiffuseData &data,
+                                      uint32_t *seed, BsdfSampleRec *rec)
 {
     // 余弦加权重要抽样入射光线的方向
     Vec3 wi;
@@ -126,13 +123,9 @@ QUALIFIER_D_H void BSDF::SampleRoughDiffuse(uint32_t *seed,
                          wi.z * rec->normal);
     rec->valid = true;
 
-    const float alpha =
-        data_.rough_diffuse.roughness->GetColor(rec->texcoord).x;
-
-    const Vec3 albedo =
-        data_.diffuse.diffuse_reflectance->GetColor(rec->texcoord);
-
-    ::Evaluate(alpha, albedo, data_.rough_diffuse.use_fast_approx, rec);
+    const float alpha = data.roughness->GetColor(rec->texcoord).x;
+    const Vec3 albedo = data.diffuse_reflectance->GetColor(rec->texcoord);
+    ::Evaluate(alpha, albedo, data.use_fast_approx, rec);
 }
 
 } // namespace csrt

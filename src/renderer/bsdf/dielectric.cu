@@ -1,17 +1,18 @@
-#include "csrt/renderer/bsdf.cuh"
+#include "csrt/renderer/bsdfs/dielectric.cuh"
 
-#include "csrt/rtcore.cuh"
+#include "csrt/renderer/bsdfs/bsdf.cuh"
+#include "csrt/rtcore/scene.cuh"
 #include "csrt/utils.cuh"
-
 
 namespace csrt
 {
 
-QUALIFIER_D_H void BSDF::EvaluateDielectric(BSDF::SampleRec *rec) const
+QUALIFIER_D_H void EvaluateDielectric(const DielectricData &data,
+                                      BsdfSampleRec *rec)
 {
-    float eta = data_.dielectric.eta;
+    float eta = data.eta;
     // 相对折射率的倒数，即入射侧介质和透射侧介质的绝对折射率之比
-    float eta_inv = data_.dielectric.eta_inv;
+    float eta_inv = data.eta_inv;
     if (rec->inside)
     { // 如果光线源于物体内部，那么应该颠倒相对折射率
         float temp = eta_inv;
@@ -27,14 +28,12 @@ QUALIFIER_D_H void BSDF::EvaluateDielectric(BSDF::SampleRec *rec) const
                h_local = rec->ToLocal(h_world);
 
     // 反推根据GGX法线分布函数重要抽样微平面法线的概率
-    const float alpha_u =
-                    data_.dielectric.roughness_u->GetColor(rec->texcoord).x,
-                alpha_v =
-                    data_.dielectric.roughness_v->GetColor(rec->texcoord).x,
+    const float alpha_u = data.roughness_u->GetColor(rec->texcoord).x,
+                alpha_v = data.roughness_v->GetColor(rec->texcoord).x,
                 D = PdfGgx(alpha_u, alpha_v, h_local),
                 H_dot_I = Dot(-rec->wi, h_world),
                 H_dot_O = Dot(rec->wo, h_world),
-                F = FresnelSchlick(H_dot_I, data_.dielectric.reflectivity);
+                F = FresnelSchlick(H_dot_I, data.reflectivity);
     rec->pdf = relfect ? (F * D) / (4.0f * H_dot_O)
                        : (((1.0f - F) * D) *
                           abs(H_dot_O / Sqr(eta_inv * H_dot_I + H_dot_O)));
@@ -55,8 +54,7 @@ QUALIFIER_D_H void BSDF::EvaluateDielectric(BSDF::SampleRec *rec) const
         // rec->attenuation += EvaluateMultipleScatter(N_dot_I, N_dot_O,
         // roughness);
 
-        const Vec3 spec =
-            data_.dielectric.specular_reflectance->GetColor(rec->texcoord);
+        const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
     else
@@ -76,22 +74,17 @@ QUALIFIER_D_H void BSDF::EvaluateDielectric(BSDF::SampleRec *rec) const
         //     对辐射亮度进行积分需要进行相应的处理
         rec->attenuation *= Sqr(eta);
 
-        const Vec3 spec =
-            data_.dielectric.specular_transmittance->GetColor(rec->texcoord);
+        const Vec3 spec = data.specular_transmittance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
 }
 
-QUALIFIER_D_H void BSDF::SampleDielectric(uint32_t *seed,
-                                          BSDF::SampleRec *rec) const
+QUALIFIER_D_H void SampleDielectric(const DielectricData &data, uint32_t *seed,
+                                    BsdfSampleRec *rec)
 {
     const float scale = 1.2f - 0.2f * sqrt(abs(Dot(-rec->wo, rec->normal)));
-    const float alpha_u =
-                    data_.dielectric.roughness_u->GetColor(rec->texcoord).x *
-                    scale,
-                alpha_v =
-                    data_.dielectric.roughness_v->GetColor(rec->texcoord).x *
-                    scale;
+    const float alpha_u = data.roughness_u->GetColor(rec->texcoord).x * scale,
+                alpha_v = data.roughness_v->GetColor(rec->texcoord).x * scale;
 
     // 根据GGX法线分布函数重要抽样微平面法线
     Vec3 h_local(0);
@@ -103,9 +96,9 @@ QUALIFIER_D_H void BSDF::SampleDielectric(uint32_t *seed,
     if (H_dot_O < kEpsilonFloat)
         return;
 
-    float eta = data_.dielectric.eta;
+    float eta = data.eta;
     // 相对折射率的倒数，即入射侧介质和透射侧介质的绝对折射率之比
-    float eta_inv = data_.dielectric.eta_inv;
+    float eta_inv = data.eta_inv;
     if (!rec->inside)
     { // 如果光线源于物体内部，那么应该颠倒相对折射率
         float temp = eta_inv;
@@ -115,7 +108,7 @@ QUALIFIER_D_H void BSDF::SampleDielectric(uint32_t *seed,
 
     Vec3 wt;
     const bool full_reflect = !Ray::Refract(-rec->wo, h_world, eta, &wt);
-    float F = FresnelSchlick(H_dot_O, data_.dielectric.reflectivity);
+    float F = FresnelSchlick(H_dot_O, data.reflectivity);
     const Vec3 wo_local = rec->ToLocal(rec->wo);
     if (full_reflect || RandomFloat(seed) < F)
     { // 抽样反射光线
@@ -134,8 +127,7 @@ QUALIFIER_D_H void BSDF::SampleDielectric(uint32_t *seed,
                     N_dot_O = wo_local.z;
         rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
 
-        const Vec3 spec =
-            data_.dielectric.specular_reflectance->GetColor(rec->texcoord);
+        const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
     else
@@ -153,7 +145,7 @@ QUALIFIER_D_H void BSDF::SampleDielectric(uint32_t *seed,
             return;
 
         H_dot_O = -H_dot_O;
-        F = FresnelSchlick(H_dot_I, data_.dielectric.reflectivity);
+        F = FresnelSchlick(H_dot_I, data.reflectivity);
         rec->pdf =
             ((1.0f - F) * D) * abs(H_dot_O / Sqr(eta_inv * H_dot_I + H_dot_O));
         if (rec->pdf < kEpsilon)
@@ -170,8 +162,7 @@ QUALIFIER_D_H void BSDF::SampleDielectric(uint32_t *seed,
         //     对辐射亮度进行积分需要进行相应的处理
         rec->attenuation *= Sqr(eta);
 
-        const Vec3 spec =
-            data_.dielectric.specular_transmittance->GetColor(rec->texcoord);
+        const Vec3 spec = data.specular_transmittance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
     rec->valid = true;

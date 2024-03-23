@@ -1,13 +1,14 @@
-#include "csrt/renderer/bsdf.cuh"
+#include "csrt/renderer/bsdfs/thin_dielectric.cuh"
 
-#include "csrt/rtcore.cuh"
+#include "csrt/renderer/bsdfs/bsdf.cuh"
+#include "csrt/rtcore/scene.cuh"
 #include "csrt/utils.cuh"
-
 
 namespace csrt
 {
 
-QUALIFIER_D_H void BSDF::EvaluateThinDielectric(BSDF::SampleRec *rec) const
+QUALIFIER_D_H void EvaluateThinDielectric(const DielectricData &data,
+                                          BsdfSampleRec *rec)
 {
 
     bool reflect = true;
@@ -29,14 +30,12 @@ QUALIFIER_D_H void BSDF::EvaluateThinDielectric(BSDF::SampleRec *rec) const
     // 反推根据GGX法线分布函数重要抽样微平面法线的概率
     const Vec3 h_world = Normalize(-rec->wi + wo),
                h_local = rec->ToLocal(h_world);
-    const float alpha_u =
-                    data_.dielectric.roughness_u->GetColor(rec->texcoord).x,
-                alpha_v =
-                    data_.dielectric.roughness_v->GetColor(rec->texcoord).x,
+    const float alpha_u = data.roughness_u->GetColor(rec->texcoord).x,
+                alpha_v = data.roughness_v->GetColor(rec->texcoord).x,
                 D = PdfGgx(alpha_u, alpha_v, h_local),
                 H_dot_I = Dot(-rec->wi, h_world),
                 H_dot_O = Dot(rec->wo, h_world);
-    float F = FresnelSchlick(H_dot_I, data_.dielectric.reflectivity);
+    float F = FresnelSchlick(H_dot_I, data.reflectivity);
     if (F < 1.0f)
         F *= 2.0f / (1.0f + F);
 
@@ -53,29 +52,25 @@ QUALIFIER_D_H void BSDF::EvaluateThinDielectric(BSDF::SampleRec *rec) const
     if (reflect)
     {
         rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
-        const Vec3 spec =
-            data_.dielectric.specular_reflectance->GetColor(rec->texcoord);
+        const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
     else
     {
         rec->attenuation = ((1.0f - F) * D * G) / (4.0f * N_dot_O);
-        const Vec3 spec =
-            data_.dielectric.specular_transmittance->GetColor(rec->texcoord);
+        const Vec3 spec = data.specular_transmittance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
 }
 
-QUALIFIER_D_H void BSDF::SampleThinDielectric(uint32_t *seed,
-                                              BSDF::SampleRec *rec) const
+QUALIFIER_D_H void SampleThinDielectric(const DielectricData &data,
+                                        uint32_t *seed, BsdfSampleRec *rec)
 {
     // 根据GGX法线分布函数重要抽样微平面法线，生成入射光线方向
     Vec3 h_local(0);
     float D = 0;
-    const float alpha_u =
-                    data_.dielectric.roughness_u->GetColor(rec->texcoord).x,
-                alpha_v =
-                    data_.dielectric.roughness_v->GetColor(rec->texcoord).x;
+    const float alpha_u = data.roughness_u->GetColor(rec->texcoord).x,
+                alpha_v = data.roughness_v->GetColor(rec->texcoord).x;
     SampleGgx(RandomFloat(seed), RandomFloat(seed), alpha_u, alpha_v, &h_local,
               &D);
     const Vec3 h_world = rec->ToWorld(h_local);
@@ -96,7 +91,7 @@ QUALIFIER_D_H void BSDF::SampleThinDielectric(uint32_t *seed,
                     SmithG1Ggx(alpha_u, alpha_v, wo_local, h_local),
                 H_dot_I = Dot(-rec->wi, h_world), N_dot_O = wo_local.z;
 
-    float F = FresnelSchlick(H_dot_I, data_.dielectric.reflectivity);
+    float F = FresnelSchlick(H_dot_I, data.reflectivity);
     if (F < 1.0f)
         F *= 2.0f / (1.0f + F);
 
@@ -108,8 +103,7 @@ QUALIFIER_D_H void BSDF::SampleThinDielectric(uint32_t *seed,
 
         rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
 
-        const Vec3 spec =
-            data_.dielectric.specular_reflectance->GetColor(rec->texcoord);
+        const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
     else
@@ -120,8 +114,7 @@ QUALIFIER_D_H void BSDF::SampleThinDielectric(uint32_t *seed,
 
         rec->attenuation = ((1.0f - F) * D * G) / (4.0f * N_dot_O);
 
-        const Vec3 spec =
-            data_.dielectric.specular_transmittance->GetColor(rec->texcoord);
+        const Vec3 spec = data.specular_transmittance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
 
         rec->wi = rec->wo;

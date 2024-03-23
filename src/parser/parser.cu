@@ -447,10 +447,10 @@ uint64_t element_parser::ReadTexture(const pugi::xml_node &texture_node,
             id = "texture_" + std::to_string(index);
         local::map_texture[id] = index;
 
-        Texture::Info info;
-        info.type = Texture::Type::kConstant;
-        info.constant.color = {scale * defalut_value};
-        local::config.textures.push_back(info);
+        TextureData data;
+        data.type = TextureType::kConstant;
+        data.constant.color = {scale * defalut_value};
+        local::config.textures.push_back(data);
         return index;
     }
 
@@ -493,10 +493,10 @@ uint64_t element_parser::ReadTexture(const pugi::xml_node &texture_node,
         const Vec3 value =
             basic_parser::ReadVec3(texture_node, Vec3(defalut_value), "");
         local::map_texture[id] = index;
-        Texture::Info info;
-        info.type = Texture::Type::kConstant;
-        info.constant.color = scale * value;
-        local::config.textures.push_back(info);
+        TextureData data;
+        data.type = TextureType::kConstant;
+        data.constant.color = scale * value;
+        local::config.textures.push_back(data);
         id_texture = index;
         break;
     }
@@ -508,10 +508,10 @@ uint64_t element_parser::ReadTexture(const pugi::xml_node &texture_node,
         const float value =
             texture_node.attribute("value").as_float(defalut_value);
         local::map_texture[id] = index;
-        Texture::Info info;
-        info.type = Texture::Type::kConstant;
-        info.constant.color = {scale * value};
-        local::config.textures.push_back(info);
+        TextureData data;
+        data.type = TextureType::kConstant;
+        data.constant.color = {scale * value};
+        local::config.textures.push_back(data);
         id_texture = index;
         break;
     }
@@ -566,12 +566,12 @@ uint64_t element_parser::ReadTexture(const pugi::xml_node &texture_node,
             if (id.empty())
                 id = "texture_" + std::to_string(index);
             local::map_texture[id] = index;
-            Texture::Info info;
-            info.type = Texture::Type::kCheckerboard;
-            info.checkerboard.color0 = scale * color0;
-            info.checkerboard.color1 = scale * color1;
-            info.checkerboard.to_uv = to_uv;
-            local::config.textures.push_back(info);
+            TextureData data;
+            data.type = TextureType::kCheckerboard;
+            data.checkerboard.color0 = scale * color0;
+            data.checkerboard.color1 = scale * color1;
+            data.checkerboard.to_uv = to_uv;
+            local::config.textures.push_back(data);
             id_texture = index;
             break;
         }
@@ -635,10 +635,10 @@ element_parser::ReadTexture(const pugi::xml_node &parent_node,
             index = local::config.textures.size();
             const std::string id = "texture_" + std::to_string(index);
             local::map_texture[id] = index;
-            Texture::Info info;
-            info.type = Texture::Type::kConstant;
-            info.constant.color = {defalut_value};
-            local::config.textures.push_back(info);
+            TextureData data;
+            data.type = TextureType::kConstant;
+            data.constant.color = {defalut_value};
+            local::config.textures.push_back(data);
         }
     }
     catch (const std::exception &e)
@@ -653,37 +653,23 @@ uint64_t element_parser::ReadBitmap(const std::string &filename,
                                     float scale, int *width_max)
 {
     int width = 0, height = 0, channel = 1;
-    std::vector<float> data = {};
-    image_io::Read(filename, gamma, width_max, &width, &height, &channel,
-                   &data);
+    float *data =
+        image_io::Read(filename, gamma, width_max, &width, &height, &channel);
 
-    for (float &item : data)
-        item *= scale;
+    for (int i = 0; i < width * height * channel; ++i)
+        data[i] *= scale;
 
     const uint64_t index = local::config.textures.size();
     local::map_texture[id] = index;
 
-    Texture::Info info;
-    switch (channel)
-    {
-    case 1:
-        info.type = Texture::Type::kBitmap1;
-        break;
-    case 3:
-        info.type = Texture::Type::kBitmap3;
-        break;
-    case 4:
-        info.type = Texture::Type::kBitmap4;
-        break;
-    default:
-        throw std::exception("unsupport bitmap channel.");
-        break;
-    }
-    info.bitmap.data = data;
-    info.bitmap.width = width;
-    info.bitmap.height = height;
-    info.bitmap.to_uv = {};
-    local::config.textures.push_back(info);
+    TextureData data_texture;
+    data_texture.type = TextureType::kBitmap;
+    data_texture.bitmap.data = data;
+    data_texture.bitmap.width = width;
+    data_texture.bitmap.height = height;
+    data_texture.bitmap.channel = channel;
+    data_texture.bitmap.to_uv = {};
+    local::config.textures.push_back(data_texture);
     return index;
 }
 
@@ -742,7 +728,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
     if (id.empty())
         id = "bsdf_" + std::to_string(id_bsdf);
 
-    BSDF::Info info;
+    BsdfInfo info;
     info.twosided = twosided;
     info.id_opacity = id_opacity;
     info.id_bump_map = id_bumpmap;
@@ -756,7 +742,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
         {
             uint64_t id_reflectance =
                 ReadTexture(bsdf_node, {"reflectance"}, 0.5f);
-            info.type = BSDF::Type::kDiffuse;
+            info.type = BsdfType::kDiffuse;
             info.diffuse.id_diffuse_reflectance = id_reflectance;
             break;
         }
@@ -767,7 +753,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
             uint64_t id_reflectance =
                 ReadTexture(bsdf_node, {"reflectance"}, 0.5f);
             uint64_t id_roughness = ReadTexture(bsdf_node, {"alpha"}, 0.2f);
-            info.type = BSDF::Type::kRoughDiffuse;
+            info.type = BsdfType::kRoughDiffuse;
             info.rough_diffuse.use_fast_approx = use_fast_aaprox;
             info.rough_diffuse.id_diffuse_reflectance = id_reflectance;
             info.rough_diffuse.id_roughness = id_roughness;
@@ -814,8 +800,8 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
             const uint64_t id_specular_transmittance = ReadTexture(
                 bsdf_node, {"specularTransmittance", "specular_transmittance"},
                 1.0f);
-            info.type = is_thin_dielectric ? BSDF::Type::kThinDielectric
-                                           : BSDF::Type::kDielectric;
+            info.type = is_thin_dielectric ? BsdfType::kThinDielectric
+                                           : BsdfType::kDielectric;
             info.dielectric.eta = int_ior / ext_ior;
             info.dielectric.id_roughness_u = id_roughness_u;
             info.dielectric.id_roughness_v = id_roughness_v;
@@ -864,7 +850,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
             const Vec3 edgetint =
                 (temp1 - eta * temp2) / (temp1 - temp3 * temp2);
 
-            info.type = BSDF::Type::kConductor;
+            info.type = BsdfType::kConductor;
             info.conductor.id_roughness_u = id_roughness_u;
             info.conductor.id_roughness_v = id_roughness_v;
             info.conductor.id_specular_reflectance = id_specular_reflectance;
@@ -891,7 +877,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
                 bsdf_node, {"specularReflectance", "specular_reflectance"},
                 1.0f);
 
-            info.type = BSDF::Type::kPlastic;
+            info.type = BsdfType::kPlastic;
             info.plastic.eta = int_ior / ext_ior;
             info.plastic.id_roughness = id_roughness;
             info.plastic.id_diffuse_reflectance = id_diffuse_reflectance;
@@ -906,7 +892,7 @@ uint64_t element_parser::ReadBsdf(const pugi::xml_node &bsdf_node,
                     type.c_str());
             const uint64_t id_reflectance =
                 ReadTexture(bsdf_node, std::vector<std::string>{}, 0.5f);
-            info.type = BSDF::Type::kDiffuse;
+            info.type = BsdfType::kDiffuse;
             info.diffuse.id_diffuse_reflectance = id_reflectance;
             break;
         }
@@ -1003,15 +989,15 @@ uint64_t element_parser::ReadShape(const pugi::xml_node &shape_node)
         const std::string texture_id =
             "texture_" + std::to_string(index_texture);
         local::map_texture[texture_id] = index_texture;
-        Texture::Info info_texture;
-        info_texture.type = Texture::Type::kConstant;
-        info_texture.constant.color = radiance;
-        local::config.textures.push_back(info_texture);
+        TextureData data_texture;
+        data_texture.type = TextureType::kConstant;
+        data_texture.constant.color = radiance;
+        local::config.textures.push_back(data_texture);
 
         size_t id_radiance = local::map_texture[texture_id];
         id_bsdf = local::config.bsdfs.size();
-        BSDF::Info info_bsdf;
-        info_bsdf.type = BSDF::Type::kAreaLight;
+        BsdfInfo info_bsdf;
+        info_bsdf.type = BsdfType::kAreaLight;
         info_bsdf.area_light.id_radiance = id_radiance;
         info_bsdf.area_light.weight = 1;
         info_bsdf.twosided = false;
@@ -1045,8 +1031,8 @@ uint64_t element_parser::ReadShape(const pugi::xml_node &shape_node)
                     "[warning] cannot fing bsdf for shape '%s', use deault "
                     "instead.\n",
                     id.c_str());
-            BSDF::Info info;
-            info.type = BSDF::Type::kDiffuse;
+            BsdfInfo info;
+            info.type = BsdfType::kDiffuse;
             info.twosided = false;
             info.id_opacity = kInvalidId;
             info.id_bump_map = kInvalidId;
@@ -1142,8 +1128,8 @@ void element_parser::ReadEmitter(const pugi::xml_node &emitter_node)
         {
         case "point"_hash:
         {
-            Emitter::Info info;
-            info.type = Emitter::Type::kPoint;
+            EmitterInfo info;
+            info.type = EmitterType::kPoint;
             info.point.position =
                 basic_parser::ReadVec3(emitter_node, {"position"}, Vec3(0));
             const Mat4 to_world =
@@ -1156,8 +1142,8 @@ void element_parser::ReadEmitter(const pugi::xml_node &emitter_node)
         }
         case "spot"_hash:
         {
-            Emitter::Info info;
-            info.type = Emitter::Type::kSpot;
+            EmitterInfo info;
+            info.type = EmitterType::kSpot;
             info.spot.intensity =
                 basic_parser::ReadVec3(emitter_node, {"intensity"}, Vec3(1));
             info.spot.to_world =
@@ -1180,8 +1166,8 @@ void element_parser::ReadEmitter(const pugi::xml_node &emitter_node)
         }
         case "directional"_hash:
         {
-            Emitter::Info info;
-            info.type = Emitter::Type::kDirectional;
+            EmitterInfo info;
+            info.type = EmitterType::kDirectional;
             const Mat4 to_world =
                 basic_parser::ReadTransform4(emitter_node.child("transform"));
             const Vec3 dir_local = basic_parser::ReadVec3(
@@ -1246,23 +1232,23 @@ void element_parser::ReadEmitter(const pugi::xml_node &emitter_node)
                     emitter_node, {"sunRadiusScale"}, 1);
 
                 Vec3 sun_radiance;
-                std::vector<float> data;
-                CreateSunTexture(sun_direction, turbidity, sun_scale,
-                                 sun_radius_scale, width, height, &sun_radiance,
-                                 &data);
+                float *data = CreateSunTexture(sun_direction, turbidity,
+                                               sun_scale, sun_radius_scale,
+                                               width, height, &sun_radiance);
 
                 const uint64_t id_texture = local::config.textures.size();
                 local::map_texture["sun_texture"] = id_texture;
-                Texture::Info info_texture;
-                info_texture.type = Texture::Type::kBitmap3;
-                info_texture.bitmap.data = data;
-                info_texture.bitmap.width = width;
-                info_texture.bitmap.height = height;
-                info_texture.bitmap.to_uv = {};
-                local::config.textures.push_back(info_texture);
+                TextureData data_texture;
+                data_texture.type = TextureType::kBitmap;
+                data_texture.bitmap.data = data;
+                data_texture.bitmap.width = width;
+                data_texture.bitmap.height = height;
+                data_texture.bitmap.channel = 3;
+                data_texture.bitmap.to_uv = {};
+                local::config.textures.push_back(data_texture);
 
-                Emitter::Info info_emitter;
-                info_emitter.type = Emitter::Type::kSun;
+                EmitterInfo info_emitter;
+                info_emitter.type = EmitterType::kSun;
                 info_emitter.sun.direction = -sun_direction;
                 info_emitter.sun.radiance = sun_radiance;
                 info_emitter.sun.cos_cutoff_angle =
@@ -1286,22 +1272,23 @@ void element_parser::ReadEmitter(const pugi::xml_node &emitter_node)
                 float extend =
                     basic_parser::ReadBoolean(emitter_node, {"extend"}, true);
 
-                std::vector<float> data;
-                CreateSkyTexture(sun_direction, albedo, turbidity, stretch,
-                                 sky_scale, extend, width, height, &data);
+                float *data =
+                    CreateSkyTexture(sun_direction, albedo, turbidity, stretch,
+                                     sky_scale, extend, width, height);
 
                 const uint64_t id_texture = local::config.textures.size();
                 local::map_texture["sky_texture"] = id_texture;
-                Texture::Info info_texture;
-                info_texture.type = Texture::Type::kBitmap3;
-                info_texture.bitmap.data = data;
-                info_texture.bitmap.width = width;
-                info_texture.bitmap.height = height;
-                info_texture.bitmap.to_uv = {};
-                local::config.textures.push_back(info_texture);
+                TextureData data_texture;
+                data_texture.type = TextureType::kBitmap;
+                data_texture.bitmap.data = data;
+                data_texture.bitmap.width = width;
+                data_texture.bitmap.height = height;
+                data_texture.bitmap.channel = 3;
+                data_texture.bitmap.to_uv = {};
+                local::config.textures.push_back(data_texture);
 
-                Emitter::Info info;
-                info.type = Emitter::Type::kEnvMap;
+                EmitterInfo info;
+                info.type = EmitterType::kEnvMap;
                 info.envmap.id_radiance = id_texture;
                 info.envmap.to_world = {};
                 local::config.emitters.push_back(info);
@@ -1318,8 +1305,8 @@ void element_parser::ReadEmitter(const pugi::xml_node &emitter_node)
                 basic_parser::ReadFloat(emitter_node, {"scale"}, 1.0f);
             int width_target = static_cast<int>(
                 local::config.camera.width * 360 / local::config.camera.fov_x);
-            Emitter::Info info;
-            info.type = Emitter::Type::kEnvMap;
+            EmitterInfo info;
+            info.type = EmitterType::kEnvMap;
             info.envmap.id_radiance =
                 ReadBitmap(local::current_directory + filename, filename, gamma,
                            scale, &width_target);
@@ -1330,8 +1317,8 @@ void element_parser::ReadEmitter(const pugi::xml_node &emitter_node)
         }
         case "constant"_hash:
         {
-            Emitter::Info info;
-            info.type = Emitter::Type::kConstant;
+            EmitterInfo info;
+            info.type = EmitterType::kConstant;
             info.constant.radiance =
                 basic_parser::ReadVec3(emitter_node, {"radiance"}, Vec3(1));
             local::config.emitters.push_back(info);

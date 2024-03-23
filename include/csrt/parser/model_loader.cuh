@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "../renderer.cuh"
+#include "../renderer/renderer.cuh"
 
 namespace csrt
 {

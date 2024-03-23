@@ -1,135 +1,137 @@
-#include "csrt/renderer/emitter.cuh"
+#include "csrt/renderer/emitters/emitter.cuh"
 
 namespace csrt
 {
 
-QUALIFIER_D_H Emitter::Data::Data()
-    : type(Emitter::Type::kNone), point{}, spot{}, directional{}, sun{},
-      envmap{}, constant{}
+QUALIFIER_D_H EmitterInfo::EmitterInfo()
+    : type(EmitterType::kNone), point{}, spot{}, directional{}, sun{}, envmap{},
+      constant{}
 {
 }
 
-QUALIFIER_D_H Emitter::Data::Data(const Emitter::Data &info) : type(info.type)
+QUALIFIER_D_H EmitterInfo::EmitterInfo(const EmitterInfo &info)
+    : type(info.type)
 {
     switch (info.type)
     {
-    case Emitter::Type::kPoint:
+    case EmitterType::kPoint:
         point = info.point;
         break;
-    case Emitter::Type::kSpot:
+    case EmitterType::kSpot:
         spot = info.spot;
         break;
-    case Emitter::Type::kDirectional:
+    case EmitterType::kDirectional:
         directional = info.directional;
         break;
-    case Emitter::Type::kSun:
+    case EmitterType::kSun:
         sun = info.sun;
         break;
-    case Emitter::Type::kEnvMap:
+    case EmitterType::kEnvMap:
         envmap = info.envmap;
         break;
-    case Emitter::Type::kConstant:
+    case EmitterType::kConstant:
         constant = info.constant;
         break;
     }
 }
 
-QUALIFIER_D_H void Emitter::Data::operator=(const Emitter::Data &info)
+// QUALIFIER_D_H void EmitterInfo::operator=(const EmitterInfo &info)
+// {
+//     type = info.type;
+//     switch (info.type)
+//     {
+//     case EmitterType::kPoint:
+//         point = info.point;
+//         break;
+//     case EmitterType::kSpot:
+//         spot = info.spot;
+//         break;
+//     case EmitterType::kDirectional:
+//         directional = info.directional;
+//         break;
+//     case EmitterType::kSun:
+//         sun = info.sun;
+//         break;
+//     case EmitterType::kEnvMap:
+//         envmap = info.envmap;
+//         break;
+//     case EmitterType::kConstant:
+//         constant = info.constant;
+//         break;
+//     }
+// }
+
+QUALIFIER_D_H EmitterData::EmitterData()
+    : type(EmitterType::kNone), point{}, spot{}, directional{}, sun{}, envmap{},
+      constant{}
 {
-    type = info.type;
-    switch (info.type)
+}
+
+// QUALIFIER_D_H EmitterData::EmitterData(const EmitterData &info)
+//     : type(info.type)
+// {
+//     switch (info.type)
+//     {
+//     case EmitterType::kPoint:
+//         point = info.point;
+//         break;
+//     case EmitterType::kSpot:
+//         spot = info.spot;
+//         break;
+//     case EmitterType::kDirectional:
+//         directional = info.directional;
+//         break;
+//     case EmitterType::kSun:
+//         sun = info.sun;
+//         break;
+//     case EmitterType::kEnvMap:
+//         envmap = info.envmap;
+//         break;
+//     case EmitterType::kConstant:
+//         constant = info.constant;
+//         break;
+//     }
+// }
+
+QUALIFIER_D_H void EmitterData::operator=(const EmitterData &data)
+{
+    type = data.type;
+    switch (data.type)
     {
-    case Emitter::Type::kPoint:
-        point = info.point;
+    case EmitterType::kPoint:
+        point = data.point;
         break;
-    case Emitter::Type::kSpot:
-        spot = info.spot;
+    case EmitterType::kSpot:
+        spot = data.spot;
         break;
-    case Emitter::Type::kDirectional:
-        directional = info.directional;
+    case EmitterType::kDirectional:
+        directional = data.directional;
         break;
-    case Emitter::Type::kSun:
-        sun = info.sun;
+    case EmitterType::kSun:
+        sun = data.sun;
         break;
-    case Emitter::Type::kEnvMap:
-        envmap = info.envmap;
+    case EmitterType::kEnvMap:
+        envmap = data.envmap;
         break;
-    case Emitter::Type::kConstant:
-        constant = info.constant;
+    case EmitterType::kConstant:
+        constant = data.constant;
         break;
     }
 }
 
-QUALIFIER_D_H Emitter::Info::Info()
-    : type(Emitter::Type::kNone), point{}, spot{}, directional{}, sun{},
-      envmap{}, constant{}
-{
-}
+QUALIFIER_D_H Emitter::Emitter() : id_(kInvalidId), data_{} {}
 
-QUALIFIER_D_H Emitter::Info::Info(const Emitter::Info &info) : type(info.type)
-{
-    switch (info.type)
-    {
-    case Emitter::Type::kPoint:
-        point = info.point;
-        break;
-    case Emitter::Type::kSpot:
-        spot = info.spot;
-        break;
-    case Emitter::Type::kDirectional:
-        directional = info.directional;
-        break;
-    case Emitter::Type::kSun:
-        sun = info.sun;
-        break;
-    case Emitter::Type::kEnvMap:
-        envmap = info.envmap;
-        break;
-    case Emitter::Type::kConstant:
-        constant = info.constant;
-        break;
-    }
-}
-
-QUALIFIER_D_H void Emitter::Info::operator=(const Emitter::Info &info)
-{
-    type = info.type;
-    switch (info.type)
-    {
-    case Emitter::Type::kPoint:
-        point = info.point;
-        break;
-    case Emitter::Type::kSpot:
-        spot = info.spot;
-        break;
-    case Emitter::Type::kDirectional:
-        directional = info.directional;
-        break;
-    case Emitter::Type::kSun:
-        sun = info.sun;
-        break;
-    case Emitter::Type::kEnvMap:
-        envmap = info.envmap;
-        break;
-    case Emitter::Type::kConstant:
-        constant = info.constant;
-        break;
-    }
-}
-
-QUALIFIER_D_H Emitter::Emitter() : id_(kInvalidId), tlas_(nullptr), data_{} {}
-
-QUALIFIER_D_H Emitter::Emitter(const uint32_t id, const Emitter::Info &info,
-                               TLAS *tlas, Texture *texture_buffer)
-    : id_(id), tlas_(tlas)
+QUALIFIER_D_H Emitter::Emitter(const uint32_t id, const EmitterInfo &info,
+                               Texture *texture_buffer)
+    : id_(id)
 {
     data_.type = info.type;
     switch (info.type)
     {
-    case Emitter::Type::kPoint:
+    case EmitterType::kPoint:
         data_.point = info.point;
         break;
-    case Emitter::Type::kSpot:
+    case EmitterType::kSpot:
         data_.spot.cutoff_angle = info.spot.cutoff_angle;
         data_.spot.cos_cutoff_angle = cosf(info.spot.cutoff_angle);
         data_.spot.uv_factor = tanf(info.spot.cutoff_angle);
@@ -144,73 +146,103 @@ QUALIFIER_D_H Emitter::Emitter(const uint32_t id, const Emitter::Info &info,
         data_.spot.position = TransformPoint(info.spot.to_world, {0, 0, 0});
         data_.spot.to_local = info.spot.to_world.Inverse();
         break;
-    case Emitter::Type::kDirectional:
+    case EmitterType::kDirectional:
         data_.directional = info.directional;
         break;
-    case Emitter::Type::kSun:
+    case EmitterType::kSun:
         data_.sun.cos_cutoff_angle = info.sun.cos_cutoff_angle;
         data_.sun.texture = texture_buffer + info.sun.id_texture;
         data_.sun.direction = info.sun.direction;
         data_.sun.radiance = info.sun.radiance;
         break;
-    case Emitter::Type::kEnvMap:
+    case EmitterType::kEnvMap:
         data_.envmap.radiance = texture_buffer + info.envmap.id_radiance;
         data_.envmap.to_world = info.envmap.to_world;
         data_.envmap.to_local = info.envmap.to_world.Inverse();
         break;
-    case Emitter::Type::kConstant:
+    case EmitterType::kConstant:
         data_.constant = info.constant;
     }
 }
 
-QUALIFIER_D_H Emitter::SampleRec
-Emitter::Sample(const Vec3 &origin, const float xi_0, const float xi_1) const
+QUALIFIER_D_H void Emitter::InitEnvMap(const int width, const int height,
+                                       const float normalization, float *pixels)
+{
+    data_.envmap.width = width;
+    data_.envmap.height = height;
+    data_.envmap.normalization = normalization;
+    data_.envmap.cdf_cols = pixels;
+    data_.envmap.cdf_rows = pixels + height + 1;
+    data_.envmap.weight_rows = pixels + (height + 1) + height;
+}
+
+QUALIFIER_D_H EmitterSampleRec Emitter::Sample(const Vec3 &origin,
+                                               const float xi_0,
+                                               const float xi_1) const
+{
+    EmitterSampleRec rec;
+    switch (data_.type)
+    {
+    case EmitterType::kPoint:
+        SamplePointLight(data_.point, origin, xi_0, xi_1, &rec);
+        break;
+    case EmitterType::kSpot:
+        SampleSpotLight(data_.spot, origin, xi_0, xi_1, &rec);
+        break;
+    case EmitterType::kDirectional:
+        SampleDirectionalLight(data_.directional, origin, xi_0, xi_1, &rec);
+        break;
+    case EmitterType::kSun:
+        SampleSun(data_.sun, origin, xi_0, xi_1, &rec);
+        break;
+    case EmitterType::kEnvMap:
+        SampleEnvMap(data_.envmap, origin, xi_0, xi_1, &rec);
+        break;
+    case EmitterType::kConstant:
+        SampleConstantLight(data_.constant, origin, xi_0, xi_1, &rec);
+        break;
+    }
+    return rec;
+}
+
+QUALIFIER_D_H Vec3 Emitter::Evaluate(const EmitterSampleRec &rec) const
 {
     switch (data_.type)
     {
-    case Emitter::Type::kPoint:
-        return SamplePoint(origin, xi_0, xi_1);
+    case EmitterType::kPoint:
+        return EvaluatePointLight(data_.point, &rec);
         break;
-    case Emitter::Type::kSpot:
-        return SampleSpot(origin, xi_0, xi_1);
+    case EmitterType::kSpot:
+        return EvaluateSpotLight(data_.spot, &rec);
         break;
-    case Emitter::Type::kDirectional:
-        return {true, true, kMaxFloat, data_.directional.direction};
+    case EmitterType::kDirectional:
+        return EvaluateDirectionalLight(data_.directional, &rec);
         break;
-    case Emitter::Type::kSun:
-        return SampleSun(origin, xi_0, xi_1);
+    case EmitterType::kSun:
+        return EvaluateSun(data_.sun, &rec);
         break;
-    case Emitter::Type::kEnvMap:
-        return SampleEnvMap(origin, xi_0, xi_1);
+    case EmitterType::kEnvMap:
+        return EvaluateEnvMap(data_.envmap, &rec);
         break;
-    case Emitter::Type::kConstant:
-        return {true, false, kMaxFloat, SampleSphereUniform(xi_0, xi_1)};
+    case EmitterType::kConstant:
+        return EvaluateConstantLight(data_.constant, &rec);
         break;
     }
     return {};
 }
 
-QUALIFIER_D_H Vec3 csrt::Emitter::Evaluate(const SampleRec &rec) const
+QUALIFIER_D_H Vec3 Emitter::Evaluate(const Vec3 &look_dir) const
 {
     switch (data_.type)
     {
-    case Emitter::Type::kPoint:
-        return data_.point.intensity;
+    case EmitterType::kSun:
+        return EvaluateSun(data_.sun, look_dir);
         break;
-    case Emitter::Type::kSpot:
-        return EvaluateSpot(rec);
+    case EmitterType::kEnvMap:
+        return EvaluateEnvMap(data_.envmap, look_dir);
         break;
-    case Emitter::Type::kDirectional:
-        return data_.directional.radiance;
-        break;
-    case Emitter::Type::kSun:
-        return data_.sun.radiance;
-        break;
-    case Emitter::Type::kEnvMap:
-        return EvaluateEnvMap(rec);
-        break;
-    case Emitter::Type::kConstant:
-        return data_.constant.radiance;
+    case EmitterType::kConstant:
+        return EvaluateConstantLight(data_.constant, look_dir);
         break;
     }
     return {};
@@ -220,89 +252,14 @@ QUALIFIER_D_H float Emitter::Pdf(const Vec3 &look_dir) const
 {
     switch (data_.type)
     {
-    case Emitter::Type::kEnvMap:
-        return PdfEnvMap(look_dir);
+    case EmitterType::kEnvMap:
+        return PdfEnvMap(data_.envmap, look_dir);
         break;
-    case Emitter::Type::kConstant:
-        return k1Div4Pi;
+    case EmitterType::kConstant:
+        return PdfConstantLight(data_.constant, look_dir);
         break;
     }
     return 0;
-}
-
-QUALIFIER_D_H Vec3 Emitter::Evaluate(const Vec3 &look_dir) const
-{
-    switch (data_.type)
-    {
-    case Emitter::Type::kSun:
-        return EvaluateSun(look_dir);
-        break;
-    case Emitter::Type::kEnvMap:
-        return EvaluateEnvMap(look_dir);
-        break;
-    case Emitter::Type::kConstant:
-        return data_.constant.radiance;
-        break;
-    }
-    return {};
-}
-
-QUALIFIER_D_H Emitter::SampleRec Emitter::SamplePoint(const Vec3 &origin,
-                                                      const float xi_0,
-                                                      const float xi_1) const
-{
-    const Vec3 vec = origin - data_.point.position;
-    return {true, true, Length(vec), Normalize(vec)};
-}
-
-QUALIFIER_D_H Emitter::SampleRec Emitter::SampleSpot(const Vec3 &origin,
-                                                     const float xi_0,
-                                                     const float xi_1) const
-{
-    const Vec3 vec = origin - data_.spot.position;
-    const Vec3 wi = Normalize(vec),
-               dir_local = TransformVector(data_.spot.to_local, wi);
-    if (dir_local.z < data_.spot.cos_cutoff_angle)
-        return {};
-    else
-        return {true, true, Length(vec), wi};
-}
-
-QUALIFIER_D_H Emitter::SampleRec
-Emitter::SampleSun(const Vec3 &origin, const float xi_0, const float xi_1) const
-{
-    const Vec3 dir_local =
-        SampleConeUniform(data_.sun.cos_cutoff_angle, xi_0, xi_1);
-    return {true, true, kMaxFloat,
-            LocalToWorld(dir_local, data_.sun.direction)};
-}
-
-QUALIFIER_D_H Vec3 Emitter::EvaluateSpot(const SampleRec &rec) const
-{
-    const Vec3 dir = TransformVector(data_.spot.to_local, rec.wi);
-
-    Vec3 fall_off = {1.0f, 1.0f, 1.0f};
-    if (data_.spot.texture != nullptr)
-    {
-        const Vec2 texcoord = {
-            0.5f + 0.5f * dir.x / (dir.z * data_.spot.uv_factor),
-            0.5f + 0.5f * dir.y / (dir.z * data_.spot.uv_factor)};
-        fall_off *= data_.spot.texture->GetColor(texcoord);
-    }
-    if (dir.z < data_.spot.cos_beam_width)
-    {
-        fall_off *= (data_.spot.cutoff_angle - acosf(dir.z)) *
-                    data_.spot.transition_width_rcp;
-    }
-    return data_.spot.intensity * fall_off * Sqr(1.0f / rec.distance);
-}
-
-QUALIFIER_D_H Vec3 Emitter::EvaluateSun(const Vec3 &look_dir) const
-{
-    float phi = 0, theta = 0;
-    CartesianToSpherical(look_dir, &theta, &phi, nullptr);
-    const Vec2 texcoord = {phi * k1Div2Pi, theta * k1DivPi};
-    return data_.sun.texture->GetColor(texcoord);
 }
 
 } // namespace csrt

@@ -18,9 +18,9 @@ struct Hit
     Vec3 bitangent;
 
     QUALIFIER_D_H Hit();
-    QUALIFIER_D_H Hit(const bool _id_primitve, const Vec2 &_texcoord,
+    QUALIFIER_D_H Hit(const uint32_t _id_primitve, const Vec2 &_texcoord,
                       const Vec3 &_position, const Vec3 &_normal);
-    QUALIFIER_D_H Hit(const bool _id_primitve, const bool _inside,
+    QUALIFIER_D_H Hit(const uint32_t _id_primitve, const bool _inside,
                       const Vec2 &_texcoord, const Vec3 &_position,
                       const Vec3 &_normal, const Vec3 &_tangent,
                       const Vec3 &_bitangent);

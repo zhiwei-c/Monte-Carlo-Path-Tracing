@@ -56,9 +56,9 @@ void image_io::Write(const int width, const int height,
     }
 }
 
-void image_io::Read(const std::string &filename, const float gamma,
-                    const int *width_max, int *width, int *height, int *channel,
-                    std::vector<float> *data)
+float *image_io::Read(const std::string &filename, const float gamma,
+                      const int *width_max, int *width, int *height,
+                      int *channel)
 {
     const std::set<std::string> support_format = {
         "EXR", "exr", "jpg", "jpeg", "JPG", "JPEG", "png", "PNG",
@@ -72,14 +72,15 @@ void image_io::Read(const std::string &filename, const float gamma,
         exit(1);
     }
 
-    float *raw_data = nullptr;
+    float *data = nullptr;
+
     switch (Hash(suffix.c_str()))
     {
     case "exr"_hash:
     case "EXR"_hash:
     {
         const char *err = nullptr;
-        if (LoadEXR(&raw_data, width, height, filename.c_str(), &err) !=
+        if (LoadEXR(&data, width, height, filename.c_str(), &err) !=
             TINYEXR_SUCCESS)
         {
             fprintf(stderr, "[error] load image '%s' failed.",
@@ -95,7 +96,7 @@ void image_io::Read(const std::string &filename, const float gamma,
         {
             int num_component = *width * *height * *channel;
             for (int i = 0; i < num_component; ++i)
-                raw_data[i] = std::pow(raw_data[i], gamma);
+                data[i] = std::pow(data[i], gamma);
         }
         *channel = 4;
         break;
@@ -103,8 +104,8 @@ void image_io::Read(const std::string &filename, const float gamma,
     case "HDR"_hash:
     case "hdr"_hash:
     {
-        raw_data = stbi_loadf(filename.c_str(), width, height, channel, 0);
-        if (raw_data == nullptr)
+        data = stbi_loadf(filename.c_str(), width, height, channel, 0);
+        if (data == nullptr)
         {
             fprintf(stderr, "[error] load image '%s' failed.",
                     filename.c_str());
@@ -115,16 +116,15 @@ void image_io::Read(const std::string &filename, const float gamma,
         {
             for (int i = 0; i < num_component; ++i)
             {
-                raw_data[i] =
-                    raw_data[i] <= 0.04045f
-                        ? raw_data[i] / 12.92f
-                        : std::pow((raw_data[i] + 0.055f) / 1.055f, 2.4f);
+                data[i] = data[i] <= 0.04045f
+                              ? data[i] / 12.92f
+                              : std::pow((data[i] + 0.055f) / 1.055f, 2.4f);
             }
         }
         else if (gamma != 0.0f)
         {
             for (int i = 0; i < num_component; ++i)
-                raw_data[i] = std::pow(raw_data[i], gamma);
+                data[i] = std::pow(data[i], gamma);
         }
         break;
     }
@@ -139,23 +139,22 @@ void image_io::Read(const std::string &filename, const float gamma,
             exit(1);
         }
         int num_component = *width * *height * *channel;
-        raw_data = new float[num_component];
+        data = new float[num_component];
         for (int i = 0; i < num_component; ++i)
-            raw_data[i] = static_cast<int>(raw_data_uc[i]) / 255.0f;
+            data[i] = static_cast<int>(raw_data_uc[i]) / 255.0f;
         if (gamma == 0.0f || gamma == -1.0f)
         {
             for (int i = 0; i < num_component; ++i)
             {
-                raw_data[i] =
-                    raw_data[i] <= 0.04045f
-                        ? raw_data[i] / 12.92f
-                        : std::pow((raw_data[i] + 0.055f) / 1.055f, 2.4f);
+                data[i] = data[i] <= 0.04045f
+                              ? data[i] / 12.92f
+                              : std::pow((data[i] + 0.055f) / 1.055f, 2.4f);
             }
         }
         else
         {
             for (int i = 0; i < num_component; ++i)
-                raw_data[i] = std::pow(raw_data[i], gamma);
+                data[i] = std::pow(data[i], gamma);
         }
         stbi_image_free(raw_data_uc);
         break;
@@ -166,16 +165,14 @@ void image_io::Read(const std::string &filename, const float gamma,
     {
         int height_target = *width_max * *height / *width;
         float *target_data = new float[*width_max * height_target * *channel];
-        Resize(raw_data, *width, *height, 0, target_data, *width_max,
-               height_target, 0, *channel);
-        raw_data = target_data;
+        Resize(data, *width, *height, 0, target_data, *width_max, height_target,
+               0, *channel);
+        data = target_data;
         *width = *width_max;
         *height = height_target;
     }
 
-    *data =
-        std::vector<float>(raw_data, raw_data + *width * *height * *channel);
-    SAFE_DELETE_ARRAY(raw_data);
+    return data;
 }
 
 void image_io::Resize(const float *input_pixels, int input_w, int input_h,

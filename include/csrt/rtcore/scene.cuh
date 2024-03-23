@@ -3,8 +3,8 @@
 #include <vector>
 
 #include "../utils.cuh"
-#include "accel/tlas.cuh"
 #include "accel/bvh_builder.cuh"
+#include "accel/tlas.cuh"
 #include "instance.cuh"
 #include "primitives/primitive.cuh"
 
@@ -34,7 +34,7 @@ private:
     void CommitMeshes(const uint32_t id);
 
     void SetupMeshes(Instance::Info::Meshes info_meshes,
-                     std::vector<Primitive::Data> *list_data_primitve,
+                     std::vector<PrimitiveData> *list_data_primitve,
                      std::vector<float> *areas);
 
     BackendType backend_type_;

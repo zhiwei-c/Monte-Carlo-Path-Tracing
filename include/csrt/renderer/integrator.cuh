@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../rtcore.cuh"
+#include "../rtcore/scene.cuh"
 #include "../tensor.cuh"
 #include "../utils.cuh"
-#include "bsdf.cuh"
-#include "emitter.cuh"
+#include "bsdfs/bsdf.cuh"
+#include "emitters/emitter.cuh"
 
 namespace csrt
 {
@@ -30,7 +30,7 @@ public:
         uint32_t id_envmap = kInvalidId;
 
         // 场景中的所有BSDF
-        BSDF *bsdfs = nullptr;
+        Bsdf *bsdfs = nullptr;
 
         // 场景中的所有实例
         Instance *instances = nullptr;
@@ -69,18 +69,16 @@ public:
                              uint32_t *seed) const;
 
 private:
-    QUALIFIER_D_H Hit TraceRay(Ray *ray, uint32_t *seed) const;
-    QUALIFIER_D_H bool TraceRay1(Ray *ray, uint32_t *seed) const;
-
     QUALIFIER_D_H Vec3 EvaluateDirectLight(const Hit &hit, const Vec3 &wo,
                                            uint32_t *seed) const;
-    QUALIFIER_D_H BSDF::SampleRec EvaluateRay(const Vec3 &wi, const Vec3 &wo,
-                                              const Hit &hit, BSDF *bsdf) const;
-    QUALIFIER_D_H BSDF::SampleRec SampleRay(const Vec3 &wo, const Hit &hit,
-                                            BSDF *bsdf, uint32_t *seed) const;
+    QUALIFIER_D_H BsdfSampleRec EvaluateRay(const Vec3 &wi, const Vec3 &wo,
+                                              const Hit &hit, Bsdf *bsdf) const;
+    QUALIFIER_D_H BsdfSampleRec SampleRay(const Vec3 &wo, const Hit &hit,
+                                            Bsdf *bsdf, uint32_t *seed) const;
 
     uint32_t size_cdf_area_light_;
     float pdf_rr_rcp_;
     Data data_;
 };
+
 } // namespace csrt

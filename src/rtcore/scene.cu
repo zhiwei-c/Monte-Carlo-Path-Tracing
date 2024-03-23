@@ -210,13 +210,11 @@ void Scene::CommitSphere(const uint32_t id)
             list_info_instance_[id].sphere;
         const Mat4 to_world = list_info_instance_[id].to_world;
 
-        Primitive::Data data_primitive;
-        data_primitive.type = Primitive::Type::kSphere;
+        PrimitiveData data_primitive;
+        data_primitive.type = PrimitiveType::kSphere;
         data_primitive.sphere.radius = info_sphere.radius;
         data_primitive.sphere.center = info_sphere.center;
         data_primitive.sphere.to_world = to_world;
-        data_primitive.sphere.normal_to_world = to_world.Transpose().Inverse();
-        data_primitive.sphere.to_local = to_world.Inverse();
 
         Primitive *primitives =
             MallocArray<Primitive>(backend_type_, num_primitive_ + 1);
@@ -315,7 +313,7 @@ void Scene::CommitMeshes(const uint32_t id)
 
     try
     {
-        std::vector<Primitive::Data> list_data_primitve;
+        std::vector<PrimitiveData> list_data_primitve;
         std::vector<float> areas;
         SetupMeshes(info_meshes, &list_data_primitve, &areas);
         const uint32_t num_primitive_local =
@@ -357,21 +355,20 @@ void Scene::CommitMeshes(const uint32_t id)
 }
 
 void Scene::SetupMeshes(Instance::Info::Meshes info_meshes,
-                        std::vector<Primitive::Data> *list_data_primitve,
+                        std::vector<PrimitiveData> *list_data_primitve,
                         std::vector<float> *areas)
 {
     try
     {
         const uint32_t num_primitive_local =
             static_cast<uint32_t>(info_meshes.indices.size());
-        *list_data_primitve = std::vector<Primitive::Data>(num_primitive_local);
+        *list_data_primitve = std::vector<PrimitiveData>(num_primitive_local);
         *areas = std::vector<float>(num_primitive_local);
         for (uint32_t i = 0; i < num_primitive_local; ++i)
         {
-            (*list_data_primitve)[i].type = Primitive::Type::kTriangle;
+            (*list_data_primitve)[i].type = PrimitiveType::kTriangle;
             const Uvec3 indices = info_meshes.indices[i];
-            Primitive::Data::Triangle &triangle =
-                (*list_data_primitve)[i].triangle;
+            TriangleData &triangle = (*list_data_primitve)[i].triangle;
 
             if (info_meshes.texcoords.empty())
             {
@@ -388,9 +385,9 @@ void Scene::SetupMeshes(Instance::Info::Meshes info_meshes,
             for (int j = 0; j < 3; ++j)
                 triangle.positions[j] = info_meshes.positions[indices[j]];
 
-            triangle.v0v1 = triangle.positions[1] - triangle.positions[0];
-            triangle.v0v2 = triangle.positions[2] - triangle.positions[0];
-            const Vec3 normal_geom = Cross(triangle.v0v1, triangle.v0v2);
+            const Vec3 v0v1 = triangle.positions[1] - triangle.positions[0],
+                       v0v2 = triangle.positions[2] - triangle.positions[0];
+            const Vec3 normal_geom = Cross(v0v1, v0v2);
             (*areas)[i] = Length(normal_geom);
 
             if (info_meshes.normals.empty())
@@ -413,9 +410,8 @@ void Scene::SetupMeshes(Instance::Info::Meshes info_meshes,
                                triangle.texcoords[2] - triangle.texcoords[0];
                 const float r = 1.0f / (uv_delta_01.y * uv_delta_02.x -
                                         uv_delta_01.x * uv_delta_02.y);
-                const Vec3 tangent = Normalize((uv_delta_01.y * triangle.v0v2 -
-                                                uv_delta_02.y * triangle.v0v1) *
-                                               r);
+                const Vec3 tangent = Normalize(
+                    (uv_delta_01.y * v0v2 - uv_delta_02.y * v0v1) * r);
                 for (int j = 0; j < 3; ++j)
                 {
                     triangle.bitangents[j] =

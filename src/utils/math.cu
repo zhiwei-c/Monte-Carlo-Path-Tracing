@@ -148,6 +148,36 @@ QUALIFIER_D_H float SmithG1Ggx(const float roughness_u, const float roughness_v,
     return 2.0f / (1.0f + sqrtf(1.0f + tan_theta_2));
 }
 
+QUALIFIER_D_H float AverageFresnel(const float eta)
+{
+    if (eta < 1.0)
+    {
+        /* Fit by Egan and Hilgeman (1973). Works reasonably well for
+            "normal" IOR values (<2).
+            Max rel. error in 1.0 - 1.5 : 0.1%
+            Max rel. error in 1.5 - 2   : 0.6%
+            Max rel. error in 2.0 - 5   : 9.5%
+        */
+        return -1.4399f * Sqr(eta) + 0.7099f * eta + 0.6681f + 0.0636f / eta;
+    }
+    else
+    {
+        /* Fit by d'Eon and Irving (2011)
+
+            Maintains a good accuracy even for unrealistic IOR values.
+
+            Max rel. error in 1.0 - 2.0   : 0.1%
+            Max rel. error in 2.0 - 10.0  : 0.2%
+        */
+        float inv_eta = 1.0f / eta, inv_eta_2 = inv_eta * inv_eta,
+              inv_eta_3 = inv_eta_2 * inv_eta, inv_eta_4 = inv_eta_3 * inv_eta,
+              inv_eta_5 = inv_eta_4 * inv_eta;
+        return 0.919317f - 3.4793f * inv_eta + 6.75335f * inv_eta_2 -
+               7.80989f * inv_eta_3 + 4.98554f * inv_eta_4 -
+               1.36881f * inv_eta_5;
+    }
+}
+
 QUALIFIER_D_H uint32_t BinarySearch(const uint32_t num, float *cdf,
                                     const float target)
 {

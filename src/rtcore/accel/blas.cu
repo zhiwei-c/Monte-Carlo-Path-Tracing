@@ -1,5 +1,7 @@
 #include "csrt/rtcore/accel/blas.cuh"
 
+#include "csrt/renderer/bsdfs/bsdf.cuh"
+
 namespace csrt
 {
 
@@ -13,7 +15,8 @@ QUALIFIER_D_H BLAS::BLAS(const uint64_t offset_node, const BvhNode *node_buffer,
 {
 }
 
-QUALIFIER_D_H void BLAS::Intersect(Ray *ray, Hit *hit) const
+QUALIFIER_D_H void BLAS::Intersect(Bsdf *bsdf, uint32_t *seed, Ray *ray,
+                                   Hit *hit) const
 {
     uint32_t stack[65];
     stack[0] = 0;
@@ -27,7 +30,7 @@ QUALIFIER_D_H void BLAS::Intersect(Ray *ray, Hit *hit) const
         {
             if (node->leaf)
             {
-                primitives_[node->id_object].Intersect(ray, hit);
+                primitives_[node->id_object].Intersect(bsdf, seed, ray, hit);
                 break;
             }
             else
@@ -38,6 +41,39 @@ QUALIFIER_D_H void BLAS::Intersect(Ray *ray, Hit *hit) const
             }
         }
     }
+}
+
+QUALIFIER_D_H bool BLAS::IntersectAny(Bsdf *bsdf, uint32_t *seed,
+                                      Ray *ray) const
+{
+    uint32_t stack[65];
+    stack[0] = 0;
+    int ptr = 0;
+    const BvhNode *node = nullptr;
+    while (ptr >= 0)
+    {
+        node = nodes_ + stack[ptr];
+        --ptr;
+        while (node->aabb.Intersect(ray))
+        {
+            if (node->leaf)
+            {
+                if (primitives_[node->id_object].Intersect(bsdf, seed, ray,
+                                                           nullptr))
+                    return true;
+                else
+                    break;
+            }
+            else
+            {
+                ++ptr;
+                stack[ptr] = node->id_right;
+                node = nodes_ + node->id_left;
+            }
+        }
+    }
+
+    return false;
 }
 
 QUALIFIER_D_H Hit BLAS::Sample(const float xi_0, const float xi_1,

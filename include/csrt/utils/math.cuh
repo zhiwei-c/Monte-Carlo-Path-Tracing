@@ -88,6 +88,15 @@ QUALIFIER_D_H float SmithG1Ggx(const float roughness, const Vec3 &v,
 QUALIFIER_D_H float SmithG1Ggx(const float roughness_u, const float roughness_v,
                                const Vec3 &v, const Vec3 &h);
 
+QUALIFIER_D_H float AverageFresnel(const float eta);
+
+template <typename T>
+QUALIFIER_D_H T FresnelSchlick(const float cos_theta, const T &relectivity)
+{
+    return (1.0f - relectivity) * static_cast<float>(pow(1.0f - cos_theta, 5)) +
+           relectivity;
+}
+
 template <typename T>
 QUALIFIER_D_H T Sqr(const T &t)
 {

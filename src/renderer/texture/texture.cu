@@ -1,119 +1,62 @@
-#include "csrt/renderer/texture.cuh"
+#include "csrt/renderer/textures/texture.cuh"
 
 #include <exception>
 
 namespace csrt
 {
 
-QUALIFIER_D_H Texture::Data::Data()
-    : type(Texture::Type::kNone), constant{}, checkerboard{}, bitmap{}
+QUALIFIER_D_H TextureData::TextureData()
+    : type(TextureType::kNone), constant{}, checkerboard{}, bitmap{}
 {
 }
 
-QUALIFIER_D_H Texture::Data::Data(const Texture::Data &info) : type(info.type)
+QUALIFIER_D_H TextureData::TextureData(const TextureData &data)
+    : type(data.type)
 {
-    switch (info.type)
+    switch (data.type)
     {
-    case Texture::Type::kNone:
+    case TextureType::kNone:
         break;
-    case Texture::Type::kConstant:
-        constant = info.constant;
+    case TextureType::kConstant:
+        constant = data.constant;
         break;
-    case Texture::Type::kCheckerboard:
-        checkerboard = info.checkerboard;
+    case TextureType::kCheckerboard:
+        checkerboard = data.checkerboard;
         break;
-    case Texture::Type::kBitmap1:
-    case Texture::Type::kBitmap3:
-    case Texture::Type::kBitmap4:
-        bitmap = info.bitmap;
+    case TextureType::kBitmap:
+        bitmap = data.bitmap;
         break;
     }
 }
 
-QUALIFIER_D_H void Texture::Data::operator=(const Texture::Data &info)
+QUALIFIER_D_H void TextureData::operator=(const TextureData &data)
 {
-    type = info.type;
-    switch (info.type)
+    type = data.type;
+    switch (data.type)
     {
-    case Texture::Type::kNone:
+    case TextureType::kNone:
         break;
-    case Texture::Type::kConstant:
-        constant = info.constant;
+    case TextureType::kConstant:
+        constant = data.constant;
         break;
-    case Texture::Type::kCheckerboard:
-        checkerboard = info.checkerboard;
+    case TextureType::kCheckerboard:
+        checkerboard = data.checkerboard;
         break;
-    case Texture::Type::kBitmap1:
-    case Texture::Type::kBitmap3:
-    case Texture::Type::kBitmap4:
-        bitmap = info.bitmap;
-        break;
-    }
-}
-
-Texture::Info::Info()
-    : type(Texture::Type::kNone), constant{}, checkerboard{}, bitmap{}
-{
-}
-
-Texture::Info::Info(const Texture::Info &info) : type(info.type)
-{
-    switch (info.type)
-    {
-    case Texture::Type::kNone:
-        break;
-    case Texture::Type::kConstant:
-        constant = info.constant;
-        break;
-    case Texture::Type::kCheckerboard:
-        checkerboard = info.checkerboard;
-        break;
-    case Texture::Type::kBitmap1:
-    case Texture::Type::kBitmap3:
-    case Texture::Type::kBitmap4:
-        bitmap = info.bitmap;
-        break;
-    default:
-        throw std::exception("unknow texture type.");
-        break;
-    }
-}
-
-void Texture::Info::operator=(const Texture::Info &info)
-{
-    type = info.type;
-    switch (info.type)
-    {
-    case Texture::Type::kNone:
-        break;
-    case Texture::Type::kConstant:
-        constant = info.constant;
-        break;
-    case Texture::Type::kCheckerboard:
-        checkerboard = info.checkerboard;
-        break;
-    case Texture::Type::kBitmap1:
-    case Texture::Type::kBitmap3:
-    case Texture::Type::kBitmap4:
-        bitmap = info.bitmap;
-        break;
-    default:
-        throw std::exception("unknow texture type.");
+    case TextureType::kBitmap:
+        bitmap = data.bitmap;
         break;
     }
 }
 
 QUALIFIER_D_H Texture::Texture() : id_(kInvalidId), data_{} {}
 
-QUALIFIER_D_H Texture::Texture(const uint32_t id, const Texture::Data &data,
-                               const uint64_t offset_data)
+QUALIFIER_D_H Texture::Texture(const uint32_t id, const TextureData &data,
+                               const uint64_t pixel_offset)
     : id_(id), data_(data)
 {
-    if (data_.type == Texture::Type::kBitmap1 ||
-        data_.type == Texture::Type::kBitmap3 ||
-        data_.type == Texture::Type::kBitmap4)
+    if (data_.type == TextureType::kBitmap)
     {
-        data_.bitmap.data = data_.bitmap.data + offset_data;
+        data_.bitmap.data = data_.bitmap.data + pixel_offset;
     }
 }
 
@@ -121,20 +64,14 @@ QUALIFIER_D_H Vec3 Texture::GetColor(const Vec2 &texcoord) const
 {
     switch (data_.type)
     {
-    case Texture::Type::kConstant:
-        return data_.constant.color;
+    case TextureType::kConstant:
+        return GetColorConstantTexture(data_.constant, texcoord);
         break;
-    case Texture::Type::kCheckerboard:
-        return GetColorCheckerboard(texcoord);
+    case TextureType::kCheckerboard:
+        return GetColorCheckerboard(data_.checkerboard, texcoord);
         break;
-    case Texture::Type::kBitmap1:
-        return {GetColorBitmap1(texcoord)};
-        break;
-    case Texture::Type::kBitmap3:
-        return GetColorBitmap<3>(texcoord);
-        break;
-    case Texture::Type::kBitmap4:
-        return GetColorBitmap<4>(texcoord);
+    case TextureType::kBitmap:
+        return GetColorBitmap(data_.bitmap, texcoord);
         break;
     }
     return {};
@@ -144,20 +81,14 @@ QUALIFIER_D_H Vec2 Texture::GetGradient(const Vec2 &texcoord) const
 {
     switch (data_.type)
     {
-    case Texture::Type::kConstant:
-        return {};
+    case TextureType::kConstant:
+        return GetGradientConstantTexture(data_.constant, texcoord);
         break;
-    case Texture::Type::kCheckerboard:
-        return GetGradientCheckerboard(texcoord);
+    case TextureType::kCheckerboard:
+        return GetGradientCheckerboard(data_.checkerboard, texcoord);
         break;
-    case Texture::Type::kBitmap1:
-        return GetGradientBitmap1(texcoord);
-        break;
-    case Texture::Type::kBitmap3:
-        return GetGradientBitmap<3>(texcoord);
-        break;
-    case Texture::Type::kBitmap4:
-        return GetGradientBitmap<4>(texcoord);
+    case TextureType::kBitmap:
+        return GetGradientBitmap(data_.bitmap, texcoord);
         break;
     }
     return {};
@@ -168,14 +99,14 @@ QUALIFIER_D_H bool Texture::IsTransparent(const Vec2 &texcoord,
 {
     switch (data_.type)
     {
-    case Texture::Type::kConstant:
-        return data_.constant.color.x < RandomFloat(seed);
+    case TextureType::kConstant:
+        return IsTransparentConstantTexture(data_.constant, texcoord, seed);
         break;
-    case Texture::Type::kBitmap1:
-        return GetColorBitmap1(texcoord) < RandomFloat(seed);
+    case TextureType::kCheckerboard:
+        return IsTransparentCheckerboard(data_.checkerboard, texcoord, seed);
         break;
-    case Texture::Type::kBitmap4:
-        return IsTransparentBitmap4(texcoord, seed);
+    case TextureType::kBitmap:
+        return IsTransparentBitmap(data_.bitmap, texcoord, seed);
         break;
     }
     return false;

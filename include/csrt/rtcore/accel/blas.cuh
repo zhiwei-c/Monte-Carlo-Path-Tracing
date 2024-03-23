@@ -14,7 +14,9 @@ public:
                        const uint64_t offset_primitive,
                        const Primitive *primitive_buffer);
 
-    QUALIFIER_D_H void Intersect(Ray *ray, Hit *hit) const;
+    QUALIFIER_D_H void Intersect(Bsdf *bsdf, uint32_t *seed, Ray *ray,
+                                 Hit *hit) const;
+    QUALIFIER_D_H bool IntersectAny(Bsdf *bsdf, uint32_t *seed, Ray *ray) const;
     QUALIFIER_D_H Hit Sample(const float xi_0, const float xi_1,
                              const float xi_2) const;
 

@@ -3,7 +3,7 @@
 #include <string>
 
 #include "parser/parser.cuh"
-#include "renderer.cuh"
+#include "renderer/renderer.cuh"
 
 namespace csrt
 {

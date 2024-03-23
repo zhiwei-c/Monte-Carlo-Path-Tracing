@@ -169,9 +169,9 @@ RayTracer::RayTracer(const csrt::Config &config)
         std::vector<float> list_area_light_weight;
         for (size_t i = 0; i < config.instances.size(); ++i)
         {
-            const csrt::BSDF::Info info_bsdf =
+            const csrt::BsdfInfo info_bsdf =
                 config.bsdfs[config.instances[i].id_bsdf];
-            if (info_bsdf.type == csrt::BSDF::Type::kAreaLight)
+            if (info_bsdf.type == csrt::BsdfType::kAreaLight)
             {
                 map_id_area_light_instance.push_back(i);
                 list_area_light_weight.push_back(info_bsdf.area_light.weight);

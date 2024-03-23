@@ -5,48 +5,47 @@
 namespace csrt
 {
 
-QUALIFIER_D_H Primitive::Data::Data()
-    : type(Primitive::Type::kNone), triangle{}, sphere{}
+QUALIFIER_D_H PrimitiveData::PrimitiveData()
+    : type(PrimitiveType::kNone), triangle{}, sphere{}
 {
 }
 
-QUALIFIER_D_H Primitive::Data::Data(const Primitive::Data &Data)
-    : type(Data.type)
+QUALIFIER_D_H PrimitiveData::PrimitiveData(const PrimitiveData &data)
+    : type(data.type)
 {
-    switch (Data.type)
+    switch (data.type)
     {
-    case Primitive::Type::kNone:
+    case PrimitiveType::kNone:
         break;
-    case Primitive::Type::kTriangle:
-        triangle = Data.triangle;
+    case PrimitiveType::kTriangle:
+        triangle = data.triangle;
         break;
-    case Primitive::Type::kSphere:
-        sphere = Data.sphere;
+    case PrimitiveType::kSphere:
+        sphere = data.sphere;
         break;
     }
 }
 
-QUALIFIER_D_H void Primitive::Data::operator=(const Primitive::Data &Data)
+QUALIFIER_D_H void PrimitiveData::operator=(const PrimitiveData &data)
 {
-    type = Data.type;
-    switch (Data.type)
+    type = data.type;
+    switch (data.type)
     {
-    case Primitive::Type::kNone:
+    case PrimitiveType::kNone:
         break;
-    case Primitive::Type::kTriangle:
-        triangle = Data.triangle;
+    case PrimitiveType::kTriangle:
+        triangle = data.triangle;
         break;
-    case Primitive::Type::kSphere:
-        sphere = Data.sphere;
+    case PrimitiveType::kSphere:
+        sphere = data.sphere;
         break;
     }
 }
 
 QUALIFIER_D_H Primitive::Primitive() : id_(kInvalidId), data_{} {}
 
-QUALIFIER_D_H Primitive::Primitive(const uint32_t id,
-                                   const Primitive::Data &Data)
-    : id_(id), data_(Data)
+QUALIFIER_D_H Primitive::Primitive(const uint32_t id, const PrimitiveData &data)
+    : id_(id), data_(data)
 {
 }
 
@@ -54,39 +53,43 @@ QUALIFIER_D_H AABB Primitive::aabb() const
 {
     switch (data_.type)
     {
-    case Primitive::Type::kTriangle:
-        return GetAabbTriangle();
-    case Primitive::Type::kSphere:
-        return GetAabbSphere();
-    default:
-        return {};
+    case PrimitiveType::kTriangle:
+        return GetAabbTriangle(data_.triangle);
+        break;
+    case PrimitiveType::kSphere:
+        return GetAabbSphere(data_.sphere);
+        break;
     }
+    return {};
 }
 
-QUALIFIER_D_H void Primitive::Intersect(Ray *ray, Hit *hit) const
+QUALIFIER_D_H bool Primitive::Intersect(Bsdf *bsdf, uint32_t *seed, Ray *ray,
+                                        Hit *hit) const
 {
     switch (data_.type)
     {
-    case Primitive::Type::kTriangle:
-        IntersectTriangle(ray, hit);
+    case PrimitiveType::kTriangle:
+        return IntersectTriangle(id_, data_.triangle, bsdf, seed, ray, hit);
         break;
-    case Primitive::Type::kSphere:
-        IntersectSphere(ray, hit);
+    case PrimitiveType::kSphere:
+        return IntersectSphere(id_, data_.sphere, bsdf, seed, ray, hit);
         break;
     }
+    return false;
 }
 
 QUALIFIER_D_H Hit Primitive::Sample(const float xi_0, const float xi_1) const
 {
     switch (data_.type)
     {
-    case Primitive::Type::kTriangle:
-        return SampleTriangle(xi_0, xi_1);
-    case Primitive::Type::kSphere:
-        return SampleSphere(xi_0, xi_1);
-    default:
-        return {};
+    case PrimitiveType::kTriangle:
+        return SampleTriangle(id_, data_.triangle, xi_0, xi_1);
+        break;
+    case PrimitiveType::kSphere:
+        return SampleSphere(id_, data_.sphere, xi_0, xi_1);
+        break;
     }
+    return {};
 }
 
 } // namespace csrt

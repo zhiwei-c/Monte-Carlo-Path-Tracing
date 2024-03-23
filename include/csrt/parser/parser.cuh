@@ -1,4 +1,4 @@
-#include "../renderer.cuh"
+#include "../renderer/renderer.cuh"
 
 #include <string>
 
@@ -10,10 +10,10 @@ struct Config
     BackendType backend_type;
     Camera::Info camera;
     Integrator::Info integrator;
-    std::vector<Texture::Info> textures;
-    std::vector<BSDF::Info> bsdfs;
+    std::vector<TextureData> textures;
+    std::vector<BsdfInfo> bsdfs;
     std::vector<Instance::Info> instances;
-    std::vector<Emitter::Info> emitters;
+    std::vector<EmitterInfo> emitters;
 };
 
 Config LoadConfig(const std::string &filename);

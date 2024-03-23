@@ -2,13 +2,13 @@
 
 #include <vector>
 
-#include "../rtcore.cuh"
+#include "../rtcore/scene.cuh"
 #include "../utils.cuh"
-#include "bsdf.cuh"
+#include "bsdfs/bsdf.cuh"
 #include "camera.cuh"
-#include "emitter.cuh"
+#include "emitters/emitter.cuh"
 #include "integrator.cuh"
-#include "texture.cuh"
+#include "textures/texture.cuh"
 
 namespace csrt
 {
@@ -19,12 +19,12 @@ public:
     Renderer(const BackendType backend_type);
     ~Renderer();
 
-    void AddTexture(const Texture::Info &info);
-    void AddBsdf(const BSDF::Info &info);
+    void AddTexture(const TextureData &info);
+    void AddBsdf(const BsdfInfo &info);
     void AddSceneInfo(Instance *instances, float *list_pdf_area_instance,
                       const std::vector<uint32_t> &map_instance_bsdf,
                       TLAS *tlas);
-    void AddEmitter(const Emitter::Info &info);
+    void AddEmitter(const EmitterInfo &info);
     void
     SetAreaLightInfo(const std::vector<uint32_t> map_id_area_light_instance,
                      const std::vector<float> list_area_light_weight);
@@ -56,7 +56,7 @@ private:
 
     float *pixels_;
     Texture *textures_;
-    BSDF *bsdfs_;
+    Bsdf *bsdfs_;
     Instance *instances_;
     Emitter *emitters_;
     float *data_env_map_;
@@ -76,9 +76,9 @@ private:
 
     Integrator::Info info_integrator_;
 
-    std::vector<Texture::Info> list_texture_info_;
-    std::vector<BSDF::Info> list_bsdf_info_;
-    std::vector<Emitter::Info> list_emitter_info_;
+    std::vector<TextureData> list_texture_data_;
+    std::vector<BsdfInfo> list_bsdf_info_;
+    std::vector<EmitterInfo> list_emitter_info_;
 };
 
 } // namespace csrt

@@ -1,4 +1,4 @@
-#include "csrt/renderer/render.cuh"
+#include "csrt/renderer/renderer.cuh"
 
 #include <algorithm>
 #include <array>
@@ -277,6 +277,14 @@ Renderer::Renderer(const BackendType backend_type)
 
 Renderer::~Renderer()
 {
+    for (const TextureData &data : list_texture_data_)
+    {
+        if (data.type == TextureType::kBitmap)
+        {
+            DeleteArray(BackendType::kCpu, data.bitmap.data);
+        }
+    }
+
     DeleteArray(backend_type_, textures_);
     DeleteArray(backend_type_, pixels_);
     DeleteElement(backend_type_, camera_);
@@ -291,35 +299,22 @@ Renderer::~Renderer()
     DeleteArray(backend_type_, data_env_map_);
 }
 
-void Renderer::AddTexture(const Texture::Info &info)
+void Renderer::AddTexture(const TextureData &data)
 {
-    switch (info.type)
-    {
-    case Texture::Type::kConstant:
-    case Texture::Type::kCheckerboard:
-    case Texture::Type::kBitmap1:
-    case Texture::Type::kBitmap3:
-    case Texture::Type::kBitmap4:
-        break;
-    default:
-        throw std::exception("unknow texture type.");
-        break;
-    }
-
-    list_texture_info_.push_back(info);
+    list_texture_data_.push_back(data);
 }
 
-void Renderer::AddBsdf(const BSDF::Info &info)
+void Renderer::AddBsdf(const BsdfInfo &info)
 {
     switch (info.type)
     {
-    case BSDF::Type::kAreaLight:
-    case BSDF::Type::kDiffuse:
-    case BSDF::Type::kRoughDiffuse:
-    case BSDF::Type::kConductor:
-    case BSDF::Type::kDielectric:
-    case BSDF::Type::kThinDielectric:
-    case BSDF::Type::kPlastic:
+    case BsdfType::kAreaLight:
+    case BsdfType::kDiffuse:
+    case BsdfType::kRoughDiffuse:
+    case BsdfType::kConductor:
+    case BsdfType::kDielectric:
+    case BsdfType::kThinDielectric:
+    case BsdfType::kPlastic:
         break;
     default:
         throw std::exception("unknow BSDF type.");
@@ -354,16 +349,16 @@ void Renderer::AddSceneInfo(Instance *instances, float *list_pdf_area_instance,
     }
 }
 
-void Renderer::AddEmitter(const Emitter::Info &info)
+void Renderer::AddEmitter(const EmitterInfo &info)
 {
     switch (info.type)
     {
-    case Emitter::Type::kPoint:
-    case Emitter::Type::kSpot:
-    case Emitter::Type::kDirectional:
-    case Emitter::Type::kSun:
-    case Emitter::Type::kEnvMap:
-    case Emitter::Type::kConstant:
+    case EmitterType::kPoint:
+    case EmitterType::kSpot:
+    case EmitterType::kDirectional:
+    case EmitterType::kSun:
+    case EmitterType::kEnvMap:
+    case EmitterType::kConstant:
         break;
     default:
         throw std::exception("unknow Emitter type.");
@@ -535,17 +530,17 @@ void Renderer::CommitTextures()
 {
     std::vector<float> pixel_buffer;
     std::vector<uint64_t> offsets;
-    uint64_t num_pixel = 0;
-    for (const Texture::Info &info : list_texture_info_)
+    uint64_t accumulate_pixel_num = 0;
+    for (const TextureData &data : list_texture_data_)
     {
-        if (info.type == Texture::Type::kBitmap1 ||
-            info.type == Texture::Type::kBitmap3 ||
-            info.type == Texture::Type::kBitmap4)
+        if (data.type == TextureType::kBitmap)
         {
-            pixel_buffer.insert(pixel_buffer.end(), info.bitmap.data.begin(),
-                                info.bitmap.data.end());
-            offsets.push_back(num_pixel);
-            num_pixel += info.bitmap.data.size();
+            const int pixel_num =
+                data.bitmap.width * data.bitmap.height * data.bitmap.channel;
+            pixel_buffer.insert(pixel_buffer.end(), data.bitmap.data,
+                                data.bitmap.data + pixel_num);
+            offsets.push_back(accumulate_pixel_num);
+            accumulate_pixel_num += pixel_num;
         }
     }
     try
@@ -554,35 +549,34 @@ void Renderer::CommitTextures()
         pixels_ = MallocArray(backend_type_, pixel_buffer);
 
         DeleteArray(backend_type_, textures_);
-        const uint64_t num_texture = list_texture_info_.size();
+        const uint64_t num_texture = list_texture_data_.size();
         textures_ = MallocArray<Texture>(backend_type_, num_texture);
-        uint64_t offset_data = 0;
+        uint64_t data_offset = 0;
         for (uint64_t i = 0, j = 0; i < num_texture; ++i)
         {
-            Texture::Data data;
-            data.type = list_texture_info_[i].type;
+            TextureData data;
+            data.type = list_texture_data_[i].type;
             switch (data.type)
             {
-            case Texture::Type::kConstant:
-                data.constant = list_texture_info_[i].constant;
+            case TextureType::kConstant:
+                data.constant = list_texture_data_[i].constant;
                 break;
-            case Texture::Type::kCheckerboard:
-                data.checkerboard = list_texture_info_[i].checkerboard;
+            case TextureType::kCheckerboard:
+                data.checkerboard = list_texture_data_[i].checkerboard;
                 break;
-            case Texture::Type::kBitmap1:
-            case Texture::Type::kBitmap3:
-            case Texture::Type::kBitmap4:
-                data.bitmap.width = list_texture_info_[i].bitmap.width;
-                data.bitmap.height = list_texture_info_[i].bitmap.height;
-                data.bitmap.to_uv = list_texture_info_[i].bitmap.to_uv;
+            case TextureType::kBitmap:
+                data.bitmap.width = list_texture_data_[i].bitmap.width;
+                data.bitmap.height = list_texture_data_[i].bitmap.height;
+                data.bitmap.channel = list_texture_data_[i].bitmap.channel;
+                data.bitmap.to_uv = list_texture_data_[i].bitmap.to_uv;
                 data.bitmap.data = pixels_;
-                offset_data = offsets[j++];
+                data_offset = offsets[j++];
                 break;
             default:
                 throw std::exception("unknow texture type.");
                 break;
             }
-            textures_[i] = Texture(i, data, offset_data);
+            textures_[i] = Texture(i, data, data_offset);
         }
     }
     catch (const std::exception &e)
@@ -599,37 +593,37 @@ void Renderer::CommitBsdfs()
     {
         DeleteArray(backend_type_, bsdfs_);
         const uint64_t num_bsdf = list_bsdf_info_.size();
-        bsdfs_ = MallocArray<BSDF>(backend_type_, num_bsdf);
+        bsdfs_ = MallocArray<Bsdf>(backend_type_, num_bsdf);
         for (uint64_t i = 0; i < num_bsdf; ++i)
         {
-            const BSDF::Info &info = list_bsdf_info_[i];
+            const BsdfInfo &info = list_bsdf_info_[i];
             CheckTexture(info.id_opacity, true);
             CheckTexture(info.id_bump_map, true);
             switch (info.type)
             {
-            case BSDF::Type::kAreaLight:
+            case BsdfType::kAreaLight:
                 CheckTexture(info.area_light.id_radiance, false);
                 break;
-            case BSDF::Type::kDiffuse:
+            case BsdfType::kDiffuse:
                 CheckTexture(info.diffuse.id_diffuse_reflectance, false);
                 break;
-            case BSDF::Type::kRoughDiffuse:
+            case BsdfType::kRoughDiffuse:
                 CheckTexture(info.rough_diffuse.id_diffuse_reflectance, false);
                 CheckTexture(info.rough_diffuse.id_roughness, false);
                 break;
-            case BSDF::Type::kConductor:
+            case BsdfType::kConductor:
                 CheckTexture(info.conductor.id_roughness_u, false);
                 CheckTexture(info.conductor.id_roughness_v, false);
                 CheckTexture(info.conductor.id_specular_reflectance, false);
                 break;
-            case BSDF::Type::kThinDielectric:
-            case BSDF::Type::kDielectric:
+            case BsdfType::kThinDielectric:
+            case BsdfType::kDielectric:
                 CheckTexture(info.dielectric.id_roughness_u, false);
                 CheckTexture(info.dielectric.id_roughness_v, false);
                 CheckTexture(info.dielectric.id_specular_reflectance, false);
                 CheckTexture(info.dielectric.id_specular_transmittance, false);
                 break;
-            case BSDF::Type::kPlastic:
+            case BsdfType::kPlastic:
                 CheckTexture(info.plastic.id_roughness, false);
                 CheckTexture(info.plastic.id_diffuse_reflectance, false);
                 CheckTexture(info.plastic.id_specular_reflectance, false);
@@ -638,7 +632,7 @@ void Renderer::CommitBsdfs()
                 throw std::exception("unknow BSDF type.");
                 break;
             }
-            bsdfs_[i] = BSDF(i, info, textures_);
+            bsdfs_[i] = Bsdf(i, info, textures_);
         }
     }
     catch (const std::exception &e)
@@ -660,35 +654,33 @@ void Renderer::CommitEmitters()
         emitters_ = MallocArray<Emitter>(backend_type_, num_emitter);
         for (uint64_t i = 0; i < num_emitter; ++i)
         {
-            const Emitter::Info &info = list_emitter_info_[i];
+            const EmitterInfo &info = list_emitter_info_[i];
             switch (info.type)
             {
-            case Emitter::Type::kPoint:
-            case Emitter::Type::kSpot:
-            case Emitter::Type::kDirectional:
+            case EmitterType::kPoint:
+            case EmitterType::kSpot:
+            case EmitterType::kDirectional:
                 break;
-            case Emitter::Type::kSun:
+            case EmitterType::kSun:
                 CheckTexture(info.sun.id_texture, false);
                 id_sun_ = i;
                 break;
-            case Emitter::Type::kEnvMap:
+            case EmitterType::kEnvMap:
                 CheckTexture(info.envmap.id_radiance, false);
-            case Emitter::Type::kConstant:
+            case EmitterType::kConstant:
                 id_envmap_ = i;
                 break;
             default:
                 throw std::exception("unknow emitter type.");
                 break;
             }
-            emitters_[i] = Emitter(i, info, tlas_, textures_);
+            emitters_[i] = Emitter(i, info, textures_);
 
-            if (info.type == Emitter::Type::kEnvMap)
+            if (info.type == EmitterType::kEnvMap)
             {
-                Texture::Info info_radiance =
-                    list_texture_info_[info.envmap.id_radiance];
-                if (info_radiance.type != Texture::Type::kBitmap1 &&
-                    info_radiance.type != Texture::Type::kBitmap3 &&
-                    info_radiance.type != Texture::Type::kBitmap4)
+                TextureData data_radiance =
+                    list_texture_data_[info.envmap.id_radiance];
+                if (data_radiance.type != TextureType::kBitmap)
                 {
                     std::ostringstream oss;
                     oss << "radiance texture '" << info.envmap.id_radiance
@@ -699,8 +691,8 @@ void Renderer::CommitEmitters()
                 std::vector<float> cdf_cols, cdf_rows, weight_rows;
                 float normalization;
 
-                Emitter::CreateEnvMapCdfPdf(
-                    info_radiance.bitmap.width, info_radiance.bitmap.height,
+                CreateEnvMapCdfPdf(
+                    data_radiance.bitmap.width, data_radiance.bitmap.height,
                     textures_[info.envmap.id_radiance], &cdf_cols, &cdf_rows,
                     &weight_rows, &normalization);
 
@@ -720,8 +712,8 @@ void Renderer::CommitEmitters()
                 for (uint64_t j = 0; j < cdf_cols.size(); ++j)
                     data_env_map_[j + offset] = cdf_cols[j];
 
-                emitters_[i].InitEnvMap(info_radiance.bitmap.width,
-                                        info_radiance.bitmap.height,
+                emitters_[i].InitEnvMap(data_radiance.bitmap.width,
+                                        data_radiance.bitmap.height,
                                         normalization, data_env_map_);
             }
         }
@@ -781,7 +773,7 @@ void Renderer::CheckTexture(const uint32_t id, const bool allow_invalid)
     if (id == kInvalidId && allow_invalid)
         return;
 
-    if (id >= list_texture_info_.size())
+    if (id >= list_texture_data_.size())
     {
         std::ostringstream oss;
         oss << "cannot find texture (id " << id << ").";

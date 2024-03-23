@@ -252,10 +252,9 @@ Vec3 GetSunDirection(const LocationDate &location_date)
             -cosf(azimuth) * sinf(zenith)};
 }
 
-void CreateSunTexture(const Vec3 &sun_direction, const float turbidity,
+float* CreateSunTexture(const Vec3 &sun_direction, const float turbidity,
                       const float radiance_scale, const float radius_scale,
-                      const int width, const int height, Vec3 *radiance,
-                      std::vector<float> *data)
+                      const int width, const int height, Vec3 *radiance)
 {
     const float theta = ToRadians(kSunAppRadius * 0.5f),
                 solid_angle = 2.0f * kPi * (1.0f - cosf(theta)),
@@ -272,7 +271,7 @@ void CreateSunTexture(const Vec3 &sun_direction, const float turbidity,
     if (sample_num < 100)
         sample_num = 100;
 
-    *data = std::vector<float>(width * height * 3, 0);
+    float*data = new float[width * height * 3];
     const Vec3 d_value = *radiance / static_cast<float>(sample_num);
     const Vec2 factor = {width * k1Div2Pi, height * k1DivPi};
 
@@ -295,17 +294,18 @@ void CreateSunTexture(const Vec3 &sun_direction, const float turbidity,
                       height - 1);
         const int offset = (x + y * width) * 3;
         for (int c = 0; c < 3; ++c)
-            (*data)[offset + c] += d_value[c];
+            data[offset + c] += d_value[c];
     }
+
+    return data;
 }
 
-void CreateSkyTexture(const Vec3 &sun_direction, const Vec3 &albedo,
+float* CreateSkyTexture(const Vec3 &sun_direction, const Vec3 &albedo,
                       const float turbidity, const float stretch,
                       const float radiance_scale, const bool extend,
-                      const int width, const int height,
-                      std::vector<float> *data)
+                      const int width, const int height)
 {
-    *data = std::vector<float>(width * height * 3, 0);
+    float* data = new float[width * height * 3];
     float zenith = std::acos(std::min(1.0f, std::max(-1.0f, sun_direction.y)));
     float azimuth = std::atan2(sun_direction.x, -sun_direction.z);
     if (azimuth < 0)
@@ -359,12 +359,14 @@ void CreateSkyTexture(const Vec3 &sun_direction, const Vec3 &albedo,
             color *= radiance_scale * factor2;
             const int offset = (x + y * width) * 3;
             for (int i = 0; i < 3; ++i)
-                (*data)[offset + i] = color[i];
+                data[offset + i] = color[i];
         }
     }
 
     for (int i = 0; i < 3; ++i)
         arhosekskymodelstate_free(skymodel_state[i]);
+    
+    return data;
 }
 
 } // namespace csrt

@@ -12,6 +12,11 @@ project(
     DESCRIPTION "A simple ray tracer"
     LANGUAGES CXX C)
 
+if(WIN32)
+else()
+    message(FATAL_ERROR "Only Windows, CMake will exit." )
+endif()
+
 if(ENABLE_CUDA)
     message(STATUS "Enable GPU-accelerated computing.")
     enable_language(CUDA)
