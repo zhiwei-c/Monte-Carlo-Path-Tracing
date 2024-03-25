@@ -152,7 +152,8 @@ QUALIFIER_D_H Vec3 BsdfSampleRec::ToWorld(const Vec3 &v) const
 QUALIFIER_D_H Bsdf::Bsdf() : id_(kInvalidId), data_{} {}
 
 QUALIFIER_D_H Bsdf::Bsdf(const uint32_t id, const BsdfInfo &info,
-                         Texture *texture_buffer)
+                         Texture *texture_buffer, float *brdf_avg_buffer,
+                         float *albedo_avg_buffer)
     : id_(id)
 {
     data_.type = info.type;
@@ -188,9 +189,17 @@ QUALIFIER_D_H Bsdf::Bsdf(const uint32_t id, const BsdfInfo &info,
             texture_buffer + info.conductor.id_specular_reflectance;
         data_.conductor.reflectivity = info.conductor.reflectivity;
         data_.conductor.edgetint = info.conductor.edgetint;
+        data_.conductor.F_avg = AverageFresnelConductor(
+            info.conductor.reflectivity, info.conductor.edgetint);
+        data_.conductor.brdf_avg_buffer = brdf_avg_buffer;
+        data_.conductor.albedo_avg_buffer = albedo_avg_buffer;
         break;
-    case BsdfType::kThinDielectric:
     case BsdfType::kDielectric:
+        data_.dielectric.F_avg = AverageFresnel(info.dielectric.eta);
+        data_.dielectric.F_avg_inv = AverageFresnel(1.0f / info.dielectric.eta);
+        data_.dielectric.brdf_avg_buffer = brdf_avg_buffer;
+        data_.dielectric.albedo_avg_buffer = albedo_avg_buffer;
+    case BsdfType::kThinDielectric:
         data_.twosided = true;
         data_.dielectric.roughness_u =
             texture_buffer + info.dielectric.id_roughness_u;

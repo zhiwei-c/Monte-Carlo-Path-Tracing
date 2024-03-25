@@ -74,8 +74,10 @@ private:
     // 从面光源ID到相应实例ID的映射
     uint32_t *map_area_light_instance_;
 
-    Integrator::Info info_integrator_;
+    float *brdf_avg_buffer_;   // Kulla-Conty LUT
+    float *albedo_avg_buffer_; // Kulla-Conty LUT
 
+    Integrator::Info info_integrator_;
     std::vector<TextureData> list_texture_data_;
     std::vector<BsdfInfo> list_bsdf_info_;
     std::vector<EmitterInfo> list_emitter_info_;

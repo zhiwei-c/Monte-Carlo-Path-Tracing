@@ -1,8 +1,40 @@
 #include "csrt/renderer/bsdfs/dielectric.cuh"
 
 #include "csrt/renderer/bsdfs/bsdf.cuh"
+#include "csrt/renderer/bsdfs/kulla_conty.cuh"
 #include "csrt/rtcore/scene.cuh"
 #include "csrt/utils.cuh"
+
+namespace
+{
+
+using namespace csrt;
+
+QUALIFIER_D_H float
+EvaluateMultipleScatter(const DielectricData &data, const float N_dot_I,
+                        const float N_dot_O, const float roughness,
+                        const bool inside, const bool reflect)
+{
+    const float brdf_i = GetBrdfAvg(data.brdf_avg_buffer, N_dot_I, roughness),
+                brdf_o = GetBrdfAvg(data.brdf_avg_buffer, N_dot_O, roughness),
+                albedo_avg = GetAlbedoAvg(data.albedo_avg_buffer, roughness),
+                f_ms = (1.0f - brdf_i) * (1.0f - brdf_o) /
+                       (kPi * (1.0f - albedo_avg));
+
+    const float F_avg = inside ? data.F_avg_inv : data.F_avg,
+                eta = inside ? data.eta_inv : data.eta;
+
+    const float f_add = pow(F_avg, 2) * albedo_avg /
+                        (1.0f - F_avg * (1.0f - albedo_avg)),
+                ratio_trans = ((1.0f - data.F_avg) * (1.0f - data.F_avg_inv) *
+                               pow(eta, 2) /
+                               ((1.0f - data.F_avg) +
+                                (1.0f - data.F_avg_inv) * pow(eta, 2)));
+    const float ret = f_ms * f_add * N_dot_I;
+    return reflect ? (1.0f - ratio_trans) * ret : ratio_trans * ret;
+}
+
+} // namespace
 
 namespace csrt
 {
@@ -50,9 +82,13 @@ QUALIFIER_D_H void EvaluateDielectric(const DielectricData &data,
                         SmithG1Ggx(alpha_u, alpha_v, wo_local, h_local);
         rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
 
-        // const float N_dot_I = Dot(-rec->wi, rec->normal)
-        // rec->attenuation += EvaluateMultipleScatter(N_dot_I, N_dot_O,
-        // roughness);
+        // 仅针对各向同性材料使用 Kulla-Conty 方法补偿损失的多次散射能量
+        if (alpha_u == alpha_v)
+        {
+            const float N_dot_I = Dot(-rec->wi, rec->normal);
+            rec->attenuation += EvaluateMultipleScatter(
+                data, N_dot_I, N_dot_O, alpha_u, rec->inside, true);
+        }
 
         const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
@@ -66,9 +102,13 @@ QUALIFIER_D_H void EvaluateDielectric(const DielectricData &data,
             (((abs(H_dot_I) * abs(H_dot_O)) * ((1.0f - F) * G * D)) /
              abs(N_dot_O * Sqr(eta_inv * H_dot_I + H_dot_O)));
 
-        // const float N_dot_I = Dot(rec->normal, -rec->wi);
-        // rec->attenuation += EvaluateMultipleScatter(N_dot_I, N_dot_O,
-        // roughness, rec->inside, false);
+        // 仅针对各向同性材料使用 Kulla-Conty 方法补偿损失的多次散射能量
+        if (alpha_u == alpha_v)
+        {
+            const float N_dot_I = Dot(rec->normal, -rec->wi);
+            rec->attenuation += EvaluateMultipleScatter(
+                data, N_dot_I, N_dot_O, alpha_u, rec->inside, false);
+        }
 
         // 光线折射后，光路可能覆盖的立体角范围发生了改变，
         //     对辐射亮度进行积分需要进行相应的处理
@@ -127,6 +167,13 @@ QUALIFIER_D_H void SampleDielectric(const DielectricData &data, uint32_t *seed,
                     N_dot_O = wo_local.z;
         rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
 
+        // 仅针对各向同性材料使用 Kulla-Conty 方法补偿损失的多次散射能量
+        if (alpha_u == alpha_v)
+        {
+            rec->attenuation += EvaluateMultipleScatter(
+                data, N_dot_I, N_dot_O, alpha_u, rec->inside, true);
+        }
+
         const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
         rec->attenuation *= spec;
     }
@@ -157,6 +204,13 @@ QUALIFIER_D_H void SampleDielectric(const DielectricData &data, uint32_t *seed,
         rec->attenuation =
             (((abs(H_dot_I) * abs(H_dot_O)) * ((1.0f - F) * G * D)) /
              abs(N_dot_O * Sqr(eta_inv * H_dot_I + H_dot_O)));
+
+        // 仅针对各向同性材料使用 Kulla-Conty 方法补偿损失的多次散射能量
+        if (alpha_u == alpha_v)
+        {
+            rec->attenuation += EvaluateMultipleScatter(
+                data, N_dot_I, N_dot_O, alpha_u, !rec->inside, false);
+        }
 
         // 光线折射后，光路可能覆盖的立体角范围发生了改变，
         //     对辐射亮度进行积分需要进行相应的处理

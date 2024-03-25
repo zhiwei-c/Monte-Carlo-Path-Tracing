@@ -6,6 +6,7 @@
 
 namespace csrt
 {
+
 struct BsdfSampleRec;
 
 struct ConductorInfo
@@ -24,6 +25,9 @@ struct ConductorData
     Texture *specular_reflectance = nullptr;
     Vec3 reflectivity = {};
     Vec3 edgetint = {};
+    Vec3 F_avg = {};
+    float *brdf_avg_buffer = nullptr;
+    float *albedo_avg_buffer = nullptr;
 };
 
 QUALIFIER_D_H void EvaluateConductor(const ConductorData &data,

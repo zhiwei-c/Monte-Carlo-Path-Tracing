@@ -1,8 +1,31 @@
 #include "csrt/renderer/bsdfs/conductor.cuh"
 
 #include "csrt/renderer/bsdfs/bsdf.cuh"
+#include "csrt/renderer/bsdfs/kulla_conty.cuh"
 #include "csrt/rtcore/scene.cuh"
 #include "csrt/utils.cuh"
+
+namespace
+{
+
+using namespace csrt;
+
+QUALIFIER_D_H Vec3 EvaluateMultipleScatter(const ConductorData &data,
+                                           const float N_dot_I,
+                                           const float N_dot_O,
+                                           const float roughness)
+{
+    const float brdf_i = GetBrdfAvg(data.brdf_avg_buffer, N_dot_I, roughness),
+                brdf_o = GetBrdfAvg(data.brdf_avg_buffer, N_dot_O, roughness),
+                albedo_avg = GetAlbedoAvg(data.albedo_avg_buffer, roughness),
+                f_ms = (1.0f - brdf_i) * (1.0f - brdf_o) /
+                       (kPi * (1.0f - albedo_avg));
+    const Vec3 f_add = Sqr(data.F_avg) * albedo_avg /
+                       (1.0f - data.F_avg * (1.0f - albedo_avg));
+    return f_ms * f_add * N_dot_I;
+}
+
+} // namespace
 
 namespace csrt
 {
@@ -37,8 +60,14 @@ QUALIFIER_D_H void EvaluateConductor(const ConductorData &data,
     const Vec3 F = FresnelSchlick(H_dot_I, data.reflectivity);
     rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
 
-    // const float N_dot_I = Dot(-rec->wi, rec->normal)
-    // rec->attenuation += EvaluateMultipleScatter(N_dot_I, N_dot_O, roughness);
+    // 仅针对各向同性材料使用 Kulla-Conty 方法补偿损失的多次散射能量
+    if (alpha_u == alpha_v)
+    {
+        const float N_dot_I = Dot(-rec->wi, rec->normal);
+        const Vec3 compensation =
+            EvaluateMultipleScatter(data, N_dot_I, N_dot_O, alpha_u);
+        rec->attenuation += compensation;
+    }
 
     const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
     rec->attenuation *= spec;
@@ -77,8 +106,13 @@ QUALIFIER_D_H void SampleConductor(const ConductorData &data, uint32_t *seed,
     const Vec3 F = FresnelSchlick(H_dot_I, data.reflectivity);
     rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
 
-    // const float N_dot_I = Dot(-rec->wi, rec->normal)
-    // rec->attenuation += EvaluateMultipleScatter(N_dot_I, N_dot_O, roughness);
+    // 仅针对各向同性材料使用 Kulla-Conty 方法补偿损失的多次散射能量
+    if (alpha_u == alpha_v)
+    {
+        const Vec3 compensation =
+            EvaluateMultipleScatter(data, N_dot_I, N_dot_O, alpha_u);
+        rec->attenuation += compensation;
+    }
 
     const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
     rec->attenuation *= spec;

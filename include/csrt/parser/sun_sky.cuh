@@ -9,8 +9,7 @@ namespace csrt
 {
 
 /* Apparent radius of the sun as seen from the earth (in degrees).
-   This is an approximation--the actual value is somewhere between
-   0.526 and 0.545 depending on the time of year */
+   This is an approximation--the actual value is somewhere between 0.526 and 0.545 depending on the time of year */
 constexpr float kSunAppRadius = 0.5358;
 
 struct LocationDate

@@ -6,21 +6,17 @@ else()
     set_source_files_properties(${SOURCE_LIST} ${HEADER_LIST} PROPERTIES LANGUAGE CXX)
 endif()
 
-set(SKY_LIST
-    "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/ArHosekSkyModel.c"
-    "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/ArHosekSkyModel.h"
-    "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/ArHosekSkyModelData_CIEXYZ.h"
-    "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/ArHosekSkyModelData_RGB.h"
-    "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/ArHosekSkyModelData_Spectral.h")
-set(STB_LIST
-    "${PROJECT_SOURCE_DIR}/extern/stb/stb_image.h"
-    "${PROJECT_SOURCE_DIR}/extern/stb/stb_image_resize2.h"
-    "${PROJECT_SOURCE_DIR}/extern/stb/stb_image_write.h")
-add_library(RayTracerLib ${SOURCE_LIST} ${HEADER_LIST} ${SKY_LIST} ${STB_LIST})
+file(GLOB_RECURSE SKY_HEADER CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/*.h")
+file(GLOB_RECURSE SKY_SOURCE CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel/*.c")
+file(GLOB_RECURSE STB_HEADER CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/extern/stb/*.h")
+add_library(RayTracerLib ${SOURCE_LIST} ${HEADER_LIST} ${SKY_HEADER} ${SKY_SOURCE} ${STB_HEADER})
 
-target_include_directories(RayTracerLib PUBLIC "${PROJECT_SOURCE_DIR}/include")
-target_include_directories(RayTracerLib PRIVATE "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel")
-target_include_directories(RayTracerLib PRIVATE "${PROJECT_SOURCE_DIR}/extern/stb")
+target_include_directories(RayTracerLib
+    PUBLIC
+        "${PROJECT_SOURCE_DIR}/include"
+    PRIVATE
+        "${PROJECT_SOURCE_DIR}/extern/ArHosekSkyModel"
+        "${PROJECT_SOURCE_DIR}/extern/stb")
 target_link_libraries(RayTracerLib
     PRIVATE
         unofficial::tinyexr::tinyexr
@@ -49,4 +45,4 @@ source_group(
 source_group(
     TREE "${PROJECT_SOURCE_DIR}/extern"
     PREFIX "Extern Files"
-    FILES ${SKY_LIST} ${STB_LIST})
+    FILES ${SKY_HEADER} ${SKY_SOURCE} ${STB_HEADER})

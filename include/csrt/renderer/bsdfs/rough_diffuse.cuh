@@ -6,6 +6,7 @@
 
 namespace csrt
 {
+
 struct BsdfSampleRec;
 
 struct RoughDiffuseInfo

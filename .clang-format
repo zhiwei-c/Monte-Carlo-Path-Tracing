@@ -12,4 +12,5 @@ AccessModifierOffset: -4
 NamespaceIndentation: Inner
 FixNamespaceComments: false
 
+ReflowComments: false
 AlwaysBreakTemplateDeclarations: Yes

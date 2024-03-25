@@ -54,8 +54,6 @@ struct BsdfInfo
 
     QUALIFIER_D_H BsdfInfo();
     QUALIFIER_D_H ~BsdfInfo() {}
-    // QUALIFIER_D_H Info(const Info &info);
-    // QUALIFIER_D_H void operator=(const Info &info);
 };
 
 struct BsdfData
@@ -76,7 +74,6 @@ struct BsdfData
 
     QUALIFIER_D_H BsdfData();
     QUALIFIER_D_H ~BsdfData() {}
-    // QUALIFIER_D_H Data(const BSDF::Data &info);
     QUALIFIER_D_H void operator=(const BsdfData &data);
 };
 
@@ -103,7 +100,8 @@ class Bsdf
 public:
     QUALIFIER_D_H Bsdf();
     QUALIFIER_D_H Bsdf(const uint32_t id, const BsdfInfo &info,
-                       Texture *texture_buffer);
+                       Texture *texture_buffer, float *brdf_avg_buffer,
+                       float *albedo_avg_buffer);
 
     QUALIFIER_D_H void Evaluate(BsdfSampleRec *rec) const;
     QUALIFIER_D_H void Sample(uint32_t *seed, BsdfSampleRec *rec) const;

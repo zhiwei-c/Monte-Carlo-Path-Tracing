@@ -28,8 +28,8 @@ struct TextureData
     };
 
     QUALIFIER_D_H TextureData();
-    QUALIFIER_D_H ~TextureData() {}
     QUALIFIER_D_H TextureData(const TextureData &data);
+    QUALIFIER_D_H ~TextureData() {}
     QUALIFIER_D_H void operator=(const TextureData &info);
 };
 

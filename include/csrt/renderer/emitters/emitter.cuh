@@ -41,9 +41,8 @@ struct EmitterInfo
     };
 
     QUALIFIER_D_H EmitterInfo();
-    QUALIFIER_D_H ~EmitterInfo() {}
     QUALIFIER_D_H EmitterInfo(const EmitterInfo &info);
-    // QUALIFIER_D_H void operator=(const Info &info);
+    QUALIFIER_D_H ~EmitterInfo() {}
 };
 
 struct EmitterSampleRec
@@ -69,7 +68,6 @@ struct EmitterData
 
     QUALIFIER_D_H EmitterData();
     QUALIFIER_D_H ~EmitterData() {}
-    // QUALIFIER_D_H Data(const EmitterData &info);
     QUALIFIER_D_H void operator=(const EmitterData &data);
 };
 

@@ -7,6 +7,8 @@
 #include <sstream>
 #include <thread>
 
+#include "csrt/renderer/bsdfs/kulla_conty.cuh"
+
 namespace
 {
 
@@ -273,10 +275,17 @@ Renderer::Renderer(const BackendType backend_type)
       list_pdf_area_instance_(nullptr), map_instance_bsdf_(nullptr),
       map_instance_area_light_(nullptr), map_area_light_instance_(nullptr)
 {
+    brdf_avg_buffer_ =
+        MallocArray<float>(backend_type_, kLutResolution * kLutResolution);
+    albedo_avg_buffer_ = MallocArray<float>(backend_type_, kLutResolution);
+    ComputeKullaConty(brdf_avg_buffer_, albedo_avg_buffer_);
 }
 
 Renderer::~Renderer()
 {
+    DeleteArray(backend_type_, brdf_avg_buffer_);
+    DeleteArray(backend_type_, albedo_avg_buffer_);
+
     for (const TextureData &data : list_texture_data_)
     {
         if (data.type == TextureType::kBitmap)
@@ -632,7 +641,8 @@ void Renderer::CommitBsdfs()
                 throw std::exception("unknow BSDF type.");
                 break;
             }
-            bsdfs_[i] = Bsdf(i, info, textures_);
+            bsdfs_[i] =
+                Bsdf(i, info, textures_, brdf_avg_buffer_, albedo_avg_buffer_);
         }
     }
     catch (const std::exception &e)

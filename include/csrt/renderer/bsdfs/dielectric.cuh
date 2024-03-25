@@ -6,6 +6,7 @@
 
 namespace csrt
 {
+
 struct BsdfSampleRec;
 
 struct DielectricInfo
@@ -22,6 +23,10 @@ struct DielectricData
     float reflectivity = 1.0f;
     float eta = 1.0f;
     float eta_inv = 1.0f;
+    float F_avg = 1.0f;
+    float F_avg_inv = 1.0f;
+    float *brdf_avg_buffer = nullptr;
+    float *albedo_avg_buffer = nullptr;
     Texture *roughness_u = nullptr;
     Texture *roughness_v = nullptr;
     Texture *specular_reflectance = nullptr;

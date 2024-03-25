@@ -178,6 +178,19 @@ QUALIFIER_D_H float AverageFresnel(const float eta)
     }
 }
 
+QUALIFIER_D_H Vec3 AverageFresnelConductor(const Vec3 &reflectivity,
+                                           const Vec3 &edgetint)
+{
+    return Vec3(0.087237f) + 0.0230685f * edgetint -
+           0.0864902f * edgetint * edgetint +
+           0.0774594f * edgetint * edgetint * edgetint +
+           0.782654f * reflectivity - 0.136432f * reflectivity * reflectivity +
+           0.278708f * reflectivity * reflectivity * reflectivity +
+           0.19744f * edgetint * reflectivity +
+           0.0360605f * edgetint * edgetint * reflectivity -
+           0.2586f * edgetint * reflectivity * reflectivity;
+}
+
 QUALIFIER_D_H uint32_t BinarySearch(const uint32_t num, float *cdf,
                                     const float target)
 {

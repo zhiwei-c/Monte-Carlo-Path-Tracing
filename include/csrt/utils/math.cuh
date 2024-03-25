@@ -90,6 +90,9 @@ QUALIFIER_D_H float SmithG1Ggx(const float roughness_u, const float roughness_v,
 
 QUALIFIER_D_H float AverageFresnel(const float eta);
 
+QUALIFIER_D_H Vec3 AverageFresnelConductor(const Vec3 &reflectivity,
+                                           const Vec3 &edgetint);
+
 template <typename T>
 QUALIFIER_D_H T FresnelSchlick(const float cos_theta, const T &relectivity)
 {
