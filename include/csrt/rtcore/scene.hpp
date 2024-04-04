@@ -18,7 +18,7 @@ public:
     Scene(const BackendType backend_type);
     ~Scene();
 
-    void AddInstance(const Instance::Info &info);
+    void AddInstance(const InstanceInfo &info);
     void Commit();
 
     TLAS *GetTlas() { return tlas_; };
@@ -34,7 +34,7 @@ private:
     void CommitRectangle(const uint32_t id);
     void CommitMeshes(const uint32_t id);
 
-    void SetupMeshes(Instance::Info::Meshes info_meshes,
+    void SetupMeshes(MeshesInfo info_meshes,
                      std::vector<PrimitiveData> *list_data_primitve,
                      std::vector<float> *areas);
 
@@ -47,7 +47,7 @@ private:
     BvhNode *nodes_;
     uint64_t num_primitive_;
     uint64_t num_node_;
-    std::vector<Instance::Info> list_info_instance_;
+    std::vector<InstanceInfo> list_info_instance_;
     std::vector<uint64_t> list_offset_primitive_;
     std::vector<uint64_t> list_offset_node_;
 };

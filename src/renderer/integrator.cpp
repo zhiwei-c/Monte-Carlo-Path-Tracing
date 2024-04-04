@@ -7,7 +7,7 @@ QUALIFIER_D_H Integrator::Integrator()
 {
 }
 
-QUALIFIER_D_H Integrator::Integrator(const Integrator::Data &data)
+QUALIFIER_D_H Integrator::Integrator(const IntegratorData &data)
     : data_(data), size_cdf_area_light_(data.num_area_light + 1)
 {
     pdf_rr_rcp_ = 1.0f / data_.pdf_rr;
@@ -204,8 +204,7 @@ QUALIFIER_D_H Vec3 Integrator::EvaluateDirectLight(const Hit &hit,
         if (!rec.valid)
             return L;
 
-        // 根据多重重要抽样（MIS，multiple importance
-        // sampling）合并按表面积进行抽样得到的阴影光线贡献的直接光照
+        // 根据多重重要抽样（MIS，multiple importance sampling）合并按表面积进行抽样得到的阴影光线贡献的直接光照
         const float pdf_area =
                         (data_.cdf_area_light[index_area_light + 1] -
                          data_.cdf_area_light[index_area_light]) *

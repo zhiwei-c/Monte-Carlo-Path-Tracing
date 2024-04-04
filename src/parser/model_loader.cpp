@@ -409,11 +409,10 @@ void ProcessOffset(int index_shape, uint16_t version)
     }
 }
 
-Instance::Info::Meshes ProcessAssimpNode(const aiScene *scene, aiNode *node,
-                                         bool face_normals,
-                                         const uint32_t index_offset)
+MeshesInfo ProcessAssimpNode(const aiScene *scene, aiNode *node,
+                             bool face_normals, const uint32_t index_offset)
 {
-    Instance::Info::Meshes info_meshes;
+    MeshesInfo info_meshes;
     for (unsigned int i = 0; i < node->mNumMeshes; ++i)
     {
         aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
@@ -469,7 +468,7 @@ Instance::Info::Meshes ProcessAssimpNode(const aiScene *scene, aiNode *node,
 
     for (unsigned int i = 0; i < node->mNumChildren; ++i)
     {
-        Instance::Info::Meshes info_meshes_local =
+        MeshesInfo info_meshes_local =
             ProcessAssimpNode(scene, node->mChildren[i], face_normals,
                               info_meshes.indices.size());
 
@@ -501,9 +500,8 @@ Instance::Info::Meshes ProcessAssimpNode(const aiScene *scene, aiNode *node,
 namespace csrt
 {
 
-Instance::Info::Meshes model_loader::Load(const std::string &filename,
-                                          int index_shape, bool flip_texcoords,
-                                          bool face_normals)
+MeshesInfo model_loader::Load(const std::string &filename, int index_shape,
+                              bool flip_texcoords, bool face_normals)
 {
     m_filename = filename;
     m_stream = fopen(filename.c_str(), "rb");
@@ -545,7 +543,7 @@ Instance::Info::Meshes model_loader::Load(const std::string &filename,
     uint64_t triangle_count = ReadElement<uint64_t>(true);
     bool double_precision = flags & 0x2000;
 
-    Instance::Info::Meshes info_meshes;
+    MeshesInfo info_meshes;
 
     info_meshes.positions =
         double_precision ? ReadVectorArray<Vec3, 3, float, double>(vertex_count)
@@ -582,9 +580,9 @@ Instance::Info::Meshes model_loader::Load(const std::string &filename,
     return info_meshes;
 }
 
-Instance::Info::Meshes model_loader::Load(const std::string &filename,
-                                          const bool flip_texcoords,
-                                          const bool face_normals)
+MeshesInfo model_loader::Load(const std::string &filename,
+                              const bool flip_texcoords,
+                              const bool face_normals)
 {
     fprintf(stderr, "[info] read file \"%s\"\n", filename.c_str());
 

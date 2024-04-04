@@ -447,7 +447,7 @@ void Renderer::SetCamera(const Camera::Info &info)
     }
 }
 
-void Renderer::SetIntegrator(const Integrator::Info &info)
+void Renderer::SetIntegrator(const IntegratorInfo &info)
 {
     info_integrator_ = info;
 }
@@ -791,7 +791,7 @@ void Renderer::CommitIntegrator()
         DeleteElement(backend_type_, integrator_);
         integrator_ = MallocElement<Integrator>(backend_type_);
 
-        Integrator::Data data_integrator;
+        IntegratorData data_integrator;
 
         data_integrator.pdf_rr = info_integrator_.pdf_rr;
         data_integrator.depth_rr = info_integrator_.depth_rr;

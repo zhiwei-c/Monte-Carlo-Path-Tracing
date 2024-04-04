@@ -1,8 +1,8 @@
 #ifndef CSRT__UTILS__MATH_HPP
 #define CSRT__UTILS__MATH_HPP
 
-#include <limits>
 #include <cmath>
+#include <limits>
 
 #include "../tensor.hpp"
 
@@ -66,7 +66,6 @@ QUALIFIER_D_H constexpr float RandomFloat(uint32_t *seed)
            static_cast<float>(0x01000000u);
 }
 
-QUALIFIER_D_H Vec3 RandomVec3(uint32_t *seed);
 QUALIFIER_D_H float MisWeight(float pdf1, float pdf2);
 
 QUALIFIER_D_H Vec2 SampleDiskUniform(const float xi_0, const float xi_1);
@@ -75,32 +74,6 @@ QUALIFIER_D_H Vec3 SampleConeUniform(const float cos_cutoff, const float xi_0,
 QUALIFIER_D_H Vec3 SampleSphereUniform(const float xi_0, const float xi_1);
 QUALIFIER_D_H void SampleHemisCos(const float xi_0, const float xi_1, Vec3 *vec,
                                   float *pdf);
-QUALIFIER_D_H void SampleGgx(const float xi_0, const float xi_1,
-                             const float roughness, Vec3 *vec, float *pdf);
-QUALIFIER_D_H void SampleGgx(const float xi_0, const float xi_1,
-                             const float roughness_u, const float roughness_v,
-                             Vec3 *vec, float *pdf);
-
-QUALIFIER_D_H float PdfHemisCos(const Vec3 &vec);
-QUALIFIER_D_H float PdfGgx(const float roughness, const Vec3 &vec);
-QUALIFIER_D_H float PdfGgx(const float roughness_u, const float roughness_v,
-                           const Vec3 &vec);
-QUALIFIER_D_H float SmithG1Ggx(const float roughness, const Vec3 &v,
-                               const Vec3 &h);
-QUALIFIER_D_H float SmithG1Ggx(const float roughness_u, const float roughness_v,
-                               const Vec3 &v, const Vec3 &h);
-
-QUALIFIER_D_H float AverageFresnel(const float eta);
-
-QUALIFIER_D_H Vec3 AverageFresnelConductor(const Vec3 &reflectivity,
-                                           const Vec3 &edgetint);
-
-template <typename T>
-QUALIFIER_D_H T FresnelSchlick(const float cos_theta, const T &relectivity)
-{
-    return (1.0f - relectivity) * static_cast<float>(pow(1.0f - cos_theta, 5)) +
-           relectivity;
-}
 
 template <typename T>
 QUALIFIER_D_H T Sqr(const T &t)

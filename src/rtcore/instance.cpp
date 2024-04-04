@@ -22,7 +22,7 @@ QUALIFIER_D_H void Instance::Intersect(Bsdf *bsdf_buffer,
     Bsdf *bsdf = bsdf_buffer + map_instance_bsdf[id_];
     Ray ray_local = *ray;
     Hit hit_local;
-    blas_->Intersect(bsdf, seed, &ray_local, &hit_local); 
+    blas_->Intersect(bsdf, seed, &ray_local, &hit_local);
     if (hit_local.valid && ray_local.t_max <= ray->t_max)
     {
         *ray = ray_local;

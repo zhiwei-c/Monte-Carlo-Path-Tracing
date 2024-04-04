@@ -22,16 +22,16 @@ Scene::~Scene()
     DeleteElement(backend_type_, tlas_);
 }
 
-void Scene::AddInstance(const Instance::Info &info)
+void Scene::AddInstance(const InstanceInfo &info)
 {
     try
     {
         switch (info.type)
         {
-        case Instance::Type::kCube:
-        case Instance::Type::kSphere:
-        case Instance::Type::kRectangle:
-        case Instance::Type::kMeshes:
+        case InstanceType::kCube:
+        case InstanceType::kSphere:
+        case InstanceType::kRectangle:
+        case InstanceType::kMeshes:
             break;
         default:
             throw MyException("unknow instance type.");
@@ -96,16 +96,16 @@ void Scene::CommitPrimitives()
         {
             switch (list_info_instance_[i].type)
             {
-            case Instance::Type::kCube:
+            case InstanceType::kCube:
                 CommitCube(i);
                 break;
-            case Instance::Type::kSphere:
+            case InstanceType::kSphere:
                 CommitSphere(i);
                 break;
-            case Instance::Type::kRectangle:
+            case InstanceType::kRectangle:
                 CommitRectangle(i);
                 break;
-            case Instance::Type::kMeshes:
+            case InstanceType::kMeshes:
                 CommitMeshes(i);
                 break;
             default:
@@ -194,7 +194,7 @@ void Scene::CommitInstances()
 
 void Scene::CommitCube(const uint32_t id)
 {
-    Instance::Info::Meshes &info_meshes = list_info_instance_[id].meshes;
+    MeshesInfo &info_meshes = list_info_instance_[id].meshes;
     info_meshes.texcoords = {{0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1},
                              {1, 0}, {0, 0}, {0, 1}, {1, 1}, {1, 0}, {0, 0},
                              {0, 1}, {1, 1}, {1, 0}, {0, 0}, {0, 1}, {1, 1},
@@ -236,8 +236,7 @@ void Scene::CommitSphere(const uint32_t id)
 {
     try
     {
-        const Instance::Info::Sphere &info_sphere =
-            list_info_instance_[id].sphere;
+        const SphereInfo &info_sphere = list_info_instance_[id].sphere;
         const Mat4 to_world = list_info_instance_[id].to_world;
 
         PrimitiveData data_primitive;
@@ -291,7 +290,7 @@ void Scene::CommitSphere(const uint32_t id)
 
 void Scene::CommitRectangle(const uint32_t id)
 {
-    Instance::Info::Meshes &info_meshes = list_info_instance_[id].meshes;
+    MeshesInfo &info_meshes = list_info_instance_[id].meshes;
     info_meshes.texcoords = {{0, 0}, {1, 0}, {1, 1}, {0, 1}};
     info_meshes.positions = {{-1, -1, 0}, {1, -1, 0}, {1, 1, 0}, {-1, 1, 0}};
     info_meshes.normals = {{0, 0, 1}, {0, 0, 1}, {0, 0, 1}, {0, 0, 1}};
@@ -316,7 +315,7 @@ void Scene::CommitRectangle(const uint32_t id)
 
 void Scene::CommitMeshes(const uint32_t id)
 {
-    Instance::Info::Meshes &info_meshes = list_info_instance_[id].meshes;
+    MeshesInfo &info_meshes = list_info_instance_[id].meshes;
     const Mat4 to_world = list_info_instance_[id].to_world;
 
     if (info_meshes.indices.empty())
@@ -328,7 +327,7 @@ void Scene::CommitMeshes(const uint32_t id)
     if (info_meshes.positions.empty())
     {
         throw MyException("cannot find vertex position info when adding "
-                             "instance to scene.");
+                          "instance to scene.");
     }
 
     for (Vec3 &position : info_meshes.positions)
@@ -402,7 +401,7 @@ void Scene::CommitMeshes(const uint32_t id)
     }
 }
 
-void Scene::SetupMeshes(Instance::Info::Meshes info_meshes,
+void Scene::SetupMeshes(MeshesInfo info_meshes,
                         std::vector<PrimitiveData> *list_data_primitve,
                         std::vector<float> *areas)
 {

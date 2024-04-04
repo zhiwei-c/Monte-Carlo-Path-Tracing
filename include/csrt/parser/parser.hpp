@@ -12,10 +12,10 @@ struct Config
 {
     BackendType backend_type;
     Camera::Info camera;
-    Integrator::Info integrator;
+    IntegratorInfo integrator;
     std::vector<TextureData> textures;
     std::vector<BsdfInfo> bsdfs;
-    std::vector<Instance::Info> instances;
+    std::vector<InstanceInfo> instances;
     std::vector<EmitterInfo> emitters;
 };
 

@@ -2,6 +2,56 @@
 
 #include <exception>
 
+namespace
+{
+
+using namespace csrt;
+
+QUALIFIER_D_H float AverageFresnel(const float eta)
+{
+    if (eta < 1.0)
+    {
+        /* Fit by Egan and Hilgeman (1973). Works reasonably well for
+            "normal" IOR values (<2).
+            Max rel. error in 1.0 - 1.5 : 0.1%
+            Max rel. error in 1.5 - 2   : 0.6%
+            Max rel. error in 2.0 - 5   : 9.5%
+        */
+        return -1.4399f * Sqr(eta) + 0.7099f * eta + 0.6681f + 0.0636f / eta;
+    }
+    else
+    {
+        /* Fit by d'Eon and Irving (2011)
+
+            Maintains a good accuracy even for unrealistic IOR values.
+
+            Max rel. error in 1.0 - 2.0   : 0.1%
+            Max rel. error in 2.0 - 10.0  : 0.2%
+        */
+        float inv_eta = 1.0f / eta, inv_eta_2 = inv_eta * inv_eta,
+              inv_eta_3 = inv_eta_2 * inv_eta, inv_eta_4 = inv_eta_3 * inv_eta,
+              inv_eta_5 = inv_eta_4 * inv_eta;
+        return 0.919317f - 3.4793f * inv_eta + 6.75335f * inv_eta_2 -
+               7.80989f * inv_eta_3 + 4.98554f * inv_eta_4 -
+               1.36881f * inv_eta_5;
+    }
+}
+
+QUALIFIER_D_H Vec3 AverageFresnel(const Vec3 &reflectivity,
+                                  const Vec3 &edgetint)
+{
+    return Vec3(0.087237f) + 0.0230685f * edgetint -
+           0.0864902f * edgetint * edgetint +
+           0.0774594f * edgetint * edgetint * edgetint +
+           0.782654f * reflectivity - 0.136432f * reflectivity * reflectivity +
+           0.278708f * reflectivity * reflectivity * reflectivity +
+           0.19744f * edgetint * reflectivity +
+           0.0360605f * edgetint * edgetint * reflectivity -
+           0.2586f * edgetint * reflectivity * reflectivity;
+}
+
+} // namespace
+
 namespace csrt
 {
 
@@ -11,101 +61,11 @@ QUALIFIER_D_H BsdfInfo::BsdfInfo()
 {
 }
 
-// QUALIFIER_D_H BsdfInfo::Info(const BsdfInfo &info)
-//     : type(info.type), twosided(info.twosided), id_opacity(info.id_opacity),
-//       id_bump_map(info.id_bump_map)
-// {
-//     switch (info.type)
-//     {
-//     case BsdfType::kNone:
-//         break;
-//     case BsdfType::kAreaLight:
-//         area_light = info.area_light;
-//         break;
-//     case BsdfType::kDiffuse:
-//         diffuse = info.diffuse;
-//         break;
-//     case BsdfType::kRoughDiffuse:
-//         rough_diffuse = info.rough_diffuse;
-//         break;
-//     case BsdfType::kConductor:
-//         conductor = info.conductor;
-//         break;
-//     case BsdfType::kDielectric:
-//     case BsdfType::kThinDielectric:
-//         dielectric = info.dielectric;
-//         break;
-//     case BsdfType::kPlastic:
-//         plastic = info.plastic;
-//         break;
-//     }
-// }
-
-// QUALIFIER_D_H void BsdfInfo::operator=(const BsdfInfo &info)
-// {
-//     type = info.type;
-//     twosided = info.twosided;
-//     id_opacity = info.id_opacity;
-//     id_bump_map = info.id_bump_map;
-//     switch (info.type)
-//     {
-//     case BsdfType::kNone:
-//         break;
-//     case BsdfType::kAreaLight:
-//         area_light = info.area_light;
-//         break;
-//     case BsdfType::kDiffuse:
-//         diffuse = info.diffuse;
-//         break;
-//     case BsdfType::kRoughDiffuse:
-//         rough_diffuse = info.rough_diffuse;
-//         break;
-//     case BsdfType::kConductor:
-//         conductor = info.conductor;
-//         break;
-//     case BsdfType::kDielectric:
-//     case BsdfType::kThinDielectric:
-//         dielectric = info.dielectric;
-//         break;
-//     case BsdfType::kPlastic:
-//         plastic = info.plastic;
-//         break;
-//     }
-// }
-
 QUALIFIER_D_H BsdfData::BsdfData()
     : type(BsdfType::kNone), twosided(false), opacity(nullptr),
       bump_map(nullptr), area_light{}
 {
 }
-
-// QUALIFIER_D_H Bsdf::Data::Data(const Bsdf::Data &info)
-//     : type(info.type), twosided(info.twosided), opacity(info.opacity),
-//       bump_map(info.bump_map)
-// {
-//     switch (info.type)
-//     {
-//     case BsdfType::kAreaLight:
-//         area_light = info.area_light;
-//         break;
-//     case BsdfType::kDiffuse:
-//         diffuse = info.diffuse;
-//         break;
-//     case BsdfType::kRoughDiffuse:
-//         rough_diffuse = info.rough_diffuse;
-//         break;
-//     case BsdfType::kConductor:
-//         conductor = info.conductor;
-//         break;
-//     case BsdfType::kDielectric:
-//     case BsdfType::kThinDielectric:
-//         dielectric = info.dielectric;
-//         break;
-//     case BsdfType::kPlastic:
-//         plastic = info.plastic;
-//         break;
-//     }
-// }
 
 QUALIFIER_D_H void BsdfData::operator=(const BsdfData &info)
 {
@@ -187,8 +147,8 @@ QUALIFIER_D_H Bsdf::Bsdf(const uint32_t id, const BsdfInfo &info,
             texture_buffer + info.conductor.id_specular_reflectance;
         data_.conductor.reflectivity = info.conductor.reflectivity;
         data_.conductor.edgetint = info.conductor.edgetint;
-        data_.conductor.F_avg = AverageFresnelConductor(
-            info.conductor.reflectivity, info.conductor.edgetint);
+        data_.conductor.F_avg = AverageFresnel(info.conductor.reflectivity,
+                                               info.conductor.edgetint);
         data_.conductor.brdf_avg_buffer = brdf_avg_buffer;
         data_.conductor.albedo_avg_buffer = albedo_avg_buffer;
         break;

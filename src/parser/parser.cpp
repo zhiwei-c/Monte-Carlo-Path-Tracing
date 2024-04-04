@@ -1059,7 +1059,7 @@ uint64_t element_parser::ReadShape(const pugi::xml_node &shape_node)
         }
     }
 
-    Instance::Info info;
+    InstanceInfo info;
     info.id_bsdf = id_bsdf;
     info.flip_normals = basic_parser::ReadBoolean(
         shape_node, {"flip_normals", "flipNormals"}, false);
@@ -1070,17 +1070,17 @@ uint64_t element_parser::ReadShape(const pugi::xml_node &shape_node)
     {
     case "cube"_hash:
     {
-        info.type = Instance::Type::kCube;
+        info.type = InstanceType::kCube;
         break;
     }
     case "rectangle"_hash:
     {
-        info.type = Instance::Type::kRectangle;
+        info.type = InstanceType::kRectangle;
         break;
     }
     case "sphere"_hash:
     {
-        info.type = Instance::Type::kSphere;
+        info.type = InstanceType::kSphere;
         info.sphere.radius =
             shape_node.child("float").attribute("value").as_float(1.0);
         info.sphere.center =
@@ -1097,7 +1097,7 @@ uint64_t element_parser::ReadShape(const pugi::xml_node &shape_node)
     case "gltf"_hash:
     case "ply"_hash:
     {
-        info.type = Instance::Type::kMeshes;
+        info.type = InstanceType::kMeshes;
         std::string filename =
             local::current_directory +
             shape_node.child("string").attribute("value").as_string();

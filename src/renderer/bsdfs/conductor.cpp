@@ -2,6 +2,7 @@
 
 #include "csrt/renderer/bsdfs/bsdf.hpp"
 #include "csrt/renderer/bsdfs/kulla_conty.hpp"
+#include "csrt/renderer/bsdfs/microfacet.hpp"
 #include "csrt/rtcore/scene.hpp"
 #include "csrt/utils.hpp"
 

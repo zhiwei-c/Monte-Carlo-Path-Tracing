@@ -30,7 +30,7 @@ public:
     SetAreaLightInfo(const std::vector<uint32_t> map_id_area_light_instance,
                      const std::vector<float> list_area_light_weight);
     void SetCamera(const Camera::Info &info);
-    void SetIntegrator(const Integrator::Info &info);
+    void SetIntegrator(const IntegratorInfo &info);
 
     void Commit();
 
@@ -74,11 +74,12 @@ private:
     uint32_t *map_instance_area_light_;
     // 从面光源ID到相应实例ID的映射
     uint32_t *map_area_light_instance_;
+    // Kulla-Conty LUT
+    float *brdf_avg_buffer_;
+    // Kulla-Conty LUT
+    float *albedo_avg_buffer_;
 
-    float *brdf_avg_buffer_;   // Kulla-Conty LUT
-    float *albedo_avg_buffer_; // Kulla-Conty LUT
-
-    Integrator::Info info_integrator_;
+    IntegratorInfo info_integrator_;
     std::vector<TextureData> list_texture_data_;
     std::vector<BsdfInfo> list_bsdf_info_;
     std::vector<EmitterInfo> list_emitter_info_;
