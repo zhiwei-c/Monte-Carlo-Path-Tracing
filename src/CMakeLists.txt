@@ -1,5 +1,5 @@
-file(GLOB_RECURSE HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/*.cuh")
-file(GLOB_RECURSE SOURCE_LIST CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cu")
+file(GLOB_RECURSE HEADER_LIST CONFIGURE_DEPENDS "${PROJECT_SOURCE_DIR}/include/*.hpp")
+file(GLOB_RECURSE SOURCE_LIST CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp")
 if(ENABLE_CUDA)
     set_source_files_properties(${SOURCE_LIST} ${HEADER_LIST} PROPERTIES LANGUAGE CUDA)
 else()
@@ -21,8 +21,17 @@ target_link_libraries(RayTracerLib
     PRIVATE
         unofficial::tinyexr::tinyexr
         assimp::assimp
-        ZLIB::ZLIB
+        ZLIB::ZLIB)
+if (WIN32)
+    target_link_libraries(RayTracerLib
+        PRIVATE
         pugixml::shared pugixml::pugixml)
+else()
+    target_link_libraries(RayTracerLib
+        PRIVATE
+        pugixml::static pugixml::pugixml)
+endif()
+
 if(ENABLE_CUDA)
     if(ENABLE_VIEWER)
         target_link_libraries(RayTracerLib

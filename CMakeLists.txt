@@ -12,11 +12,6 @@ project(
     DESCRIPTION "A simple ray tracer"
     LANGUAGES CXX C)
 
-if(WIN32)
-else()
-    message(FATAL_ERROR "Only Windows, CMake will exit." )
-endif()
-
 if(ENABLE_CUDA)
     message(STATUS "Enable GPU-accelerated computing.")
     enable_language(CUDA)
@@ -59,7 +54,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
             message(STATUS "Disable GPU debugging information generation")
         endif()
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:libcmt.lib")
-    else()
+    elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
         add_definitions(/wd"4819")
     endif()
 endif()
