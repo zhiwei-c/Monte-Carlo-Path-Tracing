@@ -164,6 +164,12 @@ void Scene::CommitPrimitives(
             case InstanceType::kSphere:
                 CommitSphere(list_info_instance[i]);
                 break;
+            case InstanceType::kDisk:
+                CommitDisk(list_info_instance[i]);
+                break;
+            case InstanceType::kCylinder:
+                CommitCylinder(list_info_instance[i]);
+                break;
             case InstanceType::kRectangle:
                 CommitRectangle(list_info_instance[i]);
                 break;
@@ -362,6 +368,105 @@ void Scene::CommitSphere(const InstanceInfo &info)
     {
         std::ostringstream oss;
         oss << "error when add 'sphere' instance.\n\t" << e.what();
+        throw MyException(oss.str());
+    }
+}
+
+void Scene::CommitDisk(const InstanceInfo &info)
+{
+    try
+    {
+        PrimitiveData data_primitive;
+        data_primitive.type = PrimitiveType::kDisk;
+        data_primitive.disk.to_world = info.to_world;
+
+        Primitive *primitives =
+            MallocArray<Primitive>(backend_type_, g_num_primitive + 1);
+        CopyArray(backend_type_, primitives, primitives_, g_num_primitive);
+        DeleteArray(backend_type_, primitives_);
+        primitives[g_num_primitive] = Primitive(0, data_primitive);
+        std::vector<AABB> aabbs = {primitives[g_num_primitive].aabb()};
+        primitives_ = primitives;
+        g_list_offset_primitive.push_back(g_num_primitive);
+        ++g_num_primitive;
+
+        const Vec3 center_world = TransformPoint(info.to_world, Vec3{0}),
+                   boundary_world =
+                       TransformPoint(info.to_world, Vec3{0.5f, 0, 0});
+        const float radius_world = Length(center_world - boundary_world);
+        std::vector<float> areas = {kPi * Sqr(radius_world)};
+
+        std::vector<BvhNode> list_node = BvhBuilder::Build(aabbs, areas);
+        const uint64_t num_node_local = list_node.size();
+        BvhNode *nodes =
+            MallocArray<BvhNode>(backend_type_, g_num_node + num_node_local);
+        CopyArray(backend_type_, nodes, nodes_, g_num_node);
+        DeleteArray(backend_type_, nodes_);
+        for (uint64_t i = 0; i < num_node_local; ++i)
+            nodes[g_num_node + i] = list_node[i];
+        nodes_ = nodes;
+        g_list_offset_node.push_back(g_num_node);
+        g_num_node += num_node_local;
+    }
+    catch (const MyException &e)
+    {
+        std::ostringstream oss;
+        oss << "error when add 'disk' instance.\n\t" << e.what();
+        throw MyException(oss.str());
+    }
+}
+
+void Scene::CommitCylinder(const InstanceInfo &info)
+{
+    try
+    {
+        PrimitiveData data_primitive;
+        data_primitive.type = PrimitiveType::kCylinder;
+
+        data_primitive.cylinder.to_world =
+            LocalToWorld(Normalize(info.cylinder.p1 - info.cylinder.p0));
+        data_primitive.cylinder.to_world =
+            Mul(Translate(info.cylinder.p0), data_primitive.cylinder.to_world);
+        data_primitive.cylinder.to_world =
+            Mul(info.to_world, data_primitive.cylinder.to_world);
+        data_primitive.cylinder.length =
+            Length(TransformPoint(
+                       data_primitive.cylinder.to_world,
+                       {0, 0, Length(info.cylinder.p1 - info.cylinder.p0)}) -
+                   TransformPoint(data_primitive.cylinder.to_world, {0, 0, 0}));
+        data_primitive.cylinder.radius =
+            Length(TransformPoint(data_primitive.cylinder.to_world,
+                                  {info.cylinder.radius, 0, 0}) -
+                   TransformPoint(data_primitive.cylinder.to_world, {0, 0, 0}));
+
+        Primitive *primitives =
+            MallocArray<Primitive>(backend_type_, g_num_primitive + 1);
+        CopyArray(backend_type_, primitives, primitives_, g_num_primitive);
+        DeleteArray(backend_type_, primitives_);
+        primitives[g_num_primitive] = Primitive(0, data_primitive);
+        std::vector<AABB> aabbs = {primitives[g_num_primitive].aabb()};
+        primitives_ = primitives;
+        g_list_offset_primitive.push_back(g_num_primitive);
+        ++g_num_primitive;
+
+        std::vector<float> areas = {k2Pi * Sqr(data_primitive.cylinder.radius)};
+
+        std::vector<BvhNode> list_node = BvhBuilder::Build(aabbs, areas);
+        const uint64_t num_node_local = list_node.size();
+        BvhNode *nodes =
+            MallocArray<BvhNode>(backend_type_, g_num_node + num_node_local);
+        CopyArray(backend_type_, nodes, nodes_, g_num_node);
+        DeleteArray(backend_type_, nodes_);
+        for (uint64_t i = 0; i < num_node_local; ++i)
+            nodes[g_num_node + i] = list_node[i];
+        nodes_ = nodes;
+        g_list_offset_node.push_back(g_num_node);
+        g_num_node += num_node_local;
+    }
+    catch (const MyException &e)
+    {
+        std::ostringstream oss;
+        oss << "error when add 'disk' instance.\n\t" << e.what();
         throw MyException(oss.str());
     }
 }

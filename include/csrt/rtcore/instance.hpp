@@ -14,9 +14,11 @@ enum class InstanceType
 {
     kNone,
     kCube,
-    kSphere,
     kRectangle,
     kMeshes,
+    kSphere,
+    kDisk,
+    kCylinder,
 };
 
 struct SphereInfo
@@ -45,6 +47,7 @@ struct InstanceInfo
     Mat4 to_world = {};
     SphereInfo sphere = {};
     MeshesInfo meshes = {};
+    CylinderInfo cylinder = {};
 };
 
 class Instance

@@ -78,20 +78,7 @@ void PressCharkey(unsigned char key, int x, int y)
     case 's':
     case 'S':
     {
-        std::vector<float> data(3 * screen_width * screen_height);
-        uint32_t offset_src, offset_dst;
-        for (int j = 0; j < screen_height; ++j)
-        {
-            for (int i = 0; i < screen_width; ++i)
-            {
-                offset_src = (j * screen_width + i) * 3;
-                offset_dst = ((screen_height - 1 - j) * screen_width + i) * 3;
-                for (int k = 0; k < 3; ++k)
-                    data[offset_dst + k] = frame[offset_src + k];
-            }
-        }
-        csrt::image_io::Write(data.data(), screen_width, screen_height,
-                              filename);
+        csrt::image_io::Write(frame, screen_width, screen_height, filename);
         break;
     }
     case 27:

@@ -12,31 +12,6 @@ QUALIFIER_D_H float MisWeight(float pdf1, float pdf2)
     return pdf1 / (pdf1 + pdf2);
 }
 
-QUALIFIER_D_H Vec2 SampleDiskUniform(const float xi_0, const float xi_1)
-{
-    const float r1 = 2.0f * xi_0 - 1.0f, r2 = 2.0f * xi_1 - 1.0f;
-
-    /* Modified concencric map code with less branching (by Dave Cline), see
-       http://psgraphics.blogspot.ch/2011/01/improved-code-for-concentric-map.html
-     */
-    float phi, r;
-    if (r1 == 0.0f && r2 == 0.0f)
-    {
-        r = phi = 0;
-    }
-    else if (Sqr(r1) > Sqr(r2))
-    {
-        r = r1;
-        phi = kPiDiv4 * (r2 / r1);
-    }
-    else
-    {
-        r = r2;
-        phi = kPiDiv2 - (r1 / r2) * kPiDiv4;
-    }
-    return {r * cosf(phi), r * sinf(phi)};
-}
-
 QUALIFIER_D_H Vec3 SampleConeUniform(const float cos_cutoff, const float xi_0,
                                      const float xi_1)
 {
@@ -167,6 +142,26 @@ QUALIFIER_D_H Vec3 LocalToWorld(const Vec3 &local, const Vec3 &up)
     }
     Vec3 B = Normalize(Cross(C, up));
     return Normalize(local.x * B + local.y * C + local.z * up);
+}
+
+QUALIFIER_D_H Mat4 LocalToWorld(const Vec3 &up)
+{
+    Vec3 C;
+    if (sqrt(Sqr(up.x) + Sqr(up.z)) > kEpsilonFloat)
+    {
+        float len_inv = 1.0f / sqrt(Sqr(up.x) + Sqr(up.z));
+        C = {-up.z * len_inv, 0, up.x * len_inv};
+    }
+    else
+    {
+        float len_inv = 1.0f / sqrt(Sqr(up.y) + Sqr(up.z));
+        C = {0, -up.z * len_inv, up.y * len_inv};
+    }
+    Vec3 B = Normalize(Cross(C, up));
+    return Mat4{{B.x, B.y, B.z, 0},
+                {C.x, C.y, C.z, 0},
+                {up.x, up.y, up.z, 0},
+                {0, 0, 0, 1}};
 }
 
 } // namespace csrt

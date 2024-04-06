@@ -33,6 +33,8 @@ private:
     void CommitCube(InstanceInfo info);
     void CommitMeshes(InstanceInfo info);
     void CommitSphere(const InstanceInfo &info);
+    void CommitDisk(const InstanceInfo &info);
+    void CommitCylinder(const InstanceInfo &info);
 
     BackendType backend_type_;
     Instance *instances_;

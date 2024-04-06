@@ -64,7 +64,6 @@ QUALIFIER_D_H constexpr float RandomFloat(uint32_t *seed)
 
 QUALIFIER_D_H float MisWeight(float pdf1, float pdf2);
 
-QUALIFIER_D_H Vec2 SampleDiskUniform(const float xi_0, const float xi_1);
 QUALIFIER_D_H Vec3 SampleConeUniform(const float cos_cutoff, const float xi_0,
                                      const float xi_1);
 QUALIFIER_D_H Vec3 SampleSphereUniform(const float xi_0, const float xi_1);
@@ -102,6 +101,9 @@ QUALIFIER_D_H Vec3 SphericalToCartesian(const float theta, const float phi,
                                         const float r);
 
 QUALIFIER_D_H Vec3 LocalToWorld(const Vec3 &local, const Vec3 &up);
+
+
+QUALIFIER_D_H Mat4 LocalToWorld(const Vec3 &up);
 
 } // namespace csrt
 

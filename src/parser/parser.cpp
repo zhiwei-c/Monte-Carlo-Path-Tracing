@@ -1145,11 +1145,21 @@ uint64_t element_parser::ReadShape(const pugi::xml_node &shape_node)
             basic_parser::ReadVec3(shape_node, {"center"}, Vec3(0));
         break;
     }
-    // case "disk"_hash:
-    // {
-    //     CreateDisk(to_world, id_bsdf);
-    //     break;
-    // }
+    case "disk"_hash:
+    {
+        info.type = InstanceType::kDisk;
+        break;
+    }
+    case "cylinder"_hash:
+    {
+        info.type = InstanceType::kCylinder;
+        info.cylinder.p0 = basic_parser::ReadVec3(shape_node, {"p0"}, Vec3(0));
+        info.cylinder.p1 =
+            basic_parser::ReadVec3(shape_node, {"p1"}, Vec3(0, 0, 1));
+        info.cylinder.radius =
+            shape_node.child("float").attribute("value").as_float(1.0f);
+        break;
+    }
     case "obj"_hash:
     case "serialized"_hash:
     case "gltf"_hash:

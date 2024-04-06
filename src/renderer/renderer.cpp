@@ -172,8 +172,7 @@ void DispathRaysCpu(Camera *camera, Integrator *integrator, float *frame)
 
         for (int i = 0; i < 10; ++i)
         {
-            pixel.push_back({1026, 710});
-            pixel.push_back({1026, 711});
+            pixel.push_back({443, 730});
         }
 
         std::vector<Vec3> ret;

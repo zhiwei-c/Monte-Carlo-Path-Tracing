@@ -3,6 +3,8 @@
 
 #include "../accel/aabb.hpp"
 #include "../hit.hpp"
+#include "cylinder.hpp"
+#include "disk.hpp"
 #include "sphere.hpp"
 #include "triangle.hpp"
 
@@ -14,6 +16,8 @@ enum class PrimitiveType
     kNone,
     kTriangle,
     kSphere,
+    kDisk,
+    kCylinder,
 };
 
 class Bsdf;
@@ -25,6 +29,8 @@ struct PrimitiveData
     {
         TriangleData triangle;
         SphereData sphere;
+        DiskData disk;
+        CylinderData cylinder;
     };
 
     QUALIFIER_D_H PrimitiveData();
