@@ -1,4 +1,4 @@
-# Monte-Carlo-Path-Tracing
+# 蒙特卡洛路径追踪（Monte-Carlo-Path-Tracing）
 
 ![banner](./resources/images/banner.png)
 
