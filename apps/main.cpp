@@ -97,6 +97,35 @@ int main(int argc, char **argv)
 
 Param ParseParam(int argc, char **argv)
 {
+    std::cerr << "A Simple Ray Tracer.\n\n";
+    std::cerr << "Command Format:\n";
+    std::cerr << "  '[-c/--cpu/-g/--gpu/-p/--preview] "
+                 "--input/-i 'config path' "
+                 "[--output/-o 'file path] "
+                 "[--width/-w 'value'] "
+                 "[--height/-h 'value'] "
+                 "[--spp/-s 'value']'.\n\n";
+    std::cerr << "Option:\n";
+    std::cerr << "  --'cpu' or '-c': use CPU for offline rendering.\n"
+                 "      if not specify specify CPU/CUDA/preview, use CPU.\n";
+    std::cerr << "  --'gpu' or '-g': use CUDA for offline rendering,\n"
+                 "      no effect if disbale CUDA when compiling.\n"
+                 "      if not specify specify CPU/CUDA/preview, use CPU.\n";
+    std::cerr << "  --'preview' or '-p': use CUDA for real-time rendering,\n";
+    std::cerr << "      no effect if disbale CUDA when compiling.\n";
+    std::cerr << "      if not specify specify CPU/CUDA/preview, use CPU.\n";
+    std::cerr
+        << "  '--input' or '-i': read config from mitsuba format xml file.\n";
+    std::cerr << "  '--output' or '-o': output path for rendering result\n"
+                 "      only PNG format, default: 'result.png'.\n";
+    std::cerr << "      press 's' key to save when real-time previewing.\n";
+    std::cerr
+        << "  '--width' or '-w': specify the width of rendering picture.\n";
+    std::cerr
+        << "  '--height' or '-h': specify the height of rendering picture.\n";
+    std::cerr
+        << "  '--spp' or '-s': specify the number of samples per pixel.\n\n";
+
     Param param;
     for (int i = 0; i < argc; ++i)
     {
@@ -107,7 +136,7 @@ Param ParseParam(int argc, char **argv)
         }
 #ifdef ENABLE_CUDA
         else if (argv[i] == std::string("--gpu") ||
-                 argv[i] == std::string("--g"))
+                 argv[i] == std::string("-g"))
         {
             param.type = csrt::BackendType::kCuda;
             param.preview = false;
@@ -148,6 +177,10 @@ Param ParseParam(int argc, char **argv)
                  i + 1 < argc)
         {
             param.output = argv[i + 1];
+        }
+        else if (argv[i] == std::string("--help"))
+        {
+            exit(0);
         }
     }
 

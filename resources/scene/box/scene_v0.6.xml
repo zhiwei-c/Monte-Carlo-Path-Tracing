@@ -23,22 +23,46 @@
 			<rfilter type="tent" />
 		</film>
 	</sensor>
-	<bsdf type="twosided" id="Sphere" >
-		<bsdf type="roughconductor" >
-			<float name="alpha" value="0.001" />
-			<string name="material" value="Ag" />
-		</bsdf>
-	</bsdf>
+    <texture type="checkerboard" id="texture-checkerboard">
+        <rgb name="color0" value="0.725, 0.71, 0.68" />
+        <rgb name="color1" value="0.2" />
+        <transform name="to_uv">
+            <scale x="3.000000" y="3.000000" />
+        </transform>
+    </texture>
 	<bsdf type="twosided" id="Bunny0" >
-		<bsdf type="roughconductor" >
-			<float name="alpha" value="0.1" />
-			<string name="material" value="Al" />
-		</bsdf>
-	</bsdf>
-	<bsdf type="twosided" id="Bunny1" >
 		<bsdf type="roughdielectric" >
 			<float name="alpha" value="0.1" />
 			<material value="bk7" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Cylinder0" >
+		<bsdf type="dielectric" >
+			<material value="bk7" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Disk0" >
+		<bsdf type="dielectric" >
+			<material value="bk7" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Sphere0" >
+		<bsdf type="roughconductor" >
+			<float name="alphaU" value="0.1" />
+			<float name="alphaV" value="0.3" />
+			<string name="material" value="Al" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Sphere1" >
+		<bsdf type="roughconductor" >
+			<float name="alphaU" value="0.2" />
+			<float name="alphaV" value="0.2" />
+			<string name="material" value="Al" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="Sphere2" >
+		<bsdf type="conductor" >
+			<string name="material" value="Al" />
 		</bsdf>
 	</bsdf>
 	<bsdf type="twosided" id="LeftWall" >
@@ -53,7 +77,8 @@
 	</bsdf>
 	<bsdf type="twosided" id="Floor" >
 		<bsdf type="diffuse" >
-			<rgb name="reflectance" value="0.725, 0.71, 0.68"/>
+            <ref name="reflectance" id="texture-checkerboard" />
+			<!-- <rgb name="reflectance" value="0.725, 0.71, 0.68"/> -->
 		</bsdf>
 	</bsdf>
 	<bsdf type="twosided" id="Ceiling" >
@@ -101,11 +126,6 @@
 		</transform>
 		<ref id="LeftWall" />
 	</shape>
-	<shape type="sphere" >
-		<float name="radius" value="0.15" />
-		<point name="center" x="0.0" y="0.15" z="-0.7" />
-		<ref id="Sphere" />
-	</shape>
 	<shape type="rectangle" >
 		<transform name="toWorld" >
 			<matrix value="0.235 -1.66103e-008 -7.80685e-009 -0.005 -2.05444e-008 3.90343e-009 -0.0893 1.98 2.05444e-008 0.19 8.30516e-009 -0.03 0 0 0 1"/>
@@ -121,11 +141,11 @@
 			<scale value="4.0 4.0 4.0"/>
 			<translate value="0.0672739968 -0.133556396 0.00636819750"/>
 			<rotate y="1" angle="30"/>
-            <translate value="-0.5 0 0"/>
+            <translate value="-0.3 0.02 0.05"/>
 		</transform>
 		<ref id="Bunny0" />
 	</shape>
-	<shape type="ply" >
+	<!-- <shape type="ply" >
 		<string name="filename" value="models/bun_zipper_1.ply" />
 		<transform name="toWorld" >
 			<scale value="4.0 4.0 4.0"/>
@@ -134,5 +154,34 @@
             <translate value="0.5 0 0"/>
 		</transform>
 		<ref id="Bunny1" />
+	</shape> -->
+	<shape type="cylinder" >
+        <point name="p0" value="-0.3 0.0 0.05"/>
+        <point name="p1" value="-0.3 0.02 0.05"/>
+        <float name="radius" value="0.5"/>
+		<ref id="Cylinder0" />
+	</shape>
+	<shape type="disk" >
+		<ref id="Disk0" />
+		<transform name="toWorld" >
+			<scale value="1 1 1"/>
+			<rotate x="1" angle="-90"/>
+            <translate value="-0.3 0.02 0.05"/>
+		</transform>
+	</shape>
+	<shape type="sphere" >
+		<float name="radius" value="0.15" />
+		<point name="center" x="0.15" y="0.15" z="-0.7" />
+		<ref id="Sphere0" />
+	</shape>
+	<shape type="sphere" >
+		<float name="radius" value="0.15" />
+		<point name="center" x="0.45" y="0.15" z="-0.7" />
+		<ref id="Sphere1" />
+	</shape>
+	<shape type="sphere" >
+		<float name="radius" value="0.15" />
+		<point name="center" x="0.75" y="0.15" z="-0.7" />
+		<ref id="Sphere2" />
 	</shape>
 </scene>
