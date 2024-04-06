@@ -104,9 +104,15 @@ public:
                        Texture *texture_buffer, float *brdf_avg_buffer,
                        float *albedo_avg_buffer);
 
-    QUALIFIER_D_H void Evaluate(BsdfSampleRec *rec) const;
     QUALIFIER_D_H void Sample(uint32_t *seed, BsdfSampleRec *rec) const;
+    QUALIFIER_D_H void Evaluate(BsdfSampleRec *rec) const;
+
+    QUALIFIER_D_H Vec3 ApplyBumpMapping(const Vec3 &normal, const Vec3 &tangent,
+                                        const Vec3 &bitangent,
+                                        const Vec2 &texcoord) const;
+
     QUALIFIER_D_H Vec3 GetRadiance(const Vec2 &texcoord) const;
+
     QUALIFIER_D_H bool IsEmitter() const;
     QUALIFIER_D_H bool IsTwosided() const { return data_.twosided; }
     QUALIFIER_D_H bool IsTransparent(const Vec2 &texcoord,

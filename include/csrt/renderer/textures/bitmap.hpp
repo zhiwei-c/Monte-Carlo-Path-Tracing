@@ -1,11 +1,22 @@
 #ifndef CSRT__RENDERER__TEXTURES__BITMAP_HPP
 #define CSRT__RENDERER__TEXTURES__BITMAP_HPP
 
+#include <vector>
+
 #include "../../tensor.hpp"
 #include "../../utils.hpp"
 
 namespace csrt
 {
+
+struct BitmapInfo
+{
+    int width = 0;
+    int height = 0;
+    int channel = 0;
+    std::vector<float> data = {};
+    Mat4 to_uv = {};
+};
 
 struct BitmapData
 {

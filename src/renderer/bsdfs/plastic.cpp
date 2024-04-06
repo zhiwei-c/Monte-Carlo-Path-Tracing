@@ -8,65 +8,6 @@
 namespace csrt
 {
 
-QUALIFIER_D_H void EvaluatePlastic(const PlasticData &data, BsdfSampleRec *rec)
-{
-    // 反射光线与法线方向应该位于同侧
-    const float N_dot_O = Dot(rec->wo, rec->normal);
-    if (N_dot_O < kEpsilonFloat)
-        return;
-
-    // 计算塑料清漆层和基底层反射的权重
-    const Vec3 kd = data.diffuse_reflectance->GetColor(rec->texcoord),
-               ks = data.specular_reflectance->GetColor(rec->texcoord);
-    float weight_spec =
-        (ks.x + ks.y + ks.z) / ((kd.x + kd.y + kd.z) + (ks.x + ks.y + ks.z));
-    const float N_dot_I = Dot(-rec->wi, rec->normal),
-                kr_i = FresnelSchlick(N_dot_I, data.reflectivity);
-    float pdf_spec = kr_i * weight_spec,
-          pdf_diff = (1.0f - kr_i) * (1.0f - weight_spec);
-    pdf_spec = pdf_spec / (pdf_spec + pdf_diff);
-    pdf_diff = 1.0f - pdf_spec;
-
-    // 反推根据GGX法线分布函数重要抽样微平面法线的概率
-    const Vec3 h_world = Normalize(-rec->wi + rec->wo),
-               h_local = rec->ToLocal(h_world);
-    const float alpha = data.roughness->GetColor(rec->texcoord).x,
-                D = PdfGgx(alpha, h_local), H_dot_O = Dot(rec->wo, h_world);
-    pdf_spec *= D / (4.0f * H_dot_O);
-
-    // 反推余弦加权重要抽样时的概率
-    const Vec3 wo_local = rec->ToLocal(rec->wo);
-    pdf_diff *= wo_local.z;
-
-    // 总概率
-    rec->pdf = pdf_spec + pdf_diff;
-    if (rec->pdf < kEpsilon)
-        return;
-    else
-        rec->valid = true;
-
-    // 计算塑料清漆层贡献的光能衰减系数
-    if (pdf_spec > kEpsilon)
-    {
-        const Vec3 wi_local = rec->ToLocal(-rec->wi);
-        const float H_dot_I = Dot(-rec->wi, h_world),
-                    F = FresnelSchlick(H_dot_I, data.reflectivity),
-                    G = (SmithG1Ggx(alpha, wo_local, h_local) *
-                         SmithG1Ggx(alpha, wi_local, h_local));
-        Vec3 spec = (F * D * G) / (4.0f * N_dot_O);
-        rec->attenuation += spec * ks;
-    }
-
-    // 计算塑料基底层贡献的光能衰减系数
-    if (pdf_diff > kEpsilon)
-    {
-        Vec3 diff = kd * k1DivPi * N_dot_I;
-        const float kr_o = FresnelSchlick(N_dot_O, data.reflectivity);
-        diff *= ((1.0f - kr_i) * (1.0f - kr_o)) / (1.0f - data.F_avg);
-        rec->attenuation += diff;
-    }
-}
-
 QUALIFIER_D_H void SamplePlastic(const PlasticData &data, uint32_t *seed,
                                  BsdfSampleRec *rec)
 {
@@ -148,6 +89,65 @@ QUALIFIER_D_H void SamplePlastic(const PlasticData &data, uint32_t *seed,
     if (pdf_diff > kEpsilon)
     {
         Vec3 diff = kd * k1DivPi * N_dot_I;
+        diff *= ((1.0f - kr_i) * (1.0f - kr_o)) / (1.0f - data.F_avg);
+        rec->attenuation += diff;
+    }
+}
+
+QUALIFIER_D_H void EvaluatePlastic(const PlasticData &data, BsdfSampleRec *rec)
+{
+    // 反射光线与法线方向应该位于同侧
+    const float N_dot_O = Dot(rec->wo, rec->normal);
+    if (N_dot_O < kEpsilonFloat)
+        return;
+
+    // 计算塑料清漆层和基底层反射的权重
+    const Vec3 kd = data.diffuse_reflectance->GetColor(rec->texcoord),
+               ks = data.specular_reflectance->GetColor(rec->texcoord);
+    float weight_spec =
+        (ks.x + ks.y + ks.z) / ((kd.x + kd.y + kd.z) + (ks.x + ks.y + ks.z));
+    const float N_dot_I = Dot(-rec->wi, rec->normal),
+                kr_i = FresnelSchlick(N_dot_I, data.reflectivity);
+    float pdf_spec = kr_i * weight_spec,
+          pdf_diff = (1.0f - kr_i) * (1.0f - weight_spec);
+    pdf_spec = pdf_spec / (pdf_spec + pdf_diff);
+    pdf_diff = 1.0f - pdf_spec;
+
+    // 反推根据GGX法线分布函数重要抽样微平面法线的概率
+    const Vec3 h_world = Normalize(-rec->wi + rec->wo),
+               h_local = rec->ToLocal(h_world);
+    const float alpha = data.roughness->GetColor(rec->texcoord).x,
+                D = PdfGgx(alpha, h_local), H_dot_O = Dot(rec->wo, h_world);
+    pdf_spec *= D / (4.0f * H_dot_O);
+
+    // 反推余弦加权重要抽样时的概率
+    const Vec3 wo_local = rec->ToLocal(rec->wo);
+    pdf_diff *= wo_local.z;
+
+    // 总概率
+    rec->pdf = pdf_spec + pdf_diff;
+    if (rec->pdf < kEpsilon)
+        return;
+    else
+        rec->valid = true;
+
+    // 计算塑料清漆层贡献的光能衰减系数
+    if (pdf_spec > kEpsilon)
+    {
+        const Vec3 wi_local = rec->ToLocal(-rec->wi);
+        const float H_dot_I = Dot(-rec->wi, h_world),
+                    F = FresnelSchlick(H_dot_I, data.reflectivity),
+                    G = (SmithG1Ggx(alpha, wo_local, h_local) *
+                         SmithG1Ggx(alpha, wi_local, h_local));
+        Vec3 spec = (F * D * G) / (4.0f * N_dot_O);
+        rec->attenuation += spec * ks;
+    }
+
+    // 计算塑料基底层贡献的光能衰减系数
+    if (pdf_diff > kEpsilon)
+    {
+        Vec3 diff = kd * k1DivPi * N_dot_I;
+        const float kr_o = FresnelSchlick(N_dot_O, data.reflectivity);
         diff *= ((1.0f - kr_i) * (1.0f - kr_o)) / (1.0f - data.F_avg);
         rec->attenuation += diff;
     }

@@ -86,12 +86,6 @@ std::vector<BvhNode> BvhBuilder::Build(const std::vector<AABB> &aabbs,
         oss << "error when build BVH.\n\t" << e.what();
         throw MyException(oss.str());
     }
-    catch (const std::exception &e)
-    {
-        std::ostringstream oss;
-        oss << "error when build BVH.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
     return nodes;
 }
 

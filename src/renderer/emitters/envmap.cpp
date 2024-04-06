@@ -8,7 +8,7 @@ using namespace csrt;
 
 QUALIFIER_D_H float LinearRgbToLuminance(const Vec3 &rgb)
 {
-    return 0.2126f * rgb.r + 0.7152f * rgb.g + 0.0722f * rgb.b;
+    return 0.2126f * rgb.x + 0.7152f * rgb.y + 0.0722f * rgb.z;
 }
 
 } // namespace

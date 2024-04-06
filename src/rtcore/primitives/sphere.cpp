@@ -39,11 +39,11 @@ QUALIFIER_D_H bool IntersectSphere(const uint32_t id_primitive,
     float theta, phi;
     CartesianToSpherical(position_local, &theta, &phi, nullptr);
     const Vec2 texcoord = {phi * k1Div2Pi, theta * k1DivPi};
-    if (bsdf->IsTransparent(texcoord, seed))
+    if (bsdf != nullptr && bsdf->IsTransparent(texcoord, seed))
         return false;
 
     ray->t_max = t;
-    
+
     if (hit != nullptr)
     {
         const bool inside = c < 0.0f;
@@ -63,8 +63,16 @@ QUALIFIER_D_H bool IntersectSphere(const uint32_t id_primitive,
         if (flip_bitangent)
             bitangent = -bitangent;
 
-        const Vec3 tangent = Normalize(Cross(bitangent, normal));
+        Vec3 tangent = Normalize(Cross(bitangent, normal));
         bitangent = Normalize(Cross(normal, tangent));
+
+        if (bsdf != nullptr)
+        {
+            normal =
+                bsdf->ApplyBumpMapping(normal, tangent, bitangent, texcoord);
+            bitangent = Normalize(Cross(normal, tangent));
+            tangent = Normalize(Cross(bitangent, normal));
+        }
 
         if (inside)
         {

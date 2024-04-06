@@ -13,10 +13,6 @@ constexpr float kLowestFloat = std::numeric_limits<float>::lowest();
 constexpr float kMaxFloat = std::numeric_limits<float>::max();
 constexpr uint32_t kMaxUint = std::numeric_limits<uint32_t>::max();
 
-constexpr float kEpsilonFloat = std::numeric_limits<float>::epsilon();
-constexpr float kEpsilonDistance = 1e-4f;
-constexpr float kEpsilon = 1e-2f;
-
 constexpr float kPi = 3.141592653589793f;
 constexpr float k2Pi = 3.141592653589793f * 2.0f;
 constexpr float kPiDiv2 = 3.141592653589793f * 0.5f;

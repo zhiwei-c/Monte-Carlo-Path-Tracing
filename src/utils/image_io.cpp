@@ -22,23 +22,19 @@ extern "C"
 namespace csrt
 {
 
-void image_io::Write(const int width, const int height,
-                     const float *frame_buffer, const std::string &filename)
+void image_io::Write(const float *data, const int width, const int height,
+                     std::string filename)
 {
-    unsigned char *color = new unsigned char[width * height * 3];
-    int offset = 0;
-    for (int j = 0; j < height; ++j)
+    const uint32_t num_element = static_cast<uint32_t>(width) * height * 3;
+    unsigned char *color = new unsigned char[num_element];
+    for (uint32_t i = 0; i < num_element; ++i)
     {
-        for (int i = 0; i < width; ++i)
-        {
-            offset = (j * width + i) * 3;
-            color[offset] = static_cast<unsigned char>(
-                std::min(255, static_cast<int>(255 * frame_buffer[offset])));
-            color[offset + 1] = static_cast<unsigned char>(std::min(
-                255, static_cast<int>(255 * frame_buffer[offset + 1])));
-            color[offset + 2] = static_cast<unsigned char>(std::min(
-                255, static_cast<int>(255 * frame_buffer[offset + 2])));
-        }
+        const float value =
+            data[i] <= 0.0031308f
+                ? (12.92f * data[i])
+                : (1.055f * powf(data[i], 1.0f / 2.4f) - 0.055f);
+        color[i] = static_cast<unsigned char>(
+            static_cast<int>(value > 1.0f ? 255.0f : value * 255.0f));
     }
 
     int ret =

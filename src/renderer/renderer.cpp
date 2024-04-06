@@ -14,11 +14,11 @@ namespace
 
 using namespace csrt;
 
-std::mutex m_mutex_patch;
-std::vector<std::vector<std::array<uint32_t, 3>>> m_patches;
+std::mutex g_mutex_patch;
+std::vector<std::vector<std::array<uint32_t, 3>>> g_patches;
 #ifdef ENABLE_CUDA
-dim3 m_threads_per_block = {8, 8, 1};
-dim3 m_num_blocks = {1, 1, 1};
+dim3 g_threads_per_block = {8, 8, 1};
+dim3 g_num_blocks = {1, 1, 1};
 #endif
 
 void GeneratePatchInfo(const uint32_t width, const uint32_t height)
@@ -47,14 +47,14 @@ void GeneratePatchInfo(const uint32_t width, const uint32_t height)
 
     constexpr uint32_t patch_size = 64;
     const uint32_t num_patch = (pixels.size() + patch_size - 1) / patch_size;
-    m_patches = std::vector<std::vector<std::array<uint32_t, 3>>>(num_patch);
+    g_patches = std::vector<std::vector<std::array<uint32_t, 3>>>(num_patch);
 
     uint32_t begin, end;
     for (uint32_t i = 0; i < num_patch; ++i)
     {
         begin = i * patch_size,
         end = std::min((i + 1) * patch_size, resolution);
-        m_patches[i] = std::vector<std::array<uint32_t, 3>>(
+        g_patches[i] = std::vector<std::array<uint32_t, 3>>(
             pixels.begin() + begin, pixels.begin() + end);
     }
 }
@@ -80,19 +80,8 @@ QUALIFIER_D_H void DrawPixel(const uint32_t i, const uint32_t j, Camera *camera,
         color += temp;
     }
     color *= camera->spp_inv();
-
     for (int channel = 0; channel < 3; ++channel)
-    {
-        if (color[channel] <= 0.0031308f)
-        {
-            frame[pixel_offset + channel] = 12.92f * color[channel];
-        }
-        else
-        {
-            frame[pixel_offset + channel] =
-                1.055f * powf(color[channel], 1.0f / 2.4f) - 0.055f;
-        }
-    }
+        frame[pixel_offset + channel] = color[channel];
 }
 
 #ifdef ENABLE_CUDA
@@ -106,8 +95,8 @@ __global__ void DispathRaysCuda(Camera *camera, Integrator *integrator,
 }
 
 __global__ void DispathRaysCuda(Camera *camera, Integrator *integrator,
-                                const uint32_t index_frame, float *accum,
-                                float *frame)
+                                const uint32_t index_frame, float *frame,
+                                float *frame_srgb)
 {
     const uint32_t i = blockIdx.x * blockDim.x + threadIdx.x,
                    j = blockIdx.y * blockDim.y + threadIdx.y;
@@ -130,18 +119,18 @@ __global__ void DispathRaysCuda(Camera *camera, Integrator *integrator,
         for (int c = 0; c < 3; ++c)
         {
             color[c] = fminf(color[c], 1.0f);
-            accum[pixel_offset + c] =
-                (index_frame * accum[pixel_offset + c] + color[c]) /
+            frame[pixel_offset + c] =
+                (index_frame * frame[pixel_offset + c] + color[c]) /
                 (index_frame + 1);
 
-            if (accum[pixel_offset + c] <= 0.0031308f)
+            if (frame[pixel_offset + c] <= 0.0031308f)
             {
-                frame[offset_dest + c] = 12.92f * accum[pixel_offset + c];
+                frame_srgb[offset_dest + c] = 12.92f * frame[pixel_offset + c];
             }
             else
             {
-                frame[offset_dest + c] =
-                    1.055f * powf(accum[pixel_offset + c], 1.0f / 2.4f) -
+                frame_srgb[offset_dest + c] =
+                    1.055f * powf(frame[pixel_offset + c], 1.0f / 2.4f) -
                     0.055f;
             }
         }
@@ -154,7 +143,7 @@ void DispathRaysCpu(Camera *camera, Integrator *integrator, float *frame)
 {
     Timer timer;
     uint64_t count_pacth = 0;
-    const uint64_t size_patch = m_patches.size();
+    const uint64_t size_patch = g_patches.size();
     const double size_patch_rcp = 1.0 / size_patch;
 
 #if defined(DEBUG) || defined(_DEBUG)
@@ -182,7 +171,10 @@ void DispathRaysCpu(Camera *camera, Integrator *integrator, float *frame)
         std::vector<std::array<int, 2>> pixel;
 
         for (int i = 0; i < 10; ++i)
-            pixel.push_back({137, 551});
+        {
+            pixel.push_back({1026, 710});
+            pixel.push_back({1026, 711});
+        }
 
         std::vector<Vec3> ret;
         std::vector<std::vector<Vec3>> colors;
@@ -214,7 +206,6 @@ void DispathRaysCpu(Camera *camera, Integrator *integrator, float *frame)
             color *= camera->spp_inv();
             for (int channel = 0; channel < 3; ++channel)
             {
-                color[channel] = fminf(color[channel], 1.0f);
                 color[channel] =
                     (color[channel] <= 0.0031308f)
                         ? (12.92f * color[channel])
@@ -232,18 +223,18 @@ void DispathRaysCpu(Camera *camera, Integrator *integrator, float *frame)
         while (true)
         {
             {
-                std::lock_guard<std::mutex> lock(m_mutex_patch);
+                std::lock_guard<std::mutex> lock(g_mutex_patch);
                 if (count_pacth == size_patch)
                     break;
                 id_patch = count_pacth++;
             }
-            for (const std::array<uint32_t, 3> &pixel : m_patches[id_patch])
+            for (const std::array<uint32_t, 3> &pixel : g_patches[id_patch])
             {
                 const uint32_t i = pixel.at(0), j = pixel.at(1);
                 DrawPixel(i, j, camera, integrator, frame);
             }
             {
-                std::lock_guard<std::mutex> lock(m_mutex_patch);
+                std::lock_guard<std::mutex> lock(g_mutex_patch);
                 timer.PrintProgress(count_pacth * size_patch_rcp);
             }
         }
@@ -266,200 +257,73 @@ void DispathRaysCpu(Camera *camera, Integrator *integrator, float *frame)
 namespace csrt
 {
 
-Renderer::Renderer(const BackendType backend_type)
-    : backend_type_(backend_type), num_instance_(0), num_area_light_(0),
-      id_sun_(kInvalidId), id_envmap_(kInvalidId), pixels_(nullptr),
-      textures_(nullptr), bsdfs_(nullptr), instances_(nullptr),
-      emitters_(nullptr), data_env_map_(nullptr), tlas_(nullptr),
-      integrator_(nullptr), camera_(nullptr), cdf_area_light_(nullptr),
-      list_pdf_area_instance_(nullptr), map_instance_bsdf_(nullptr),
-      map_instance_area_light_(nullptr), map_area_light_instance_(nullptr)
+Renderer::Renderer(const RendererConfig &config)
+    : backend_type_(config.backend_type), camera_(nullptr), textures_(nullptr),
+      bsdfs_(nullptr), media_(nullptr), emitters_(nullptr),
+      integrator_(nullptr), map_instance_bsdf_(nullptr),
+      map_area_light_instance_(nullptr), map_instance_area_light_(nullptr),
+      cdf_area_light_(nullptr), pixels_(nullptr), data_env_map_(nullptr),
+      brdf_avg_buffer_(nullptr), albedo_avg_buffer_(nullptr)
 {
-    brdf_avg_buffer_ =
-        MallocArray<float>(backend_type_, kLutResolution * kLutResolution);
-    albedo_avg_buffer_ = MallocArray<float>(backend_type_, kLutResolution);
-    ComputeKullaConty(brdf_avg_buffer_, albedo_avg_buffer_);
-}
-
-Renderer::~Renderer()
-{
-    DeleteArray(backend_type_, brdf_avg_buffer_);
-    DeleteArray(backend_type_, albedo_avg_buffer_);
-
-    for (const TextureData &data : list_texture_data_)
+    try
     {
-        if (data.type == TextureType::kBitmap)
+        scene_ = new csrt::Scene(config.backend_type, config.instances);
+
+        const size_t num_instance = config.instances.size();
+        std::vector<uint32_t> map_area_light_instance;
+        std::vector<float> list_area_light_weight;
+        map_instance_bsdf_ = MallocArray<uint32_t>(backend_type_, num_instance);
+        for (size_t i = 0; i < num_instance; ++i)
         {
-            DeleteArray(BackendType::kCpu, data.bitmap.data);
+            map_instance_bsdf_[i] = config.instances[i].id_bsdf;
+            if (config.instances[i].id_bsdf < config.bsdfs.size())
+            {
+                const csrt::BsdfInfo info_bsdf =
+                    config.bsdfs[config.instances[i].id_bsdf];
+                if (info_bsdf.type == csrt::BsdfType::kAreaLight)
+                {
+                    map_area_light_instance.push_back(i);
+                    list_area_light_weight.push_back(
+                        info_bsdf.area_light.weight);
+                }
+            }
         }
-    }
-
-    DeleteArray(backend_type_, textures_);
-    DeleteArray(backend_type_, pixels_);
-    DeleteElement(backend_type_, camera_);
-    DeleteElement(backend_type_, integrator_);
-
-    DeleteArray(backend_type_, bsdfs_);
-    DeleteArray(backend_type_, map_instance_bsdf_);
-
-    DeleteArray(backend_type_, map_area_light_instance_);
-    DeleteArray(backend_type_, map_instance_area_light_);
-    DeleteArray(backend_type_, cdf_area_light_);
-    DeleteArray(backend_type_, data_env_map_);
-}
-
-void Renderer::AddTexture(const TextureData &data)
-{
-    list_texture_data_.push_back(data);
-}
-
-void Renderer::AddBsdf(const BsdfInfo &info)
-{
-    switch (info.type)
-    {
-    case BsdfType::kAreaLight:
-    case BsdfType::kDiffuse:
-    case BsdfType::kRoughDiffuse:
-    case BsdfType::kConductor:
-    case BsdfType::kDielectric:
-    case BsdfType::kThinDielectric:
-    case BsdfType::kPlastic:
-        break;
-    default:
-        throw MyException("unknow BSDF type.");
-        break;
-    }
-
-    list_bsdf_info_.push_back(info);
-}
-
-void Renderer::AddSceneInfo(Instance *instances, float *list_pdf_area_instance,
-                            const std::vector<uint32_t> &map_instance_bsdf,
-                            TLAS *tlas)
-{
-    try
-    {
-        instances_ = instances;
-        list_pdf_area_instance_ = list_pdf_area_instance;
-        tlas_ = tlas;
-
-        num_instance_ = map_instance_bsdf.size();
-        for (uint32_t i = 0; i < num_instance_; ++i)
-            CheckBsdf(map_instance_bsdf[i], true);
-        DeleteArray(backend_type_, map_instance_bsdf_);
-        map_instance_bsdf_ =
-            MallocArray<uint32_t>(backend_type_, map_instance_bsdf);
-    }
-    catch (const MyException &e)
-    {
-        std::ostringstream oss;
-        oss << "error when add scene info to renderer.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
-    catch (const std::exception &e)
-    {
-        std::ostringstream oss;
-        oss << "error when add scene info to renderer.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
-}
-
-void Renderer::AddEmitter(const EmitterInfo &info)
-{
-    switch (info.type)
-    {
-    case EmitterType::kPoint:
-    case EmitterType::kSpot:
-    case EmitterType::kDirectional:
-    case EmitterType::kSun:
-    case EmitterType::kEnvMap:
-    case EmitterType::kConstant:
-        break;
-    default:
-        throw MyException("unknow Emitter type.");
-        break;
-    }
-
-    list_emitter_info_.push_back(info);
-}
-
-void Renderer::SetAreaLightInfo(
-    const std::vector<uint32_t> map_id_area_light_instance,
-    const std::vector<float> list_area_light_weight)
-{
-    try
-    {
-        DeleteArray(backend_type_, map_area_light_instance_);
         map_area_light_instance_ =
-            MallocArray<uint32_t>(backend_type_, map_id_area_light_instance);
+            MallocArray<uint32_t>(backend_type_, map_area_light_instance);
 
-        DeleteArray(backend_type_, map_instance_area_light_);
-        map_instance_area_light_ =
-            MallocArray<uint32_t>(backend_type_, num_instance_);
-        for (uint32_t i = 0; i < num_instance_; ++i)
-            map_instance_area_light_[i] = kInvalidId;
-
-        DeleteArray(backend_type_, cdf_area_light_);
-        num_area_light_ = static_cast<uint32_t>(list_area_light_weight.size());
-        cdf_area_light_ =
-            MallocArray<float>(backend_type_, num_area_light_ + 1);
+        map_instance_area_light_ = MallocArray<uint32_t>(
+            backend_type_, std::vector<uint32_t>(num_instance, kInvalidId));
+        const uint32_t num_area_light =
+            static_cast<uint32_t>(list_area_light_weight.size());
+        cdf_area_light_ = MallocArray<float>(backend_type_, num_area_light + 1);
         cdf_area_light_[0] = 0;
-        for (uint32_t i = 0; i < num_area_light_; ++i)
+        for (uint32_t i = 0; i < num_area_light; ++i)
         {
             cdf_area_light_[i + 1] =
                 list_area_light_weight[i] + cdf_area_light_[i];
-            map_instance_area_light_[map_id_area_light_instance[i]] = i;
+            map_instance_area_light_[map_area_light_instance[i]] = i;
         }
-    }
-    catch (const MyException &e)
-    {
-        std::ostringstream oss;
-        oss << "error when set 'area light' info to renderer.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
-    catch (const std::exception &e)
-    {
-        std::ostringstream oss;
-        oss << "error when set 'area light' info to renderer.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
-}
 
-void Renderer::SetCamera(const Camera::Info &info)
-{
-    try
-    {
-        DeleteElement(backend_type_, camera_);
         camera_ = MallocElement<Camera>(backend_type_);
-        *camera_ = Camera(info);
-    }
-    catch (const MyException &e)
-    {
-        std::ostringstream oss;
-        oss << "error when set camera info to renderer.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
-    catch (const std::exception &e)
-    {
-        std::ostringstream oss;
-        oss << "error when set camera info to renderer.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
-}
+        *camera_ = Camera(config.camera);
 
-void Renderer::SetIntegrator(const IntegratorInfo &info)
-{
-    info_integrator_ = info;
-}
+        CommitTextures(config.textures);
 
-void Renderer::Commit()
-{
-    try
-    {
-        CommitTextures();
-        CommitBsdfs();
-        CommitEmitters();
-        CommitIntegrator();
+        brdf_avg_buffer_ =
+            MallocArray<float>(backend_type_, kLutResolution * kLutResolution);
+        albedo_avg_buffer_ = MallocArray<float>(backend_type_, kLutResolution);
+        ComputeKullaConty(brdf_avg_buffer_, albedo_avg_buffer_);
+
+        CommitBsdfs(config.textures.size(), config.bsdfs);
+        CommitMedia(config.media);
+
+        uint32_t id_sun = kInvalidId, id_envmap = kInvalidId;
+        CommitEmitters(config.textures, config.emitters, &id_sun, &id_envmap);
+
+        CommitIntegrator(config.integrator, num_area_light,
+                         static_cast<uint32_t>(config.emitters.size()), id_sun,
+                         id_envmap);
+
 #ifdef ENABLE_CUDA
         if (backend_type_ == BackendType::kCpu)
         {
@@ -469,145 +333,86 @@ void Renderer::Commit()
         }
         else
         {
-            m_num_blocks = {
+            g_num_blocks = {
                 static_cast<unsigned int>(camera_->width() / 8 + 1),
                 static_cast<unsigned int>(camera_->height() / 8 + 1), 1};
         }
 #endif
     }
-    catch (const MyException &e)
-    {
-        std::ostringstream oss;
-        oss << "error when commit renderer.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
     catch (const std::exception &e)
     {
+        ReleaseData();
         std::ostringstream oss;
         oss << "error when commit renderer.\n\t" << e.what();
         throw MyException(oss.str());
     }
 }
 
-void Renderer::Draw(float *frame) const
+void Renderer::ReleaseData()
 {
-    try
-    {
-        fprintf(stderr, "[info] begin rendering ...\n");
+    DeleteElement(BackendType::kCpu, scene_);
 
-#ifdef ENABLE_CUDA
-        if (backend_type_ == BackendType::kCpu)
-        {
-#endif
-            DispathRaysCpu(camera_, integrator_, frame);
-#ifdef ENABLE_CUDA
-        }
-        else
-        {
-            Timer timer;
-            DispathRaysCuda<<<m_num_blocks, m_threads_per_block>>>(
-                camera_, integrator_, frame);
-            cudaError_t ret = cudaGetLastError();
-            if (ret)
-            {
-                std::ostringstream oss;
-                oss << "CUDA error : \"" << ret << "\".";
-                throw MyException(oss.str());
-            }
+    DeleteElement(backend_type_, camera_);
+    DeleteArray(backend_type_, textures_);
+    DeleteArray(backend_type_, bsdfs_);
+    DeleteArray(backend_type_, media_);
+    DeleteArray(backend_type_, emitters_);
+    DeleteElement(backend_type_, integrator_);
 
-            ret = cudaDeviceSynchronize();
-            if (ret)
-            {
-                std::ostringstream oss;
-                oss << "CUDA error : \"" << ret << "\".";
-                throw MyException(oss.str());
-            }
-            timer.PrintTimePassed("rendering");
-        }
-#endif
-    }
-    catch (const MyException &e)
-    {
-        std::ostringstream oss;
-        oss << "error when draw.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
-    catch (const std::exception &e)
-    {
-        std::ostringstream oss;
-        oss << "error when draw.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
+    DeleteArray(backend_type_, map_instance_bsdf_);
+    DeleteArray(backend_type_, map_area_light_instance_);
+    DeleteArray(backend_type_, map_instance_area_light_);
+    DeleteArray(backend_type_, cdf_area_light_);
+    DeleteArray(backend_type_, pixels_);
+    DeleteArray(backend_type_, data_env_map_);
+    DeleteArray(backend_type_, brdf_avg_buffer_);
+    DeleteArray(backend_type_, albedo_avg_buffer_);
 }
 
-#ifdef ENABLE_VIEWER
-void Renderer::Draw(const uint32_t index_frame, float *accum,
-                    float *frame) const
-{
-    DispathRaysCuda<<<m_num_blocks, m_threads_per_block>>>(
-        camera_, integrator_, index_frame, accum, frame);
-
-    cudaError_t ret = cudaGetLastError();
-    if (ret)
-    {
-        std::ostringstream oss;
-        oss << "CUDA error : \"" << ret << "\" when draw.";
-        throw MyException(oss.str());
-    }
-
-    ret = cudaDeviceSynchronize();
-    if (ret)
-    {
-        std::ostringstream oss;
-        oss << "CUDA error : \"" << ret << "\" when draw.";
-        throw MyException(oss.str());
-    }
-}
-#endif
-
-void Renderer::CommitTextures()
+void Renderer::CommitTextures(const std::vector<TextureInfo> &list_texture_info)
 {
     std::vector<float> pixel_buffer;
     std::vector<uint64_t> offsets;
     uint64_t accumulate_pixel_num = 0;
-    for (const TextureData &data : list_texture_data_)
+    for (const TextureInfo &info : list_texture_info)
     {
-        if (data.type == TextureType::kBitmap)
+        if (info.type == TextureType::kBitmap)
         {
-            const int pixel_num =
-                data.bitmap.width * data.bitmap.height * data.bitmap.channel;
-            pixel_buffer.insert(pixel_buffer.end(), data.bitmap.data,
-                                data.bitmap.data + pixel_num);
+            pixel_buffer.insert(pixel_buffer.end(), info.bitmap.data.begin(),
+                                info.bitmap.data.end());
             offsets.push_back(accumulate_pixel_num);
+
+            const int pixel_num =
+                info.bitmap.width * info.bitmap.height * info.bitmap.channel;
             accumulate_pixel_num += pixel_num;
         }
     }
+
     try
     {
-        DeleteArray(backend_type_, pixels_);
         pixels_ = MallocArray(backend_type_, pixel_buffer);
 
-        DeleteArray(backend_type_, textures_);
-        const uint64_t num_texture = list_texture_data_.size();
+        const size_t num_texture = list_texture_info.size();
         textures_ = MallocArray<Texture>(backend_type_, num_texture);
-        uint64_t data_offset = 0;
-        for (uint64_t i = 0, j = 0; i < num_texture; ++i)
+
+        size_t data_offset = 0;
+        for (size_t i = 0, j = 0; i < num_texture; ++i)
         {
             TextureData data;
-            data.type = list_texture_data_[i].type;
+            data.type = list_texture_info[i].type;
             switch (data.type)
             {
             case TextureType::kConstant:
-                data.constant = list_texture_data_[i].constant;
+                data.constant = list_texture_info[i].constant;
                 break;
             case TextureType::kCheckerboard:
-                data.checkerboard = list_texture_data_[i].checkerboard;
+                data.checkerboard = list_texture_info[i].checkerboard;
                 break;
             case TextureType::kBitmap:
-                data.bitmap.width = list_texture_data_[i].bitmap.width;
-                data.bitmap.height = list_texture_data_[i].bitmap.height;
-                data.bitmap.channel = list_texture_data_[i].bitmap.channel;
-                data.bitmap.to_uv = list_texture_data_[i].bitmap.to_uv;
+                data.bitmap.width = list_texture_info[i].bitmap.width;
+                data.bitmap.height = list_texture_info[i].bitmap.height;
+                data.bitmap.channel = list_texture_info[i].bitmap.channel;
+                data.bitmap.to_uv = list_texture_info[i].bitmap.to_uv;
                 data.bitmap.data = pixels_;
                 data_offset = offsets[j++];
                 break;
@@ -624,24 +429,31 @@ void Renderer::CommitTextures()
         oss << "error when commit textures to renderer.\n\t" << e.what();
         throw MyException(oss.str());
     }
-    catch (const std::exception &e)
-    {
-        std::ostringstream oss;
-        oss << "error when commit textures to renderer.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
 }
 
-void Renderer::CommitBsdfs()
+void Renderer::CommitBsdfs(const size_t num_texture,
+                           const std::vector<BsdfInfo> &list_bsdf_info)
 {
+    auto CheckTexture = [&](const uint32_t id, const bool allow_invalid)
+    {
+        if (id == kInvalidId && allow_invalid)
+            return;
+
+        if (id >= num_texture)
+        {
+            std::ostringstream oss;
+            oss << "cannot find texture (id " << id << ").";
+            throw MyException(oss.str());
+        }
+    };
+
     try
     {
-        DeleteArray(backend_type_, bsdfs_);
-        const uint64_t num_bsdf = list_bsdf_info_.size();
+        const size_t num_bsdf = list_bsdf_info.size();
         bsdfs_ = MallocArray<Bsdf>(backend_type_, num_bsdf);
-        for (uint64_t i = 0; i < num_bsdf; ++i)
+        for (size_t i = 0; i < num_bsdf; ++i)
         {
-            const BsdfInfo &info = list_bsdf_info_[i];
+            const BsdfInfo &info = list_bsdf_info[i];
             CheckTexture(info.id_opacity, true);
             CheckTexture(info.id_bump_map, true);
             switch (info.type)
@@ -687,26 +499,55 @@ void Renderer::CommitBsdfs()
         oss << "error when commit BSDFs to renderer." << e.what();
         throw MyException(oss.str());
     }
-    catch (const std::exception &e)
+}
+
+void Renderer::CommitMedia(const std::vector<MediumInfo> &list_medium_info)
+{
+    try
+    {
+        const size_t num_medium = list_medium_info.size();
+        media_ = MallocArray<Medium>(backend_type_, num_medium);
+        for (size_t i = 0; i < num_medium; ++i)
+        {
+            media_[i] = Medium(i, list_medium_info[i]);
+        }
+    }
+    catch (const MyException &e)
     {
         std::ostringstream oss;
-        oss << "error when commit BSDFs to renderer." << e.what();
+        oss << "error when commit medium to renderer." << e.what();
         throw MyException(oss.str());
     }
 }
 
-void Renderer::CommitEmitters()
+void Renderer::CommitEmitters(const std::vector<TextureInfo> &list_texture_info,
+                              const std::vector<EmitterInfo> &list_emitter_info,
+                              uint32_t *id_sun, uint32_t *id_envmap)
 {
+    auto CheckTexture = [&](const uint32_t id, const bool allow_invalid)
+    {
+        if (id == kInvalidId && allow_invalid)
+            return;
+
+        if (id >= list_texture_info.size())
+        {
+            std::ostringstream oss;
+            oss << "cannot find texture (id " << id << ").";
+            throw MyException(oss.str());
+        }
+    };
+
     try
     {
-        id_sun_ = kInvalidId;
-        id_envmap_ = kInvalidId;
-        DeleteArray(backend_type_, emitters_);
-        const uint64_t num_emitter = list_emitter_info_.size();
+        *id_sun = kInvalidId;
+        *id_envmap = kInvalidId;
+
+        const uint64_t num_emitter = list_emitter_info.size();
         emitters_ = MallocArray<Emitter>(backend_type_, num_emitter);
+
         for (uint64_t i = 0; i < num_emitter; ++i)
         {
-            const EmitterInfo &info = list_emitter_info_[i];
+            const EmitterInfo &info = list_emitter_info[i];
             switch (info.type)
             {
             case EmitterType::kPoint:
@@ -715,12 +556,12 @@ void Renderer::CommitEmitters()
                 break;
             case EmitterType::kSun:
                 CheckTexture(info.sun.id_texture, false);
-                id_sun_ = i;
+                *id_sun = i;
                 break;
             case EmitterType::kEnvMap:
                 CheckTexture(info.envmap.id_radiance, false);
             case EmitterType::kConstant:
-                id_envmap_ = i;
+                *id_envmap = i;
                 break;
             default:
                 throw MyException("unknow emitter type.");
@@ -730,9 +571,9 @@ void Renderer::CommitEmitters()
 
             if (info.type == EmitterType::kEnvMap)
             {
-                TextureData data_radiance =
-                    list_texture_data_[info.envmap.id_radiance];
-                if (data_radiance.type != TextureType::kBitmap)
+                const TextureInfo &radiance_texture_info =
+                    list_texture_info[info.envmap.id_radiance];
+                if (radiance_texture_info.type != TextureType::kBitmap)
                 {
                     std::ostringstream oss;
                     oss << "radiance texture '" << info.envmap.id_radiance
@@ -743,10 +584,11 @@ void Renderer::CommitEmitters()
                 std::vector<float> cdf_cols, cdf_rows, weight_rows;
                 float normalization;
 
-                CreateEnvMapCdfPdf(
-                    data_radiance.bitmap.width, data_radiance.bitmap.height,
-                    textures_[info.envmap.id_radiance], &cdf_cols, &cdf_rows,
-                    &weight_rows, &normalization);
+                CreateEnvMapCdfPdf(radiance_texture_info.bitmap.width,
+                                   radiance_texture_info.bitmap.height,
+                                   textures_[info.envmap.id_radiance],
+                                   &cdf_cols, &cdf_rows, &weight_rows,
+                                   &normalization);
 
                 DeleteArray(backend_type_, data_env_map_);
                 const uint64_t num_data =
@@ -764,8 +606,8 @@ void Renderer::CommitEmitters()
                 for (uint64_t j = 0; j < cdf_cols.size(); ++j)
                     data_env_map_[j + offset] = cdf_cols[j];
 
-                emitters_[i].InitEnvMap(data_radiance.bitmap.width,
-                                        data_radiance.bitmap.height,
+                emitters_[i].InitEnvMap(radiance_texture_info.bitmap.width,
+                                        radiance_texture_info.bitmap.height,
                                         normalization, data_env_map_);
             }
         }
@@ -776,45 +618,53 @@ void Renderer::CommitEmitters()
         oss << "error when commit BSDFs to renderer." << e.what();
         throw MyException(oss.str());
     }
-    catch (const std::exception &e)
-    {
-        std::ostringstream oss;
-        oss << "error when commit BSDFs to renderer." << e.what();
-        throw MyException(oss.str());
-    }
 }
 
-void Renderer::CommitIntegrator()
+void Renderer::CommitIntegrator(const IntegratorInfo &integrator_info,
+                                const uint32_t num_area_light,
+                                const uint32_t num_emitter,
+                                const uint32_t id_sun, const uint32_t id_envmap)
 {
     try
     {
-        DeleteElement(backend_type_, integrator_);
         integrator_ = MallocElement<Integrator>(backend_type_);
 
         IntegratorData data_integrator;
+        data_integrator.info = integrator_info;
+        data_integrator.size_cdf_area_light = num_area_light + 1;
+        data_integrator.pdf_rr_rcp = integrator_info.pdf_rr;
 
-        data_integrator.pdf_rr = info_integrator_.pdf_rr;
-        data_integrator.depth_rr = info_integrator_.depth_rr;
-        data_integrator.depth_max = info_integrator_.depth_max;
-
-        data_integrator.num_area_light = num_area_light_;
-        data_integrator.num_emitter =
-            static_cast<uint32_t>(list_emitter_info_.size());
-        data_integrator.id_sun = id_sun_;
-        data_integrator.id_envmap = id_envmap_;
+        data_integrator.num_area_light = num_area_light;
+        data_integrator.num_emitter = num_emitter;
+        data_integrator.id_sun = id_sun;
+        data_integrator.id_envmap = id_envmap;
 
         data_integrator.bsdfs = bsdfs_;
 
-        data_integrator.instances = instances_;
-        data_integrator.list_pdf_area_instance = list_pdf_area_instance_;
+        data_integrator.instances = scene_->GetInstances();
+        data_integrator.list_pdf_area_instance = scene_->GetPdfAreaList();
 
         data_integrator.emitters = emitters_;
         data_integrator.map_id_area_light_instance = map_area_light_instance_;
         data_integrator.map_id_instance_area_light = map_instance_area_light_;
         data_integrator.cdf_area_light = cdf_area_light_;
 
-        data_integrator.tlas = tlas_;
+        data_integrator.tlas = scene_->GetTlas();
         data_integrator.map_instance_bsdf = map_instance_bsdf_;
+
+        switch (integrator_info.type)
+        {
+        case IntegratorType::kPath:
+            data_integrator.info.type = IntegratorType::kPath;
+            break;
+        case IntegratorType::kVolPath:
+            data_integrator.info.type = IntegratorType::kVolPath;
+            data_integrator.media = media_;
+            break;
+        default:
+            throw MyException("unknow integrator type");
+            break;
+        }
 
         *integrator_ = Integrator(data_integrator);
     }
@@ -824,38 +674,76 @@ void Renderer::CommitIntegrator()
         oss << "error when set integrator to renderer.\n\t" << e.what();
         throw MyException(oss.str());
     }
-    catch (const std::exception &e)
-    {
-        std::ostringstream oss;
-        oss << "error when set integrator to renderer.\n\t" << e.what();
-        throw MyException(oss.str());
-    }
 }
 
-void Renderer::CheckTexture(const uint32_t id, const bool allow_invalid)
+void Renderer::Draw(float *frame) const
 {
-    if (id == kInvalidId && allow_invalid)
-        return;
+    try
+    {
+        fprintf(stderr, "[info] begin rendering ...\n");
 
-    if (id >= list_texture_data_.size())
+#ifdef ENABLE_CUDA
+        if (backend_type_ == BackendType::kCpu)
+        {
+#endif
+            DispathRaysCpu(camera_, integrator_, frame);
+#ifdef ENABLE_CUDA
+        }
+        else
+        {
+            Timer timer;
+            DispathRaysCuda<<<g_num_blocks, g_threads_per_block>>>(
+                camera_, integrator_, frame);
+            cudaError_t ret = cudaGetLastError();
+            if (ret)
+            {
+                std::ostringstream oss;
+                oss << "CUDA error : \"" << ret << "\".";
+                throw MyException(oss.str());
+            }
+
+            ret = cudaDeviceSynchronize();
+            if (ret)
+            {
+                std::ostringstream oss;
+                oss << "CUDA error : \"" << ret << "\".";
+                throw MyException(oss.str());
+            }
+            timer.PrintTimePassed("rendering");
+        }
+#endif
+    }
+    catch (const MyException &e)
     {
         std::ostringstream oss;
-        oss << "cannot find texture (id " << id << ").";
+        oss << "error when draw.\n\t" << e.what();
         throw MyException(oss.str());
     }
 }
 
-void Renderer::CheckBsdf(const uint32_t id, const bool allow_invalid)
+#ifdef ENABLE_VIEWER
+void Renderer::Draw(const uint32_t index_frame, float *frame,
+                    float *frame_srgb) const
 {
-    if (id == kInvalidId && allow_invalid)
-        return;
+    DispathRaysCuda<<<g_num_blocks, g_threads_per_block>>>(
+        camera_, integrator_, index_frame, frame, frame_srgb);
 
-    if (id >= list_bsdf_info_.size())
+    cudaError_t ret = cudaGetLastError();
+    if (ret)
     {
         std::ostringstream oss;
-        oss << "cannot find BSDF (id " << id << ").";
+        oss << "CUDA error : \"" << ret << "\" when draw.";
+        throw MyException(oss.str());
+    }
+
+    ret = cudaDeviceSynchronize();
+    if (ret)
+    {
+        std::ostringstream oss;
+        oss << "CUDA error : \"" << ret << "\" when draw.";
         throw MyException(oss.str());
     }
 }
+#endif
 
 } // namespace csrt

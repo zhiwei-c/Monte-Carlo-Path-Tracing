@@ -18,6 +18,14 @@ enum class TextureType
     kBitmap,
 };
 
+struct TextureInfo
+{
+    TextureType type = TextureType::kNone;
+    ConstantTextureData constant = {};
+    CheckerboardData checkerboard = {};
+    BitmapInfo bitmap = {};
+};
+
 struct TextureData
 {
     TextureType type;

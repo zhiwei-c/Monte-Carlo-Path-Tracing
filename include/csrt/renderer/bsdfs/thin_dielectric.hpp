@@ -9,11 +9,11 @@
 namespace csrt
 {
 
-QUALIFIER_D_H void EvaluateThinDielectric(const DielectricData &data,
-                                          BsdfSampleRec *rec);
-
 QUALIFIER_D_H void SampleThinDielectric(const DielectricData &data,
                                         uint32_t *seed, BsdfSampleRec *rec);
+
+QUALIFIER_D_H void EvaluateThinDielectric(const DielectricData &data,
+                                          BsdfSampleRec *rec);
 
 } // namespace csrt
 

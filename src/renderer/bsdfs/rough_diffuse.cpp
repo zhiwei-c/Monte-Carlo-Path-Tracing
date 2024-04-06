@@ -96,20 +96,6 @@ QUALIFIER_D_H void Evaluate(const float rougness, const Vec3 &albedo,
 namespace csrt
 {
 
-QUALIFIER_D_H void EvaluateRoughDiffuse(const RoughDiffuseData &data,
-                                        BsdfSampleRec *rec)
-{
-    // 反推余弦加权重要抽样时的概率
-    rec->pdf = Dot(rec->wo, rec->normal);
-    if (rec->pdf < kEpsilon)
-        return;
-    rec->valid = true;
-
-    const float alpha = data.roughness->GetColor(rec->texcoord).x;
-    const Vec3 albedo = data.diffuse_reflectance->GetColor(rec->texcoord);
-    ::Evaluate(alpha, albedo, data.use_fast_approx, rec);
-}
-
 QUALIFIER_D_H void SampleRoughDiffuse(const RoughDiffuseData &data,
                                       uint32_t *seed, BsdfSampleRec *rec)
 {
@@ -121,6 +107,20 @@ QUALIFIER_D_H void SampleRoughDiffuse(const RoughDiffuseData &data,
 
     rec->wi = -Normalize(wi.x * rec->tangent + wi.y * rec->bitangent +
                          wi.z * rec->normal);
+    rec->valid = true;
+
+    const float alpha = data.roughness->GetColor(rec->texcoord).x;
+    const Vec3 albedo = data.diffuse_reflectance->GetColor(rec->texcoord);
+    ::Evaluate(alpha, albedo, data.use_fast_approx, rec);
+}
+
+QUALIFIER_D_H void EvaluateRoughDiffuse(const RoughDiffuseData &data,
+                                        BsdfSampleRec *rec)
+{
+    // 反推余弦加权重要抽样时的概率
+    rec->pdf = Dot(rec->wo, rec->normal);
+    if (rec->pdf < kEpsilon)
+        return;
     rec->valid = true;
 
     const float alpha = data.roughness->GetColor(rec->texcoord).x;

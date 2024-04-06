@@ -34,11 +34,11 @@ struct DielectricData
     Texture *specular_transmittance = nullptr;
 };
 
-QUALIFIER_D_H void EvaluateDielectric(const DielectricData &data,
-                                      BsdfSampleRec *rec);
-
 QUALIFIER_D_H void SampleDielectric(const DielectricData &data, uint32_t *seed,
                                     BsdfSampleRec *rec);
+
+QUALIFIER_D_H void EvaluateDielectric(const DielectricData &data,
+                                      BsdfSampleRec *rec);
 
 } // namespace csrt
 

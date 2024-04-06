@@ -21,21 +21,9 @@ struct Uvec3
 
 struct Vec3
 {
-    union
-    {
-        float x;
-        float r;
-    };
-    union
-    {
-        float y;
-        float g;
-    };
-    union
-    {
-        float z;
-        float b;
-    };
+    float x;
+    float y;
+    float z;
 
     QUALIFIER_D_H Vec3() : x(0), y(0), z(0) {}
     QUALIFIER_D_H Vec3(const float x) : x(x), y(x), z(x) {}

@@ -40,85 +40,6 @@ EvaluateMultipleScatter(const DielectricData &data, const float N_dot_I,
 namespace csrt
 {
 
-QUALIFIER_D_H void EvaluateDielectric(const DielectricData &data,
-                                      BsdfSampleRec *rec)
-{
-    float eta = data.eta;
-    // 相对折射率的倒数，即入射侧介质和透射侧介质的绝对折射率之比
-    float eta_inv = data.eta_inv;
-    if (rec->inside)
-    { // 如果光线源于物体内部，那么应该颠倒相对折射率
-        float temp = eta_inv;
-        eta_inv = eta;
-        eta = temp;
-    }
-
-    // 计算微平面法线，使之与入射光线同侧
-    const float N_dot_O = Dot(rec->wo, rec->normal);
-    const bool relfect = N_dot_O > 0.0f;
-    const Vec3 h_world = relfect ? Normalize(-rec->wi + rec->wo)
-                                 : -Normalize(eta_inv * (-rec->wi) + rec->wo),
-               h_local = rec->ToLocal(h_world);
-
-    // 反推根据GGX法线分布函数重要抽样微平面法线的概率
-    const float alpha_u = data.roughness_u->GetColor(rec->texcoord).x,
-                alpha_v = data.roughness_v->GetColor(rec->texcoord).x,
-                D = PdfGgx(alpha_u, alpha_v, h_local),
-                H_dot_I = Dot(-rec->wi, h_world),
-                H_dot_O = Dot(rec->wo, h_world),
-                F = FresnelSchlick(H_dot_I, data.reflectivity);
-    rec->pdf = relfect ? (F * D) / (4.0f * H_dot_O)
-                       : (((1.0f - F) * D) *
-                          abs(H_dot_O / Sqr(eta_inv * H_dot_I + H_dot_O)));
-    if (rec->pdf < kEpsilon)
-        return;
-    else
-        rec->valid = true;
-
-    const Vec3 wi_local = rec->ToLocal(-rec->wi);
-    if (relfect)
-    {
-        const Vec3 wo_local = rec->ToLocal(rec->wo);
-        const float G = SmithG1Ggx(alpha_u, alpha_v, wi_local, h_local) *
-                        SmithG1Ggx(alpha_u, alpha_v, wo_local, h_local);
-        rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
-
-        // 仅针对各向同性材料使用 Kulla-Conty 方法补偿损失的多次散射能量
-        if (alpha_u == alpha_v)
-        {
-            const float N_dot_I = Dot(-rec->wi, rec->normal);
-            rec->attenuation += EvaluateMultipleScatter(
-                data, N_dot_I, N_dot_O, alpha_u, rec->inside, true);
-        }
-
-        const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
-        rec->attenuation *= spec;
-    }
-    else
-    {
-        const Vec3 wo_local = rec->ToLocal(-rec->wo);
-        const float G = SmithG1Ggx(alpha_u, alpha_v, wi_local, h_local) *
-                        SmithG1Ggx(alpha_u, alpha_v, wo_local, h_local);
-        rec->attenuation =
-            (((abs(H_dot_I) * abs(H_dot_O)) * ((1.0f - F) * G * D)) /
-             abs(N_dot_O * Sqr(eta_inv * H_dot_I + H_dot_O)));
-
-        // 仅针对各向同性材料使用 Kulla-Conty 方法补偿损失的多次散射能量
-        if (alpha_u == alpha_v)
-        {
-            const float N_dot_I = Dot(rec->normal, -rec->wi);
-            rec->attenuation += EvaluateMultipleScatter(
-                data, N_dot_I, N_dot_O, alpha_u, rec->inside, false);
-        }
-
-        // 光线折射后，光路可能覆盖的立体角范围发生了改变，
-        //     对辐射亮度进行积分需要进行相应的处理
-        rec->attenuation *= Sqr(eta);
-
-        const Vec3 spec = data.specular_transmittance->GetColor(rec->texcoord);
-        rec->attenuation *= spec;
-    }
-}
 
 QUALIFIER_D_H void SampleDielectric(const DielectricData &data, uint32_t *seed,
                                     BsdfSampleRec *rec)
@@ -221,6 +142,86 @@ QUALIFIER_D_H void SampleDielectric(const DielectricData &data, uint32_t *seed,
         rec->attenuation *= spec;
     }
     rec->valid = true;
+}
+
+QUALIFIER_D_H void EvaluateDielectric(const DielectricData &data,
+                                      BsdfSampleRec *rec)
+{
+    float eta = data.eta;
+    // 相对折射率的倒数，即入射侧介质和透射侧介质的绝对折射率之比
+    float eta_inv = data.eta_inv;
+    if (rec->inside)
+    { // 如果光线源于物体内部，那么应该颠倒相对折射率
+        float temp = eta_inv;
+        eta_inv = eta;
+        eta = temp;
+    }
+
+    // 计算微平面法线，使之与入射光线同侧
+    const float N_dot_O = Dot(rec->wo, rec->normal);
+    const bool relfect = N_dot_O > 0.0f;
+    const Vec3 h_world = relfect ? Normalize(-rec->wi + rec->wo)
+                                 : -Normalize(eta_inv * (-rec->wi) + rec->wo),
+               h_local = rec->ToLocal(h_world);
+
+    // 反推根据GGX法线分布函数重要抽样微平面法线的概率
+    const float alpha_u = data.roughness_u->GetColor(rec->texcoord).x,
+                alpha_v = data.roughness_v->GetColor(rec->texcoord).x,
+                D = PdfGgx(alpha_u, alpha_v, h_local),
+                H_dot_I = Dot(-rec->wi, h_world),
+                H_dot_O = Dot(rec->wo, h_world),
+                F = FresnelSchlick(H_dot_I, data.reflectivity);
+    rec->pdf = relfect ? (F * D) / (4.0f * H_dot_O)
+                       : (((1.0f - F) * D) *
+                          abs(H_dot_O / Sqr(eta_inv * H_dot_I + H_dot_O)));
+    if (rec->pdf < kEpsilon)
+        return;
+    else
+        rec->valid = true;
+
+    const Vec3 wi_local = rec->ToLocal(-rec->wi);
+    if (relfect)
+    {
+        const Vec3 wo_local = rec->ToLocal(rec->wo);
+        const float G = SmithG1Ggx(alpha_u, alpha_v, wi_local, h_local) *
+                        SmithG1Ggx(alpha_u, alpha_v, wo_local, h_local);
+        rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
+
+        // 仅针对各向同性材料使用 Kulla-Conty 方法补偿损失的多次散射能量
+        if (alpha_u == alpha_v)
+        {
+            const float N_dot_I = Dot(-rec->wi, rec->normal);
+            rec->attenuation += EvaluateMultipleScatter(
+                data, N_dot_I, N_dot_O, alpha_u, rec->inside, true);
+        }
+
+        const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
+        rec->attenuation *= spec;
+    }
+    else
+    {
+        const Vec3 wo_local = rec->ToLocal(-rec->wo);
+        const float G = SmithG1Ggx(alpha_u, alpha_v, wi_local, h_local) *
+                        SmithG1Ggx(alpha_u, alpha_v, wo_local, h_local);
+        rec->attenuation =
+            (((abs(H_dot_I) * abs(H_dot_O)) * ((1.0f - F) * G * D)) /
+             abs(N_dot_O * Sqr(eta_inv * H_dot_I + H_dot_O)));
+
+        // 仅针对各向同性材料使用 Kulla-Conty 方法补偿损失的多次散射能量
+        if (alpha_u == alpha_v)
+        {
+            const float N_dot_I = Dot(rec->normal, -rec->wi);
+            rec->attenuation += EvaluateMultipleScatter(
+                data, N_dot_I, N_dot_O, alpha_u, rec->inside, false);
+        }
+
+        // 光线折射后，光路可能覆盖的立体角范围发生了改变，
+        //     对辐射亮度进行积分需要进行相应的处理
+        rec->attenuation *= Sqr(eta);
+
+        const Vec3 spec = data.specular_transmittance->GetColor(rec->texcoord);
+        rec->attenuation *= spec;
+    }
 }
 
 } // namespace csrt

@@ -39,6 +39,8 @@ struct InstanceInfo
 {
     InstanceType type = InstanceType::kNone;
     uint32_t id_bsdf = kInvalidId;
+    uint32_t id_medium_int = kInvalidId;
+    uint32_t id_medium_ext = kInvalidId;
     bool flip_normals = false;
     Mat4 to_world = {};
     SphereInfo sphere = {};
@@ -49,7 +51,9 @@ class Instance
 {
 public:
     QUALIFIER_D_H Instance();
-    QUALIFIER_D_H Instance(const uint32_t id, const BLAS *blas_buffer);
+    QUALIFIER_D_H Instance(const uint32_t id, const uint32_t id_medium_int,
+                           const uint32_t id_medium_ext,
+                           const BLAS *blas_buffer);
 
     QUALIFIER_D_H void Intersect(Bsdf *bsdf_buffer, uint32_t *map_instance_bsdf,
                                  uint32_t *seed, Ray *ray, Hit *hit) const;
@@ -63,6 +67,8 @@ public:
 
 private:
     uint32_t id_;
+    uint32_t id_medium_int_;
+    uint32_t id_medium_ext_;
     const BLAS *blas_;
 };
 

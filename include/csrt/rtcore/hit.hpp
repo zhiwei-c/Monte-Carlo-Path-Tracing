@@ -12,6 +12,8 @@ struct Hit
     bool inside;
     uint32_t id_instance;
     uint32_t id_primitve;
+    uint32_t id_medium_int;
+    uint32_t id_medium_ext;
     Vec2 texcoord;
     Vec3 position;
     Vec3 normal;

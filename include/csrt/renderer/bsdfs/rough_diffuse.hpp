@@ -24,11 +24,11 @@ struct RoughDiffuseData
     Texture *roughness = nullptr;
 };
 
-QUALIFIER_D_H void EvaluateRoughDiffuse(const RoughDiffuseData &data,
-                                        BsdfSampleRec *rec);
-
 QUALIFIER_D_H void SampleRoughDiffuse(const RoughDiffuseData &data,
                                       uint32_t *seed, BsdfSampleRec *rec);
+
+QUALIFIER_D_H void EvaluateRoughDiffuse(const RoughDiffuseData &data,
+                                        BsdfSampleRec *rec);
 
 } // namespace csrt
 

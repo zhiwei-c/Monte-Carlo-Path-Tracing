@@ -1,23 +1,37 @@
-#ifndef CSRT__RENDERER__INTEGRATOR_HPP
-#define CSRT__RENDERER__INTEGRATOR_HPP
+#ifndef CSRT__RENDERER__INTEGRATORS__INTEGRATOR_HPP
+#define CSRT__RENDERER__INTEGRATORS__INTEGRATOR_HPP
 
-#include "../rtcore/scene.hpp"
-#include "../tensor.hpp"
-#include "../utils.hpp"
-#include "bsdfs/bsdf.hpp"
-#include "emitters/emitter.hpp"
+#include "path.hpp"
+#include "volpath.hpp"
 
 namespace csrt
 {
 
-struct IntegratorData
+enum class IntegratorType
 {
+    kPath,
+    kVolPath,
+};
+
+struct IntegratorInfo
+{
+    IntegratorType type = IntegratorType::kPath;
+    // 在图像中隐藏光源
+    bool hide_emitters = false;
     // 根据俄罗斯轮盘赌算法的概率
     float pdf_rr = 0.95f;
     // 光线追踪开始使用俄罗斯轮盘赌算法判断是否终止的深度
     uint32_t depth_rr = 0;
     // 光线追踪的最大深度
     uint32_t depth_max = kMaxUint;
+};
+
+struct IntegratorData
+{
+    // 光线跟踪算法基本信息
+    IntegratorInfo info = {};
+    uint32_t size_cdf_area_light = 0;
+    float pdf_rr_rcp = 0;
 
     // 面光源数量
     uint32_t num_area_light = 0;
@@ -30,6 +44,9 @@ struct IntegratorData
 
     // 场景中的所有BSDF
     Bsdf *bsdfs = nullptr;
+
+    // 场景中的所有参与介质
+    Medium *media = nullptr;
 
     // 场景中的所有实例
     Instance *instances = nullptr;
@@ -51,35 +68,16 @@ struct IntegratorData
     uint32_t *map_instance_bsdf = nullptr;
 };
 
-struct IntegratorInfo
-{
-    // 根据俄罗斯轮盘赌算法的概率
-    float pdf_rr = 0.95f;
-    // 光线追踪开始使用俄罗斯轮盘赌算法判断是否终止的深度
-    uint32_t depth_rr = 0;
-    // 光线追踪的最大深度
-    uint32_t depth_max = kMaxUint;
-};
-
 class Integrator
 {
 public:
-    QUALIFIER_D_H Integrator();
-    QUALIFIER_D_H Integrator(const IntegratorData &data);
+    QUALIFIER_D_H Integrator() : data_{} {}
+    QUALIFIER_D_H Integrator(const IntegratorData &data) : data_(data) {}
 
     QUALIFIER_D_H Vec3 Shade(const Vec3 &eye, const Vec3 &look_dir,
                              uint32_t *seed) const;
 
 private:
-    QUALIFIER_D_H Vec3 EvaluateDirectLight(const Hit &hit, const Vec3 &wo,
-                                           uint32_t *seed) const;
-    QUALIFIER_D_H BsdfSampleRec EvaluateRay(const Vec3 &wi, const Vec3 &wo,
-                                            const Hit &hit, Bsdf *bsdf) const;
-    QUALIFIER_D_H BsdfSampleRec SampleRay(const Vec3 &wo, const Hit &hit,
-                                          Bsdf *bsdf, uint32_t *seed) const;
-
-    uint32_t size_cdf_area_light_;
-    float pdf_rr_rcp_;
     IntegratorData data_;
 };
 

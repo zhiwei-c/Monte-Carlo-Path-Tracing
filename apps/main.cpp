@@ -29,20 +29,12 @@ int main(int argc, char **argv)
 #endif
 
     Param param = ParseParam(argc, argv);
-    csrt::Config confg;
+    csrt::RendererConfig confg;
     try
     {
         confg = csrt::LoadConfig(param.input);
     }
     catch (const csrt::MyException &e)
-    {
-        std::cerr << e.what() << '\n';
-#ifdef ENABLE_CUDA
-        cudaDeviceReset();
-#endif
-        return 0;
-    }
-    catch (const std::exception &e)
     {
         std::cerr << e.what() << '\n';
 #ifdef ENABLE_CUDA
@@ -79,14 +71,6 @@ int main(int argc, char **argv)
 #endif
         return 0;
     }
-    catch (const std::exception &e)
-    {
-        std::cerr << e.what() << '\n';
-#ifdef ENABLE_CUDA
-        cudaDeviceReset();
-#endif
-        return 0;
-    }
 
     try
     {
@@ -98,15 +82,6 @@ int main(int argc, char **argv)
             ray_tracer->Draw(param.output);
     }
     catch (const csrt::MyException &e)
-    {
-        std::cerr << e.what() << '\n';
-        delete ray_tracer;
-#ifdef ENABLE_CUDA
-        cudaDeviceReset();
-#endif
-        return 0;
-    }
-    catch (const std::exception &e)
     {
         std::cerr << e.what() << '\n';
         delete ray_tracer;

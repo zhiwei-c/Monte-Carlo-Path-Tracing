@@ -21,9 +21,12 @@ namespace csrt
 
 constexpr uint32_t kInvalidId = std::numeric_limits<uint32_t>::max();
 
+constexpr float kEpsilonFloat = std::numeric_limits<float>::epsilon();
+constexpr float kEpsilonDistance = 1e-4f;
+constexpr float kEpsilon = 0.01f;
 constexpr float kAabbErrorBound =
-    1.0f + 6.0f * (std::numeric_limits<float>::epsilon() * 0.5f) /
-               (1.0f - 3.0f * (std::numeric_limits<float>::epsilon() * 0.5f));
+    1.0f +
+    6.0f * (kEpsilonFloat * 0.5f) / (1.0f - 3.0f * (kEpsilonFloat * 0.5f));
 
 } // namespace csrt
 

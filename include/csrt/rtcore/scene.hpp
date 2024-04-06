@@ -15,41 +15,33 @@ namespace csrt
 class Scene
 {
 public:
-    Scene(const BackendType backend_type);
-    ~Scene();
+    Scene(const BackendType backend_type,
+          const std::vector<InstanceInfo> &list_info_instance);
+    ~Scene() { ReleaseData(); }
 
-    void AddInstance(const InstanceInfo &info);
-    void Commit();
-
-    TLAS *GetTlas() { return tlas_; };
-    Instance *GetInstances() { return instances_; }
-    float *GetPdfAreaList() { return list_pdf_area_; }
+    TLAS *GetTlas() const { return tlas_; };
+    Instance *GetInstances() const { return instances_; }
+    float *GetPdfAreaList() const { return list_pdf_area_; }
 
 private:
-    void CommitPrimitives();
-    void CommitInstances();
+    void ReleaseData();
 
-    void CommitCube(const uint32_t id);
-    void CommitSphere(const uint32_t id);
-    void CommitRectangle(const uint32_t id);
-    void CommitMeshes(const uint32_t id);
+    void CommitPrimitives(const std::vector<InstanceInfo> &list_info_instance);
+    void CommitInstances(const std::vector<InstanceInfo> &list_info_instance);
 
-    void SetupMeshes(MeshesInfo info_meshes,
-                     std::vector<PrimitiveData> *list_data_primitve,
-                     std::vector<float> *areas);
+    void CommitRectangle(InstanceInfo info);
+    void CommitCube(InstanceInfo info);
+    void CommitMeshes(InstanceInfo info);
+    void CommitSphere(const InstanceInfo &info);
 
     BackendType backend_type_;
-    TLAS *tlas_;
     Instance *instances_;
-    BLAS *list_blas_;
-    float *list_pdf_area_;
     Primitive *primitives_;
     BvhNode *nodes_;
-    uint64_t num_primitive_;
-    uint64_t num_node_;
-    std::vector<InstanceInfo> list_info_instance_;
-    std::vector<uint64_t> list_offset_primitive_;
-    std::vector<uint64_t> list_offset_node_;
+    TLAS *tlas_;
+    BLAS *list_blas_;
+    // 场景中所有实例按面积均匀抽样时的概率（面积的倒数）
+    float *list_pdf_area_;
 };
 
 } // namespace csrt

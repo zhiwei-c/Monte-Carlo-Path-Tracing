@@ -31,11 +31,11 @@ struct ConductorData
     float *albedo_avg_buffer = nullptr;
 };
 
-QUALIFIER_D_H void EvaluateConductor(const ConductorData &data,
-                                     BsdfSampleRec *rec);
-
 QUALIFIER_D_H void SampleConductor(const ConductorData &data, uint32_t *seed,
                                    BsdfSampleRec *rec);
+
+QUALIFIER_D_H void EvaluateConductor(const ConductorData &data,
+                                     BsdfSampleRec *rec);
 
 } // namespace csrt
 

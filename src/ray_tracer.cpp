@@ -1,5 +1,7 @@
 #include "csrt/ray_tracer.hpp"
 
+#include "csrt/utils.hpp"
+
 #ifdef ENABLE_VIEWER
 
 #include <chrono>
@@ -11,7 +13,7 @@ namespace
 char text[256];
 int screen_width, screen_height;
 uint32_t index_frame = 0, last_time = 0, current_time = 0;
-float *accum = nullptr, *frame = nullptr;
+float *frame = nullptr, *frame_srgb = nullptr;
 double fps = 0.0, count_frame_cyc = 0.0, aspect;
 std::string filename;
 csrt::Renderer *renderer;
@@ -24,15 +26,9 @@ void Render()
     // 绘制图形
     try
     {
-        renderer->Draw(index_frame, accum, frame);
+        renderer->Draw(index_frame, frame, frame_srgb);
     }
-    catch (const MyException &e)
-    {
-        fprintf(stderr, "[error] %s.\n", e.what());
-        cudaDeviceReset();
-        exit(1);
-    }
-    catch (const std::exception &e)
+    catch (const csrt::MyException &e)
     {
         fprintf(stderr, "[error] %s.\n", e.what());
         cudaDeviceReset();
@@ -47,7 +43,7 @@ void Render()
 
     glRasterPos2i(0, 0);
     glDrawPixels(screen_width, screen_height, GL_RGB, GL_FLOAT,
-                 (GLvoid *)frame);
+                 (GLvoid *)frame_srgb);
 
     // 计算 FPS
     current_time = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -94,7 +90,7 @@ void PressCharkey(unsigned char key, int x, int y)
                     data[offset_dst + k] = frame[offset_src + k];
             }
         }
-        csrt::image_io::Write(screen_width, screen_height, data.data(),
+        csrt::image_io::Write(data.data(), screen_width, screen_height,
                               filename);
         break;
     }
@@ -138,97 +134,41 @@ void Reshape(int x, int y)
 namespace csrt
 {
 
-RayTracer::RayTracer(const csrt::Config &config)
+RayTracer::RayTracer(const csrt::RendererConfig &config)
     : backend_type_(config.backend_type), width_(config.camera.width),
-      height_(config.camera.height)
+      height_(config.camera.height), frame_(nullptr), renderer_(nullptr)
 #ifdef ENABLE_VIEWER
-    , accum_(nullptr)
+      ,
+      frame_srgb_(nullptr)
 #endif
 {
     try
     {
-        scene_ = new csrt::Scene(config.backend_type);
-        for (size_t i = 0; i < config.instances.size(); ++i)
-            scene_->AddInstance(config.instances[i]);
-        scene_->Commit();
-
-        renderer_ = new csrt::Renderer(config.backend_type);
-
-        for (size_t i = 0; i < config.textures.size(); ++i)
-            renderer_->AddTexture(config.textures[i]);
-
-        for (size_t i = 0; i < config.bsdfs.size(); ++i)
-            renderer_->AddBsdf(config.bsdfs[i]);
-
-        std::vector<uint32_t> map_id_instance_bsdf;
-        for (size_t i = 0; i < config.instances.size(); ++i)
-            map_id_instance_bsdf.push_back(config.instances[i].id_bsdf);
-
-        renderer_->AddSceneInfo(scene_->GetInstances(),
-                                scene_->GetPdfAreaList(), map_id_instance_bsdf,
-                                scene_->GetTlas());
-
-        for (size_t i = 0; i < config.emitters.size(); ++i)
-            renderer_->AddEmitter(config.emitters[i]);
-
-        std::vector<uint32_t> map_id_area_light_instance;
-        std::vector<float> list_area_light_weight;
-        for (size_t i = 0; i < config.instances.size(); ++i)
-        {
-            const csrt::BsdfInfo info_bsdf =
-                config.bsdfs[config.instances[i].id_bsdf];
-            if (info_bsdf.type == csrt::BsdfType::kAreaLight)
-            {
-                map_id_area_light_instance.push_back(i);
-                list_area_light_weight.push_back(info_bsdf.area_light.weight);
-            }
-        }
-        renderer_->SetAreaLightInfo(map_id_area_light_instance,
-                                    list_area_light_weight);
-
-        renderer_->SetCamera(config.camera);
-        renderer_->SetIntegrator(config.integrator);
-        renderer_->Commit();
-
-        uint32_t num_element = config.camera.width * config.camera.height * 3;
+        renderer_ = new Renderer(config);
+        const uint32_t num_element =
+            config.camera.width * config.camera.height * 3;
         frame_ = csrt::MallocArray<float>(config.backend_type, num_element);
     }
     catch (const MyException &e)
     {
-        throw e;
-    }
-    catch (const std::exception &e)
-    {
+        ReleaseData();
         throw e;
     }
 }
 
-RayTracer::~RayTracer()
+void RayTracer::ReleaseData()
 {
+    csrt::DeleteElement(BackendType::kCpu, renderer_);
     csrt::DeleteArray(backend_type_, frame_);
 #ifdef ENABLE_VIEWER
-    csrt::DeleteArray(backend_type_, accum_);
+    csrt::DeleteArray(backend_type_, frame_srgb_);
 #endif
-
-    delete renderer_;
-    delete scene_;
 }
 
 void RayTracer::Draw(const std::string &output_filename) const
 {
-    try
-    {
-        renderer_->Draw(frame_);
-        csrt::image_io::Write(width_, height_, frame_, output_filename);
-    }
-    catch (const MyException &e)
-    {
-        throw e;
-    }
-    catch (const std::exception &e)
-    {
-        throw e;
-    }
+    renderer_->Draw(frame_);
+    csrt::image_io::Write(frame_, width_, height_, output_filename);
 }
 
 #ifdef ENABLE_VIEWER
@@ -255,8 +195,8 @@ void RayTracer::Preview(int argc, char **argv,
     // set the background color
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
-    ::screen_width = ::screen_width = width_;
-    ::screen_height = ::screen_height = height_;
+    ::screen_width = width_;
+    ::screen_height = height_;
     ::aspect = static_cast<double>(width_) / height_;
     ::renderer = renderer_;
     ::filename = output_filename;
@@ -264,8 +204,8 @@ void RayTracer::Preview(int argc, char **argv,
                       std::chrono::system_clock::now().time_since_epoch())
                       .count();
 
-    accum_ = csrt::MallocArray<float>(backend_type_, width_ * height_ * 3);
-    ::accum = accum_;
+    frame_srgb_ = csrt::MallocArray<float>(backend_type_, width_ * height_ * 3);
+    ::frame_srgb = frame_srgb_;
     ::frame = frame_;
 
     // call main loop

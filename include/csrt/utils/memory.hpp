@@ -162,7 +162,7 @@ T *MallocArray(const BackendType &backend_type, const std::vector<T> &src)
 }
 
 template <typename T>
-void CopyArray(const BackendType &backend_type, T *dest, T *src,
+void CopyArray(const BackendType &backend_type, T *&dest, const T *src,
                const uint64_t num)
 {
 #ifdef ENABLE_CUDA
@@ -188,7 +188,7 @@ void CopyArray(const BackendType &backend_type, T *dest, T *src,
 }
 
 template <typename T>
-void DeleteElement(const BackendType &backend_type, T *data)
+void DeleteElement(const BackendType &backend_type, T *&data)
 {
     if (data == nullptr)
         return;
@@ -217,7 +217,7 @@ void DeleteElement(const BackendType &backend_type, T *data)
 }
 
 template <typename T>
-void DeleteArray(const BackendType &backend_type, T *data)
+void DeleteArray(const BackendType &backend_type, T *&data)
 {
     if (data == nullptr)
         return;

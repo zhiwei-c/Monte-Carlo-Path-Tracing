@@ -185,6 +185,31 @@ QUALIFIER_D_H Bsdf::Bsdf(const uint32_t id, const BsdfInfo &info,
     }
 }
 
+QUALIFIER_D_H void Bsdf::Sample(uint32_t *seed, BsdfSampleRec *rec) const
+{
+    switch (data_.type)
+    {
+    case BsdfType::kDiffuse:
+        SampleDiffuse(data_.diffuse, seed, rec);
+        break;
+    case BsdfType::kRoughDiffuse:
+        SampleRoughDiffuse(data_.rough_diffuse, seed, rec);
+        break;
+    case BsdfType::kConductor:
+        SampleConductor(data_.conductor, seed, rec);
+        break;
+    case BsdfType::kDielectric:
+        SampleDielectric(data_.dielectric, seed, rec);
+        break;
+    case BsdfType::kThinDielectric:
+        SampleThinDielectric(data_.dielectric, seed, rec);
+        break;
+    case BsdfType::kPlastic:
+        SamplePlastic(data_.plastic, seed, rec);
+        break;
+    }
+}
+
 QUALIFIER_D_H void Bsdf::Evaluate(BsdfSampleRec *rec) const
 {
     switch (data_.type)
@@ -210,28 +235,20 @@ QUALIFIER_D_H void Bsdf::Evaluate(BsdfSampleRec *rec) const
     }
 }
 
-QUALIFIER_D_H void Bsdf::Sample(uint32_t *seed, BsdfSampleRec *rec) const
+QUALIFIER_D_H Vec3 Bsdf::ApplyBumpMapping(const Vec3 &normal,
+                                          const Vec3 &tangent,
+                                          const Vec3 &bitangent,
+                                          const Vec2 &texcoord) const
 {
-    switch (data_.type)
+    if (data_.bump_map == nullptr)
     {
-    case BsdfType::kDiffuse:
-        SampleDiffuse(data_.diffuse, seed, rec);
-        break;
-    case BsdfType::kRoughDiffuse:
-        SampleRoughDiffuse(data_.rough_diffuse, seed, rec);
-        break;
-    case BsdfType::kConductor:
-        SampleConductor(data_.conductor, seed, rec);
-        break;
-    case BsdfType::kDielectric:
-        SampleDielectric(data_.dielectric, seed, rec);
-        break;
-    case BsdfType::kThinDielectric:
-        SampleThinDielectric(data_.dielectric, seed, rec);
-        break;
-    case BsdfType::kPlastic:
-        SamplePlastic(data_.plastic, seed, rec);
-        break;
+        return normal;
+    }
+    else
+    {
+        const Vec2 gradient = data_.bump_map->GetGradient(texcoord);
+        return Normalize(-gradient.u * tangent - gradient.v * bitangent +
+                         normal);
     }
 }
 

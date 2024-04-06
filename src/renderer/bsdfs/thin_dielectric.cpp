@@ -8,62 +8,6 @@
 namespace csrt
 {
 
-QUALIFIER_D_H void EvaluateThinDielectric(const DielectricData &data,
-                                          BsdfSampleRec *rec)
-{
-
-    bool reflect = true;
-    Vec3 wo = rec->wo;
-    float N_dot_O = Dot(rec->wo, rec->normal);
-    if (fabs(N_dot_O) < kEpsilonFloat)
-        return;
-
-    // 调整反射光线方向，使之与法线方向位于同侧
-    Vec3 wo_local = rec->ToLocal(rec->wo);
-    if (N_dot_O < 0.0f)
-    {
-        reflect = false;
-        N_dot_O = -N_dot_O;
-        wo_local.z = -wo_local.z;
-        wo = rec->ToWorld(wo_local);
-    }
-
-    // 反推根据GGX法线分布函数重要抽样微平面法线的概率
-    const Vec3 h_world = Normalize(-rec->wi + wo),
-               h_local = rec->ToLocal(h_world);
-    const float alpha_u = data.roughness_u->GetColor(rec->texcoord).x,
-                alpha_v = data.roughness_v->GetColor(rec->texcoord).x,
-                D = PdfGgx(alpha_u, alpha_v, h_local),
-                H_dot_I = Dot(-rec->wi, h_world),
-                H_dot_O = Dot(rec->wo, h_world);
-    float F = FresnelSchlick(H_dot_I, data.reflectivity);
-    if (F < 1.0f)
-        F *= 2.0f / (1.0f + F);
-
-    rec->pdf = reflect ? (F * D) / (4.0f * H_dot_O)
-                       : ((1.0f - F) * D) / (4.0f * H_dot_O);
-    if (rec->pdf < kEpsilon)
-        return;
-    else
-        rec->valid = true;
-
-    const Vec3 wi_local = rec->ToLocal(-rec->wi);
-    const float G = SmithG1Ggx(alpha_u, alpha_v, wi_local, h_local) *
-                    SmithG1Ggx(alpha_u, alpha_v, wo_local, h_local);
-    if (reflect)
-    {
-        rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
-        const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
-        rec->attenuation *= spec;
-    }
-    else
-    {
-        rec->attenuation = ((1.0f - F) * D * G) / (4.0f * N_dot_O);
-        const Vec3 spec = data.specular_transmittance->GetColor(rec->texcoord);
-        rec->attenuation *= spec;
-    }
-}
-
 QUALIFIER_D_H void SampleThinDielectric(const DielectricData &data,
                                         uint32_t *seed, BsdfSampleRec *rec)
 {
@@ -122,6 +66,62 @@ QUALIFIER_D_H void SampleThinDielectric(const DielectricData &data,
     }
 
     rec->valid = true;
+}
+
+QUALIFIER_D_H void EvaluateThinDielectric(const DielectricData &data,
+                                          BsdfSampleRec *rec)
+{
+
+    bool reflect = true;
+    Vec3 wo = rec->wo;
+    float N_dot_O = Dot(rec->wo, rec->normal);
+    if (fabs(N_dot_O) < kEpsilonFloat)
+        return;
+
+    // 调整反射光线方向，使之与法线方向位于同侧
+    Vec3 wo_local = rec->ToLocal(rec->wo);
+    if (N_dot_O < 0.0f)
+    {
+        reflect = false;
+        N_dot_O = -N_dot_O;
+        wo_local.z = -wo_local.z;
+        wo = rec->ToWorld(wo_local);
+    }
+
+    // 反推根据GGX法线分布函数重要抽样微平面法线的概率
+    const Vec3 h_world = Normalize(-rec->wi + wo),
+               h_local = rec->ToLocal(h_world);
+    const float alpha_u = data.roughness_u->GetColor(rec->texcoord).x,
+                alpha_v = data.roughness_v->GetColor(rec->texcoord).x,
+                D = PdfGgx(alpha_u, alpha_v, h_local),
+                H_dot_I = Dot(-rec->wi, h_world),
+                H_dot_O = Dot(rec->wo, h_world);
+    float F = FresnelSchlick(H_dot_I, data.reflectivity);
+    if (F < 1.0f)
+        F *= 2.0f / (1.0f + F);
+
+    rec->pdf = reflect ? (F * D) / (4.0f * H_dot_O)
+                       : ((1.0f - F) * D) / (4.0f * H_dot_O);
+    if (rec->pdf < kEpsilon)
+        return;
+    else
+        rec->valid = true;
+
+    const Vec3 wi_local = rec->ToLocal(-rec->wi);
+    const float G = SmithG1Ggx(alpha_u, alpha_v, wi_local, h_local) *
+                    SmithG1Ggx(alpha_u, alpha_v, wo_local, h_local);
+    if (reflect)
+    {
+        rec->attenuation = (F * D * G) / (4.0f * N_dot_O);
+        const Vec3 spec = data.specular_reflectance->GetColor(rec->texcoord);
+        rec->attenuation *= spec;
+    }
+    else
+    {
+        rec->attenuation = ((1.0f - F) * D * G) / (4.0f * N_dot_O);
+        const Vec3 spec = data.specular_transmittance->GetColor(rec->texcoord);
+        rec->attenuation *= spec;
+    }
 }
 
 } // namespace csrt

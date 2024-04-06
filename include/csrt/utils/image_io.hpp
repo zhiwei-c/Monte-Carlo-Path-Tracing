@@ -9,8 +9,8 @@ namespace csrt
 
 namespace image_io
 {
-    void Write(const int width, const int height, const float *frame_buffer,
-               const std::string &filename);
+    void Write(const float *data, const int width, const int height,
+               std::string filename);
     float *Read(const std::string &filename, const float gamma,
                 const int *width_max, int *width, int *height, int *channel);
     void Resize(const float *input_pixels, int input_w, int input_h,

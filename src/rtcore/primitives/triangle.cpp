@@ -114,7 +114,7 @@ QUALIFIER_D_H bool IntersectTriangle(const uint32_t id_primitive,
 #endif
 
     const Vec2 texcoord = Lerp(data.texcoords, u, v, w);
-    if (bsdf->IsTransparent(texcoord, seed))
+    if (bsdf != nullptr && bsdf->IsTransparent(texcoord, seed))
         return false;
 
     ray->t_max = t;
@@ -122,10 +122,17 @@ QUALIFIER_D_H bool IntersectTriangle(const uint32_t id_primitive,
     if (hit != nullptr)
     {
         const bool inside = det_inv < 0;
-        const Vec3 position = Lerp(data.positions, u, v, w),
-                   tangent = Normalize(Lerp(data.tangents, u, v, w));
+        const Vec3 position = Lerp(data.positions, u, v, w);
         Vec3 normal = Normalize(Lerp(data.normals, u, v, w)),
+             tangent = Normalize(Lerp(data.tangents, u, v, w)),
              bitangent = Normalize(Lerp(data.bitangents, u, v, w));
+        if (bsdf != nullptr)
+        {
+            normal =
+                bsdf->ApplyBumpMapping(normal, tangent, bitangent, texcoord);
+            bitangent = Normalize(Cross(normal, tangent));
+            tangent = Normalize(Cross(bitangent, normal));
+        }
 
         if (inside)
         {

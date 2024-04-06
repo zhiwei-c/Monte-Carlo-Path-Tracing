@@ -16,35 +16,36 @@ using namespace csrt;
 
 constexpr size_t kZstreamBufferSize = 32768;
 
-std::string m_filename;
-FILE *m_stream;
-uint8_t m_inflateBuffer[kZstreamBufferSize];
-z_stream m_deflateStream, m_inflateStream;
+std::string g_filename;
+FILE *g_stream;
+uint8_t g_inflateBuffer[kZstreamBufferSize];
+z_stream g_deflateStream;
+z_stream g_inflateStream;
 
 void InitZlib()
 {
-    m_deflateStream.zalloc = Z_NULL;
-    m_deflateStream.zfree = Z_NULL;
-    m_deflateStream.opaque = Z_NULL;
-    int retval = deflateInit2(&m_deflateStream, Z_DEFAULT_COMPRESSION,
+    g_deflateStream.zalloc = Z_NULL;
+    g_deflateStream.zfree = Z_NULL;
+    g_deflateStream.opaque = Z_NULL;
+    int retval = deflateInit2(&g_deflateStream, Z_DEFAULT_COMPRESSION,
                               Z_DEFLATED, 15, 8, Z_DEFAULT_STRATEGY);
     if (retval != Z_OK)
     {
-        fclose(m_stream);
+        fclose(g_stream);
         std::ostringstream oss;
         oss << "cannot initialize ZLIB: error code '" << retval << "'.";
         throw MyException(oss.str());
     }
 
-    m_inflateStream.zalloc = Z_NULL;
-    m_inflateStream.zfree = Z_NULL;
-    m_inflateStream.opaque = Z_NULL;
-    m_inflateStream.avail_in = 0;
-    m_inflateStream.next_in = Z_NULL;
-    retval = inflateInit2(&m_inflateStream, 15);
+    g_inflateStream.zalloc = Z_NULL;
+    g_inflateStream.zfree = Z_NULL;
+    g_inflateStream.opaque = Z_NULL;
+    g_inflateStream.avail_in = 0;
+    g_inflateStream.next_in = Z_NULL;
+    retval = inflateInit2(&g_inflateStream, 15);
     if (retval != Z_OK)
     {
-        fclose(m_stream);
+        fclose(g_stream);
         std::ostringstream oss;
         oss << "cannot initialize ZLIB: error code '" << retval << "'.";
         throw MyException(oss.str());
@@ -83,15 +84,15 @@ T SwapEndianness(T value)
 void Seek(size_t pos)
 {
 #ifdef WIN32
-    if (_fseeki64(m_stream, pos, SEEK_SET))
+    if (_fseeki64(g_stream, pos, SEEK_SET))
 #else
-    if (fseeko(m_stream, (off_t)pos, SEEK_SET))
+    if (fseeko(g_stream, (off_t)pos, SEEK_SET))
 #endif
     {
-        fclose(m_stream);
+        fclose(g_stream);
         std::ostringstream oss;
         oss << "error while trying to seek to position '" << pos
-            << "' in file '" << m_filename << "'.";
+            << "' in file '" << g_filename << "'.";
         throw MyException(oss.str());
     }
 }
@@ -99,15 +100,15 @@ void Seek(size_t pos)
 size_t GetPos()
 {
 #ifdef WIN32
-    long long pos = _ftelli64(m_stream);
+    long long pos = _ftelli64(g_stream);
 #else
-    off_t pos = ftello(m_stream);
+    off_t pos = ftello(g_stream);
 #endif
     if (pos == -1)
     {
-        fclose(m_stream);
+        fclose(g_stream);
         std::ostringstream oss;
-        oss << "error while looking up the position in file '" << m_filename
+        oss << "error while looking up the position in file '" << g_filename
             << "'.";
         throw MyException(oss.str());
     }
@@ -116,38 +117,26 @@ size_t GetPos()
 
 size_t GetSize()
 {
-    size_t size;
-    try
+    size_t tmp = GetPos();
+    if (fseek(g_stream, 0, SEEK_END))
     {
-        size_t tmp = GetPos();
-        if (fseek(m_stream, 0, SEEK_END))
-        {
-            fclose(m_stream);
-            std::ostringstream oss;
-            oss << "error while seeking within file '" << m_filename << "'.";
-            throw MyException(oss.str());
-        }
+        fclose(g_stream);
+        std::ostringstream oss;
+        oss << "error while seeking within file '" << g_filename << "'.";
+        throw MyException(oss.str());
+    }
 
-        size = GetPos();
+    size_t size = GetPos();
 #ifdef WIN32
-        if (_fseeki64(m_stream, tmp, SEEK_SET))
+    if (_fseeki64(g_stream, tmp, SEEK_SET))
 #else
-        if (fseeko(m_stream, tmp, SEEK_SET))
+    if (fseeko(g_stream, tmp, SEEK_SET))
 #endif
-        {
-            fclose(m_stream);
-            std::ostringstream oss;
-            oss << "error while seeking within file '" << m_filename << "'.";
-            throw MyException(oss.str());
-        }
-    }
-    catch (const MyException &e)
     {
-        throw e;
-    }
-    catch (const std::exception &e)
-    {
-        throw e;
+        fclose(g_stream);
+        std::ostringstream oss;
+        oss << "error while seeking within file '" << g_filename << "'.";
+        throw MyException(oss.str());
     }
 
     return size;
@@ -155,15 +144,15 @@ size_t GetSize()
 
 void ReadFile(void *ptr, size_t size)
 {
-    size_t bytesRead = fread(ptr, 1, size, m_stream);
+    size_t bytesRead = fread(ptr, 1, size, g_stream);
     if (bytesRead != size)
     {
-        fclose(m_stream);
+        fclose(g_stream);
         std::ostringstream oss;
-        if (ferror(m_stream) != 0)
-            oss << "error while reading from file '" << m_filename << "'.";
+        if (ferror(g_stream) != 0)
+            oss << "error while reading from file '" << g_filename << "'.";
         else
-            oss << "read less data than expected from file '" << m_filename
+            oss << "read less data than expected from file '" << g_filename
                 << "'.";
         throw MyException(oss.str());
     }
@@ -171,118 +160,94 @@ void ReadFile(void *ptr, size_t size)
 
 void ReadCompressedFile(void *ptr, size_t size)
 {
-    try
+    uint8_t *targetPtr = (uint8_t *)ptr;
+    while (size > 0)
     {
-        uint8_t *targetPtr = (uint8_t *)ptr;
-        while (size > 0)
+        if (g_inflateStream.avail_in == 0)
         {
-            if (m_inflateStream.avail_in == 0)
+            size_t remaining = GetSize() - GetPos();
+            g_inflateStream.next_in = g_inflateBuffer;
+            g_inflateStream.avail_in =
+                (uInt)std::min(remaining, sizeof(g_inflateBuffer));
+            if (g_inflateStream.avail_in == 0)
             {
-                size_t remaining = GetSize() - GetPos();
-                m_inflateStream.next_in = m_inflateBuffer;
-                m_inflateStream.avail_in =
-                    (uInt)std::min(remaining, sizeof(m_inflateBuffer));
-                if (m_inflateStream.avail_in == 0)
-                {
-                    fclose(m_stream);
-                    std::ostringstream oss;
-                    oss << "read less data than expected from file '"
-                        << m_filename << "'.";
-                    throw MyException(oss.str());
-                }
-
-                ReadFile(m_inflateBuffer, m_inflateStream.avail_in);
-            }
-
-            m_inflateStream.avail_out = (uInt)size;
-            m_inflateStream.next_out = targetPtr;
-
-            int retval = inflate(&m_inflateStream, Z_NO_FLUSH);
-            switch (retval)
-            {
-            case Z_STREAM_ERROR:
-            {
-                fclose(m_stream);
+                fclose(g_stream);
                 std::ostringstream oss;
-                oss << "inflate(): stream error for file '" << m_filename
+                oss << "read less data than expected from file '" << g_filename
                     << "'.";
                 throw MyException(oss.str());
-                break;
             }
-            case Z_NEED_DICT:
-            {
-                fclose(m_stream);
-                std::ostringstream oss;
-                oss << "inflate(): need dictionary for file '" << m_filename
-                    << "'.";
-                throw MyException(oss.str());
-                break;
-            }
-            case Z_DATA_ERROR:
-            {
-                fclose(m_stream);
-                std::ostringstream oss;
-                oss << "inflate(): data error for file '" << m_filename << "'.";
-                throw MyException(oss.str());
-                break;
-            }
-            case Z_MEM_ERROR:
-            {
-                fclose(m_stream);
-                std::ostringstream oss;
-                oss << "inflate(): memory error for file '" << m_filename
-                    << "'.";
-                throw MyException(oss.str());
-                break;
-            }
-            };
 
-            size_t outputSize = size - (size_t)m_inflateStream.avail_out;
-            targetPtr += outputSize;
-            size -= outputSize;
-
-            if (size > 0 && retval == Z_STREAM_END)
-            {
-                fclose(m_stream);
-                std::ostringstream oss;
-                oss << "inflate(): attempting to read past the end of the "
-                       "stream for file '"
-                    << m_filename << "'.";
-                throw MyException(oss.str());
-            }
+            ReadFile(g_inflateBuffer, g_inflateStream.avail_in);
         }
-    }
-    catch (const MyException &e)
-    {
-        throw e;
-    }
-    catch (const std::exception &e)
-    {
-        throw e;
+
+        g_inflateStream.avail_out = (uInt)size;
+        g_inflateStream.next_out = targetPtr;
+
+        int retval = inflate(&g_inflateStream, Z_NO_FLUSH);
+        switch (retval)
+        {
+        case Z_STREAM_ERROR:
+        {
+            fclose(g_stream);
+            std::ostringstream oss;
+            oss << "inflate(): stream error for file '" << g_filename << "'.";
+            throw MyException(oss.str());
+            break;
+        }
+        case Z_NEED_DICT:
+        {
+            fclose(g_stream);
+            std::ostringstream oss;
+            oss << "inflate(): need dictionary for file '" << g_filename
+                << "'.";
+            throw MyException(oss.str());
+            break;
+        }
+        case Z_DATA_ERROR:
+        {
+            fclose(g_stream);
+            std::ostringstream oss;
+            oss << "inflate(): data error for file '" << g_filename << "'.";
+            throw MyException(oss.str());
+            break;
+        }
+        case Z_MEM_ERROR:
+        {
+            fclose(g_stream);
+            std::ostringstream oss;
+            oss << "inflate(): memory error for file '" << g_filename << "'.";
+            throw MyException(oss.str());
+            break;
+        }
+        };
+
+        size_t outputSize = size - (size_t)g_inflateStream.avail_out;
+        targetPtr += outputSize;
+        size -= outputSize;
+
+        if (size > 0 && retval == Z_STREAM_END)
+        {
+            fclose(g_stream);
+            std::ostringstream oss;
+            oss << "inflate(): attempting to read past the end of the "
+                   "stream for file '"
+                << g_filename << "'.";
+            throw MyException(oss.str());
+        }
     }
 }
 
 std::string ReadCompressedString()
 {
     std::string retval;
-    try
+    char data;
+    do
     {
-        char data;
-        do
-        {
-            ReadCompressedFile(&data, sizeof(char));
-            if (data != 0)
-                retval += data;
-        } while (data != 0);
-    }
-    catch (const MyException &e)
-    {
-        throw e;
-    }
-    catch (const std::exception &e)
-    {
-        throw e;
-    }
+        ReadCompressedFile(&data, sizeof(char));
+        if (data != 0)
+            retval += data;
+    } while (data != 0);
     return retval;
 }
 
@@ -290,45 +255,24 @@ template <typename T>
 T ReadElement(bool compressed)
 {
     T value;
-    try
-    {
-        if (compressed)
-            ReadCompressedFile(&value, sizeof(T));
-        else
-            ReadFile(&value, sizeof(T));
-        if (kNotLittleEndian)
-            value = SwapEndianness(value);
-    }
-    catch (const MyException &e)
-    {
-        throw e;
-    }
-    catch (const std::exception &e)
-    {
-        throw e;
-    }
+    if (compressed)
+        ReadCompressedFile(&value, sizeof(T));
+    else
+        ReadFile(&value, sizeof(T));
+    if (kNotLittleEndian)
+        value = SwapEndianness(value);
+
     return value;
 }
 
 template <typename T>
 void ReadCompressedArray(T *data, size_t size)
 {
-    try
+    ReadCompressedFile(data, sizeof(T) * size);
+    if (kNotLittleEndian)
     {
-        ReadCompressedFile(data, sizeof(T) * size);
-        if (kNotLittleEndian)
-        {
-            for (size_t i = 0; i < size; ++i)
-                data[i] = SwapEndianness(data[i]);
-        }
-    }
-    catch (const MyException &e)
-    {
-        throw e;
-    }
-    catch (const std::exception &e)
-    {
-        throw e;
+        for (size_t i = 0; i < size; ++i)
+            data[i] = SwapEndianness(data[i]);
     }
 }
 
@@ -339,18 +283,8 @@ std::vector<VecType> ReadVectorArray(size_t array_size)
     std::vector<VecType> data(array_size);
     const size_t num_emelent = array_size * vec_size;
     std::vector<RawType> raw_data(num_emelent);
-    try
-    {
-        ReadCompressedArray<RawType>(raw_data.data(), num_emelent);
-    }
-    catch (const MyException &e)
-    {
-        throw e;
-    }
-    catch (const std::exception &e)
-    {
-        throw e;
-    }
+    ReadCompressedArray<RawType>(raw_data.data(), num_emelent);
+
     for (size_t i = 0; i < array_size; ++i)
     {
         for (int j = 0; j < vec_size; ++j)
@@ -364,49 +298,38 @@ void ProcessOffset(int index_shape, uint16_t version)
     if (index_shape == 0)
         return;
 
-    try
-    {
-        size_t offset = 0;
-        const size_t stream_size = GetSize();
+    size_t offset = 0;
+    const size_t stream_size = GetSize();
 
-        /* Determine the position of the requested substream. This is stored
+    /* Determine the position of the requested substream. This is stored
         at the end of the file */
-        Seek(stream_size - sizeof(uint32_t));
+    Seek(stream_size - sizeof(uint32_t));
 
-        uint32_t count = ReadElement<uint32_t>(false);
-        if (index_shape < 0 || index_shape > static_cast<int>(count))
-        {
-            fclose(m_stream);
-            std::ostringstream oss;
-            oss << "unable to unserialize mesh, shape index is out of range "
-                   "for file '"
-                << m_filename << "'.";
-            throw MyException(oss.str());
-        }
-
-        if (version == 0x0004)
-        {
-            Seek(GetSize() - sizeof(uint64_t) * (count - index_shape) -
-                 sizeof(uint32_t));
-            offset = ReadElement<uint64_t>(false);
-        }
-        else
-        {
-            Seek(GetSize() - sizeof(uint32_t) * (count - index_shape + 1));
-            offset = ReadElement<uint32_t>(false);
-        }
-
-        Seek(offset);
-        Seek(GetPos() + sizeof(uint16_t) * 2);
-    }
-    catch (const MyException &e)
+    uint32_t count = ReadElement<uint32_t>(false);
+    if (index_shape < 0 || index_shape > static_cast<int>(count))
     {
-        throw e;
+        fclose(g_stream);
+        std::ostringstream oss;
+        oss << "unable to unserialize mesh, shape index is out of range "
+               "for file '"
+            << g_filename << "'.";
+        throw MyException(oss.str());
     }
-    catch (const std::exception &e)
+
+    if (version == 0x0004)
     {
-        throw e;
+        Seek(GetSize() - sizeof(uint64_t) * (count - index_shape) -
+             sizeof(uint32_t));
+        offset = ReadElement<uint64_t>(false);
     }
+    else
+    {
+        Seek(GetSize() - sizeof(uint32_t) * (count - index_shape + 1));
+        offset = ReadElement<uint32_t>(false);
+    }
+
+    Seek(offset);
+    Seek(GetPos() + sizeof(uint16_t) * 2);
 }
 
 MeshesInfo ProcessAssimpNode(const aiScene *scene, aiNode *node,
@@ -503,9 +426,9 @@ namespace csrt
 MeshesInfo model_loader::Load(const std::string &filename, int index_shape,
                               bool flip_texcoords, bool face_normals)
 {
-    m_filename = filename;
-    m_stream = fopen(filename.c_str(), "rb");
-    if (m_stream == nullptr)
+    g_filename = filename;
+    g_stream = fopen(filename.c_str(), "rb");
+    if (g_stream == nullptr)
     {
         std::ostringstream oss;
         oss << "read file '" << filename << "' failed.";
@@ -515,7 +438,7 @@ MeshesInfo model_loader::Load(const std::string &filename, int index_shape,
     uint16_t format = ReadElement<uint16_t>(false);
     if (format != 0x041C)
     {
-        fclose(m_stream);
+        fclose(g_stream);
         std::ostringstream oss;
         oss << "invalid file format for '" << filename << "'.";
         throw MyException(oss.str());
@@ -524,7 +447,7 @@ MeshesInfo model_loader::Load(const std::string &filename, int index_shape,
     uint16_t version = ReadElement<uint16_t>(false);
     if (version != 0x0003 && format != 0x0004)
     {
-        fclose(m_stream);
+        fclose(g_stream);
         std::ostringstream oss;
         oss << "invalid file version for '" << filename << "'.";
         throw MyException(oss.str());
@@ -575,7 +498,7 @@ MeshesInfo model_loader::Load(const std::string &filename, int index_shape,
     info_meshes.indices =
         ReadVectorArray<Uvec3, 3, unsigned int, uint32_t>(triangle_count);
 
-    fclose(m_stream);
+    fclose(g_stream);
 
     return info_meshes;
 }

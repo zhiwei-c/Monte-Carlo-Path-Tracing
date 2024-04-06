@@ -27,13 +27,17 @@ struct LocationDate
 };
 
 Vec3 GetSunDirection(const LocationDate &location_date);
-float *CreateSunTexture(const Vec3 &sun_direction, const float turbidity,
-                        const float radiance_scale, const float radius_scale,
-                        const int width, const int height, Vec3 *radiance);
-float *CreateSkyTexture(const Vec3 &sun_direction, const Vec3 &albedo,
-                        const float turbidity, const float stretch,
-                        const float radiance_scale, const bool extend,
-                        const int width, const int height);
+std::vector<float> CreateSunTexture(const Vec3 &sun_direction,
+                                    const float turbidity,
+                                    const float radiance_scale,
+                                    const float radius_scale, const int width,
+                                    const int height, Vec3 *radiance);
+std::vector<float> CreateSkyTexture(const Vec3 &sun_direction,
+                                    const Vec3 &albedo, const float turbidity,
+                                    const float stretch,
+                                    const float radiance_scale,
+                                    const bool extend, const int width,
+                                    const int height);
 
 } // namespace csrt
 

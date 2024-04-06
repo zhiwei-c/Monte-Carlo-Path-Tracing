@@ -12,8 +12,8 @@ namespace csrt
 class RayTracer
 {
 public:
-    RayTracer(const Config &config);
-    ~RayTracer();
+    RayTracer(const RendererConfig &config);
+    ~RayTracer() { ReleaseData(); }
 
     void Draw(const std::string &output_filename) const;
 
@@ -22,12 +22,13 @@ public:
 #endif
 
 private:
+    void ReleaseData();
+
     BackendType backend_type_;
-    Scene *scene_;
-    Renderer *renderer_;
+    Renderer* renderer_;
     float *frame_;
 #ifdef ENABLE_VIEWER
-    float *accum_;
+    float *frame_srgb_;
 #endif
     int width_;
     int height_;

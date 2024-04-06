@@ -27,10 +27,10 @@ struct PlasticData
     Texture *specular_reflectance = nullptr;
 };
 
-QUALIFIER_D_H void EvaluatePlastic(const PlasticData &data, BsdfSampleRec *rec);
-
 QUALIFIER_D_H void SamplePlastic(const PlasticData &data, uint32_t *seed,
                                  BsdfSampleRec *rec);
+
+QUALIFIER_D_H void EvaluatePlastic(const PlasticData &data, BsdfSampleRec *rec);
 
 } // namespace csrt
 
