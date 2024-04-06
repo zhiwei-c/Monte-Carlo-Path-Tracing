@@ -112,33 +112,33 @@ Program Option:
 - `--height` or `-h`: specify the height of rendering picture.
 - `--spp` or `-s`: specify the number of samples per pixel.
 
-## 5 Gallery
+## 3 Gallery
 
-### 5.1 [Cornell Box](./resources/scene/cornell-box/scene_v0.6.xml)
+### 3.1 [Cornell Box](./resources/scene/cornell-box/scene_v0.6.xml)
 
 ![cornell box](./resources/results/cornell-box.png)
 
-### 5.2 [Box](./resources/scene/scene_v0.6.xml)
+### 3.2 [Box](./resources/scene/scene_v0.6.xml)
 
 ![box](./resources/results/box.png)
 
-### 5.3 [Lte-Orb, Rough Glass](./resources/scene/lte-orb/rough_glass.xml)
+### 3.3 [Lte-Orb, Rough Glass](./resources/scene/lte-orb/rough_glass.xml)
 
 ![lte-orb, rough glass](./resources/results/lte-orb_rough-glass.png)
 
-### 5.4 [Lte-Orb, Silver](./resources/scene/lte-orb/silver.xml)
+### 3.4 [Lte-Orb, Silver](./resources/scene/lte-orb/silver.xml)
 
 ![lte-orb, silver](./resources/results/lte-orb_silver.png)
 
-### 5.5 [Dining Room](./resources/scene/dining-room/scene_v0.6.xml)
+### 3.5 [Dining Room](./resources/scene/dining-room/scene_v0.6.xml)
 
 ![dining room](./resources/results/dining-room.png)
 
-### 5.6 [Classroom](./resources/scene/classroom/scene_v0.6.xml)
+### 3.6 [Classroom](./resources/scene/classroom/scene_v0.6.xml)
 
 ![classroom](./resources/results/classroom.png)
 
-## 6 References
+## 4 References
 
 - [Mitsuba renderer](https://github.com/mitsuba-renderer/mitsuba)
 - 《[GAMES101: 现代计算机图形学入门](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》
