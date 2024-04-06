@@ -1,6 +1,6 @@
 # 蒙特卡洛路径追踪（Monte-Carlo-Path-Tracing）
 
-![banner](./resources/images/banner.png)
+![banner](banner.png)
 
 一个路径追踪小程序，利用了 CPU 多线程或 CUDA 加速计算。项目最初参考了《[GAMES101: 现代计算机图形学入门](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》的作业7，有大幅度的调整。
 
@@ -40,7 +40,7 @@ A simple Monte Carlo path tracer based on assignment 7 of GAMES101 originally, a
 - 朗伯模型（Lambert's model）定义的[平滑漫反射（smooth diffuse）材质](src/renderer/bsdfs/diffuse.cpp)；
   - example: [Dragon](./resources/scene/dragon/scene.xml) ![dragon](./resources/results/dragon.png)
 - Oren–Nayar 反射模型（Oren–Nayar reflectance model）定义的[粗糙漫反射（rough diffuse）材质](src/renderer/bsdfs/rough_diffuse.cpp)；
-  - example: [mercury, smooth diffuse (Lambert's)](./resources/scene/mercury/smooth_diffuse.xml) VS. [mercury, rough diffuse (Oren–Nayar)](./resources/scene/mercury/rough_diffuse.xml)![mercury, smooth diffuse and rough diffuse](/resources/images/mercury_smooth-diffuse_rough-diffuse.png)
+  - example: [mercury, smooth diffuse (Lambert's)](./resources/scene/mercury/smooth_diffuse.xml) VS. [mercury, rough diffuse (Oren–Nayar)](./resources/scene/mercury/rough_diffuse.xml)![mercury, smooth diffuse and rough diffuse](/resources/results/mercury_smooth-diffuse_rough-diffuse.png)
 
 ### 1.3 参与介质（Participating Media）
 
