@@ -1,6 +1,6 @@
 # Monte-Carlo-Path-Tracing
 
-![banner](./resources/banner.png)
+![banner](./resources/images/banner.png)
 
 一个路径追踪小程序，利用了 CPU 多线程或 CUDA 加速计算。项目最初参考了《[GAMES101: 现代计算机图形学入门](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》的作业7，有大幅度的调整。
 
@@ -54,9 +54,15 @@ A simple Monte Carlo path tracer based on assignment 7 of GAMES101 originally, a
 - 环境映射（environment mapping）
 - 凹凸映射（bump mapping）
 
+#### 1.4.1 历史存档项目（Archived）特有的功能
+
+Following features are only available in [`archived` version](archive/).
+
+- [基于双向路径追踪（bidirectional path tracing，BDPT）算法迭代求解绘制方程定积分](archive/src/integrators/bdpt.hpp)；
+
 ## 2 Building & Compiling
 
-### 4.1 Dependencies
+### 2.1 Dependencies
 
 项目使用 [vcpkg](https://github.com/microsoft/vcpkg) 进行 C++ 库管理。
 
@@ -74,7 +80,7 @@ automatically import from `extern` folder:
 - [ArHosekSkyModel](http://cgg.mff.cuni.cz/projects/SkylightModelling/)
 - [stb](http://nothings.org/stb)
 
-### 4.2 CMake Option
+### 2.2 CMake Option
 
 - `ENABLE_WATERTIGHT_TRIANGLES`: Specifies whether or not enable Woop's watertight ray/triangle intersection algorithm.
 - `ENABLE_CUDA` : Specifies whether or not enable GPU-accelerated computing.
@@ -84,7 +90,7 @@ automatically import from `extern` folder:
 - `ENABLE_VIEWER` : Specifies whether or not enable real-time viewer.
   - no effect if disable GPU-accelerated computing.
 
-### 4.3 Usage
+### 2.3 Usage
 
 Command Format: `[-c/--cpu/-g/--gpu/-p/--preview] --input/-i 'config path' [--output/-o 'file path] [--width/-w 'value'] [--height/-h 'value'] [--spp/-s 'value']`
 
@@ -106,28 +112,35 @@ Program Option:
 - `--height` or `-h`: specify the height of rendering picture.
 - `--spp` or `-s`: specify the number of samples per pixel.
 
-## Gallery
+## 5 Gallery
 
-### [Cornell Box](./resources/scene/cornell-box/scene_v0.6.xml)
+### 5.1 [Cornell Box](./resources/scene/cornell-box/scene_v0.6.xml)
 
 ![cornell box](./resources/results/cornell-box.png)
 
-### [Box](./resources/scene/scene_v0.6.xml)
+### 5.2 [Box](./resources/scene/scene_v0.6.xml)
 
 ![box](./resources/results/box.png)
 
-### [Lte-Orb, Rough Glass](./resources/scene/lte-orb/rough_glass.xml)
+### 5.3 [Lte-Orb, Rough Glass](./resources/scene/lte-orb/rough_glass.xml)
 
 ![lte-orb, rough glass](./resources/results/lte-orb_rough-glass.png)
 
-### [Lte-Orb, Silver](./resources/scene/lte-orb/silver.xml)
+### 5.4 [Lte-Orb, Silver](./resources/scene/lte-orb/silver.xml)
 
 ![lte-orb, silver](./resources/results/lte-orb_silver.png)
 
-### [Dining Room](./resources/scene/dining-room/scene_v0.6.xml)
+### 5.5 [Dining Room](./resources/scene/dining-room/scene_v0.6.xml)
 
 ![dining room](./resources/results/dining-room.png)
 
-### [Classroom](./resources/scene/classroom/scene_v0.6.xml)
+### 5.6 [Classroom](./resources/scene/classroom/scene_v0.6.xml)
 
 ![classroom](./resources/results/classroom.png)
+
+## 6 References
+
+- [Mitsuba renderer](https://github.com/mitsuba-renderer/mitsuba)
+- 《[GAMES101: 现代计算机图形学入门](https://sites.cs.ucsb.edu/~lingqi/teaching/games101.html)》
+- 《[GAMES202: 高质量实时渲染](https://sites.cs.ucsb.edu/~lingqi/teaching/games202.html)》
+- 《[Accelerated Ray Tracing in One Weekend in CUDA](https://developer.nvidia.com/blog/accelerated-ray-tracing-cuda)》

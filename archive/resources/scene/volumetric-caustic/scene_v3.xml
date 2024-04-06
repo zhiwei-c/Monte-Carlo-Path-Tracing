@@ -1,0 +1,129 @@
+<scene version="3.0.0">
+	<default name="integrator" value="volpath" />
+	<default name="spp" value="1024" />
+	<default name="resy" value="1024" />
+	<default name="resx" value="1024" />
+	<default name="max_depth" value="32" />
+	<integrator type="$integrator">
+		<integer name="max_depth" value="$max_depth" />
+	</integrator>
+	<sensor type="perspective">
+		<float name="fov" value="19.5" />
+		<transform name="to_world">
+			<matrix value="-1 0 1.50996e-007 -1.05697e-006 0 1 0 1 -1.50996e-007 0 -1 7 0 0 0 1" />
+		</transform>
+		<sampler type="independent">
+			<integer name="sample_count" value="$spp" />
+		</sampler>
+		<film type="hdrfilm">
+			<integer name="width" value="$resx" />
+			<integer name="height" value="$resy" />
+			<string name="file_format" value="openexr" />
+			<string name="pixel_format" value="rgb" />
+			<rfilter type="tent" />
+		</film>
+	</sensor>
+	<medium type="homogeneous" id="medium">
+		<float name="scale" value="0.5" />
+		<rgb name="albedo" value="1, 1, 1" />
+		<rgb name="sigma_t" value="1, 1, 1" />
+	</medium>
+	<bsdf type="twosided" id="LeftWallBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.63, 0.065, 0.05" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="RightWallBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.14, 0.45, 0.091" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="FloorBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.725, 0.71, 0.68" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="CeilingBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.725, 0.71, 0.68" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="twosided" id="BackWallBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.725, 0.71, 0.68" />
+		</bsdf>
+	</bsdf>
+	<bsdf type="dielectric" id="SphereBSDF">
+		<float name="int_ior" value="1.5" />
+		<float name="ext_ior" value="1" />
+	</bsdf>
+	<bsdf type="twosided" id="LightBSDF">
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0, 0, 0" />
+		</bsdf>
+	</bsdf>
+	<shape type="rectangle" id="Floor">
+		<transform name="to_world">
+			<matrix value="-4.37114e-008 1 4.37114e-008 0 0 -8.74228e-008 2 0 1 4.37114e-008 1.91069e-015 0 0 0 0 1" />
+		</transform>
+		<ref id="FloorBSDF" />
+		<ref name="interior" id="medium"/>
+		<ref name="exterior" id="medium"/>
+	</shape>
+	<shape type="rectangle" id="Ceiling">
+		<transform name="to_world">
+			<matrix value="-1 -7.64274e-015 1.74846e-007 0 -8.74228e-008 8.74228e-008 -2 2 0 -1 -4.37114e-008 0 0 0 0 1" />
+		</transform>
+		<ref id="CeilingBSDF" />
+		<ref name="interior" id="medium"/>
+		<ref name="exterior" id="medium"/>
+	</shape>
+	<shape type="rectangle" id="BackWall">
+		<transform name="to_world">
+			<matrix value="1.91069e-015 1 1.31134e-007 0 1 3.82137e-015 -8.74228e-008 1 -4.37114e-008 1.31134e-007 -2 -1 0 0 0 1" />
+		</transform>
+		<ref id="BackWallBSDF" />
+		<ref name="interior" id="medium"/>
+		<ref name="exterior" id="medium"/>
+	</shape>
+	<shape type="rectangle" id="RightWall">
+		<transform name="to_world">
+			<matrix value="4.37114e-008 0 2 1 1 3.82137e-015 -8.74228e-008 1 -3.82137e-015 1 -1.31134e-007 0 0 0 0 1" />
+		</transform>
+		<ref id="RightWallBSDF" />
+		<ref name="interior" id="medium"/>
+		<ref name="exterior" id="medium"/>
+	</shape>
+	<shape type="rectangle" id="LeftWall">
+		<transform name="to_world">
+			<matrix value="-4.37114e-008 8.74228e-008 -2 -1 1 3.82137e-015 -8.74228e-008 1 0 -1 -4.37114e-008 0 0 0 0 1" />
+		</transform>
+		<ref id="LeftWallBSDF" />
+		<ref name="interior" id="medium"/>
+		<ref name="exterior" id="medium"/>
+	</shape>
+	<shape type="sphere" id="Sphere">
+		<float name="radius" value="0.3" />
+		<point name="center" x="-0.22827" y="1.2" z="0.152505" />
+		<ref id="SphereBSDF" />
+		<ref name="exterior" id="medium"/>
+	</shape>
+	<shape type="rectangle" id="Light">
+		<transform name="to_world">
+            <matrix value="-0.0025 -1.91069e-015 4.37114e-008 -0.005 -2.18557e-010 2.18557e-008 -0.5 1.98 0 -0.002 -8.74228e-011 -0.03 0 0 0 1" />
+		</transform>
+		<ref id="LightBSDF" />
+		<emitter type="area">
+			<rgb name="radiance" value="541127, 381972, 127324" />
+		</emitter>
+		<ref name="interior" id="medium"/>
+		<ref name="exterior" id="medium"/>
+	</shape>
+    <shape type="cube">
+		<transform name="to_world">
+			<scale value="2.5"/>
+		</transform>
+        <bsdf type="null" />
+		<ref name="interior" id="medium"/>
+    </shape>
+</scene>
